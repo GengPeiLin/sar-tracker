@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+  <!-- 此檔案由 GitHub Actions 自動生成。請先觸發 workflow 更新資料。 -->
+  <!-- 下載前取得 Bearer Token：
+       TOKEN=$(curl -s -X POST \
+         https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token \
+         -d "client_id=cdse-public&username=EMAIL&password=PASS&grant_type=password" \
+         | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+       aria2c --header="Authorization: Bearer $TOKEN" copernicus_taiwan.meta4 -->
+</metalink>
