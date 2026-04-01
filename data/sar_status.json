@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-04-01 02:02 UTC",
-  "query_start": "2026-03-25T02:02:58.300116+00:00",
-  "query_end": "2026-04-01T02:02:58.300116+00:00",
+  "updated_at": "2026-04-01 03:36 UTC",
+  "query_start": "2026-03-25T03:36:36.898968+00:00",
+  "query_end": "2026-04-01T03:36:36.898968+00:00",
   "days_back": 7,
-  "total_frames": 48,
+  "total_frames": 60,
   "asf_count": 16,
-  "copernicus_count": 32,
+  "copernicus_count": 44,
   "satellite_summary": {
     "Sentinel-1C": 8,
     "Sentinel-1A": 8,
-    "S1A": 20,
+    "S1A": 32,
     "S1C": 12
   },
   "taiwan_frames": [
@@ -871,6 +871,94 @@
     },
     {
       "source": "Copernicus",
+      "granule": "S1A_IW_OCN__2SDV_20260331T215332_20260331T215357_063877_080899_5DDD",
+      "product_id": "792c1832-bf21-4754-87b1-f6dcfa680162",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "",
+      "date": "2026-03-31T21:53:32.424393Z",
+      "stop_time": "2026-03-31T21:53:57.423422Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.117409,
+              19.321436
+            ],
+            [
+              121.433746,
+              20.83193
+            ],
+            [
+              119.021126,
+              21.258961
+            ],
+            [
+              118.728691,
+              19.751827
+            ],
+            [
+              121.117409,
+              19.321436
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(792c1832-bf21-4754-87b1-f6dcfa680162)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_OCN__2S/2026/03/31/S1A_IW_OCN__2SDV_20260331T215332_20260331T215357_063877_080899_5DDD.SAFE",
+      "file_size_mb": 104.2
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_SLC__1SDV_20260331T215331_20260331T215358_063877_080899_7DBA",
+      "product_id": "7d3ae9d8-468e-44a5-8f2b-745bb2a70ce2",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "SLC",
+      "date": "2026-03-31T21:53:31.563275Z",
+      "stop_time": "2026-03-31T21:53:58.503396Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.104546,
+              19.256031
+            ],
+            [
+              121.44545,
+              20.88381
+            ],
+            [
+              119.051453,
+              21.30744
+            ],
+            [
+              118.736725,
+              19.68313
+            ],
+            [
+              121.104546,
+              19.256031
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(7d3ae9d8-468e-44a5-8f2b-745bb2a70ce2)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_SLC__1S/2026/03/31/S1A_IW_SLC__1SDV_20260331T215331_20260331T215358_063877_080899_7DBA.SAFE",
+      "file_size_mb": 7648.9
+    },
+    {
+      "source": "Copernicus",
       "granule": "S1A_IW_RAW__0SDV_20260331T215328_20260331T215401_063877_080899_90D1",
       "product_id": "30917444-cbbf-4f4b-95fe-218fdb39fec2",
       "platform": "S1A",
@@ -912,6 +1000,182 @@
       "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(30917444-cbbf-4f4b-95fe-218fdb39fec2)/$value",
       "s3_path": "/eodata/Sentinel-1/SAR/IW_RAW__0S/2026/03/31/S1A_IW_RAW__0SDV_20260331T215328_20260331T215401_063877_080899_90D1.SAFE",
       "file_size_mb": 1708.7
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_OCN__2SDV_20260331T215307_20260331T215332_063877_080899_BEC4",
+      "product_id": "199b0926-c0bd-4987-bb41-d51565d5e9b8",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "",
+      "date": "2026-03-31T21:53:07.425361Z",
+      "stop_time": "2026-03-31T21:53:32.422898Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.433762,
+              20.83202
+            ],
+            [
+              121.747849,
+              22.342779
+            ],
+            [
+              119.30883,
+              22.766544
+            ],
+            [
+              119.02076,
+              21.259113
+            ],
+            [
+              121.433762,
+              20.83202
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(199b0926-c0bd-4987-bb41-d51565d5e9b8)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_OCN__2S/2026/03/31/S1A_IW_OCN__2SDV_20260331T215307_20260331T215332_063877_080899_BEC4.SAFE",
+      "file_size_mb": 95.4
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_GRDH_1SDV_20260331T215307_20260331T215332_063877_080899_7AEA_COG",
+      "product_id": "ed6869fa-3fb0-4e2b-a0e1-07a0b90b056c",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "GRD",
+      "date": "2026-03-31T21:53:07.425361Z",
+      "stop_time": "2026-03-31T21:53:32.422898Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.433762,
+              20.83202
+            ],
+            [
+              121.747849,
+              22.342779
+            ],
+            [
+              119.30912,
+              22.766497
+            ],
+            [
+              119.021042,
+              21.259066
+            ],
+            [
+              121.433762,
+              20.83202
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(ed6869fa-3fb0-4e2b-a0e1-07a0b90b056c)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2026/03/31/S1A_IW_GRDH_1SDV_20260331T215307_20260331T215332_063877_080899_7AEA_COG.SAFE",
+      "file_size_mb": 909.3
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_GRDH_1SDV_20260331T215307_20260331T215332_063877_080899_551D",
+      "product_id": "ee52583b-f000-467b-aae4-f564215ea8c0",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "GRD",
+      "date": "2026-03-31T21:53:07.425361Z",
+      "stop_time": "2026-03-31T21:53:32.422898Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.433762,
+              20.83202
+            ],
+            [
+              121.747849,
+              22.342779
+            ],
+            [
+              119.30912,
+              22.766497
+            ],
+            [
+              119.021042,
+              21.259066
+            ],
+            [
+              121.433762,
+              20.83202
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(ee52583b-f000-467b-aae4-f564215ea8c0)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_GRDH_1S/2026/03/31/S1A_IW_GRDH_1SDV_20260331T215307_20260331T215332_063877_080899_551D.SAFE",
+      "file_size_mb": 1722.4
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_SLC__1SDV_20260331T215306_20260331T215333_063877_080899_46BE",
+      "product_id": "029c1c8f-b7ac-4b70-9ee1-3aff29f8cb02",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "SLC",
+      "date": "2026-03-31T21:53:06.725989Z",
+      "stop_time": "2026-03-31T21:53:33.684610Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.418518,
+              20.755653
+            ],
+            [
+              121.761887,
+              22.384094
+            ],
+            [
+              119.341507,
+              22.804638
+            ],
+            [
+              119.026772,
+              21.179533
+            ],
+            [
+              121.418518,
+              20.755653
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(029c1c8f-b7ac-4b70-9ee1-3aff29f8cb02)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_SLC__1S/2026/03/31/S1A_IW_SLC__1SDV_20260331T215306_20260331T215333_063877_080899_46BE.SAFE",
+      "file_size_mb": 7648.9
     },
     {
       "source": "Copernicus",
@@ -1003,6 +1267,138 @@
     },
     {
       "source": "Copernicus",
+      "granule": "S1A_IW_OCN__2SDV_20260331T215242_20260331T215307_063877_080899_DAB9",
+      "product_id": "d6b4b203-6e80-491c-bf45-bb1a965437ba",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "",
+      "date": "2026-03-31T21:52:42.424847Z",
+      "stop_time": "2026-03-31T21:53:07.423875Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.747887,
+              22.342867
+            ],
+            [
+              122.05777,
+              23.854416
+            ],
+            [
+              119.590172,
+              24.274891
+            ],
+            [
+              119.308388,
+              22.76671
+            ],
+            [
+              121.747887,
+              22.342867
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(d6b4b203-6e80-491c-bf45-bb1a965437ba)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_OCN__2S/2026/03/31/S1A_IW_OCN__2SDV_20260331T215242_20260331T215307_063877_080899_DAB9.SAFE",
+      "file_size_mb": 54.9
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_GRDH_1SDV_20260331T215242_20260331T215307_063877_080899_8FBB_COG",
+      "product_id": "efd61f41-8ede-4e3b-898d-c4f6ff58d06c",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "GRD",
+      "date": "2026-03-31T21:52:42.424847Z",
+      "stop_time": "2026-03-31T21:53:07.423875Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.747887,
+              22.342867
+            ],
+            [
+              122.05777,
+              23.854416
+            ],
+            [
+              119.590462,
+              24.274845
+            ],
+            [
+              119.30867,
+              22.766663
+            ],
+            [
+              121.747887,
+              22.342867
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(efd61f41-8ede-4e3b-898d-c4f6ff58d06c)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2026/03/31/S1A_IW_GRDH_1SDV_20260331T215242_20260331T215307_063877_080899_8FBB_COG.SAFE",
+      "file_size_mb": 1096.0
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_SLC__1SDV_20260331T215240_20260331T215308_063877_080899_1B1D",
+      "product_id": "ccfa5ff3-190a-49f9-9b3e-3c2b397143b3",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "SLC",
+      "date": "2026-03-31T21:52:40.961646Z",
+      "stop_time": "2026-03-31T21:53:08.857601Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              121.734467,
+              22.255384
+            ],
+            [
+              122.092522,
+              23.93992
+            ],
+            [
+              119.64222,
+              24.357412
+            ],
+            [
+              119.316467,
+              22.676182
+            ],
+            [
+              121.734467,
+              22.255384
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(ccfa5ff3-190a-49f9-9b3e-3c2b397143b3)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_SLC__1S/2026/03/31/S1A_IW_SLC__1SDV_20260331T215240_20260331T215308_063877_080899_1B1D.SAFE",
+      "file_size_mb": 7904.5
+    },
+    {
+      "source": "Copernicus",
       "granule": "S1A_IW_RAW__0SDV_20260331T215238_20260331T215311_063877_080899_F50D",
       "product_id": "6d8aa53f-04fd-4168-baad-8b1c9bbb6d4e",
       "platform": "S1A",
@@ -1091,6 +1487,94 @@
     },
     {
       "source": "Copernicus",
+      "granule": "S1A_IW_GRDH_1SDV_20260331T215213_20260331T215242_063877_080899_1E29_COG",
+      "product_id": "0f9a0585-fc57-4922-b6c1-a50598733a9b",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "GRD",
+      "date": "2026-03-31T21:52:13.387572Z",
+      "stop_time": "2026-03-31T21:52:42.423359Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              122.057785,
+              23.854507
+            ],
+            [
+              122.449287,
+              25.604515
+            ],
+            [
+              119.945343,
+              26.021835
+            ],
+            [
+              119.589897,
+              24.275028
+            ],
+            [
+              122.057785,
+              23.854507
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(0f9a0585-fc57-4922-b6c1-a50598733a9b)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_GRDH_1S-COG/2026/03/31/S1A_IW_GRDH_1SDV_20260331T215213_20260331T215242_063877_080899_1E29_COG.SAFE",
+      "file_size_mb": 1184.1
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_OCN__2SDV_20260331T215213_20260331T215242_063877_080899_B3F7",
+      "product_id": "1373a6ab-7516-498b-b4c8-0d20b521daaf",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "",
+      "date": "2026-03-31T21:52:13.387572Z",
+      "stop_time": "2026-03-31T21:52:42.423359Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              122.057785,
+              23.854507
+            ],
+            [
+              122.449287,
+              25.604515
+            ],
+            [
+              119.945145,
+              26.021866
+            ],
+            [
+              119.589699,
+              24.275061
+            ],
+            [
+              122.057785,
+              23.854507
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(1373a6ab-7516-498b-b4c8-0d20b521daaf)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_OCN__2S/2026/03/31/S1A_IW_OCN__2SDV_20260331T215213_20260331T215242_063877_080899_B3F7.SAFE",
+      "file_size_mb": 74.5
+    },
+    {
+      "source": "Copernicus",
       "granule": "S1A_IW_GRDH_1SDV_20260331T215213_20260331T215242_063877_080899_126E",
       "product_id": "23a2a726-a7f8-4a93-be1e-df24300ab1ad",
       "platform": "S1A",
@@ -1132,6 +1616,50 @@
       "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(23a2a726-a7f8-4a93-be1e-df24300ab1ad)/$value",
       "s3_path": "/eodata/Sentinel-1/SAR/IW_GRDH_1S/2026/03/31/S1A_IW_GRDH_1SDV_20260331T215213_20260331T215242_063877_080899_126E.SAFE",
       "file_size_mb": 2001.5
+    },
+    {
+      "source": "Copernicus",
+      "granule": "S1A_IW_SLC__1SDV_20260331T215213_20260331T215243_063877_080899_02C7",
+      "product_id": "22246c7e-2eb2-4a3a-9b3e-f8acdd4b0360",
+      "platform": "S1A",
+      "mode": "IW",
+      "product_type": "SLC",
+      "date": "2026-03-31T21:52:13.376081Z",
+      "stop_time": "2026-03-31T21:52:43.208370Z",
+      "polarization": "VV&VH",
+      "orbit": 105,
+      "direction": "DESCENDING",
+      "frame_number": "",
+      "footprint": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              122.063728,
+              23.804241
+            ],
+            [
+              122.450241,
+              25.605068
+            ],
+            [
+              119.964859,
+              26.019474
+            ],
+            [
+              119.616066,
+              24.222008
+            ],
+            [
+              122.063728,
+              23.804241
+            ]
+          ]
+        ]
+      },
+      "download_url": "https://zipper.dataspace.copernicus.eu/odata/v1/Products(22246c7e-2eb2-4a3a-9b3e-f8acdd4b0360)/$value",
+      "s3_path": "/eodata/Sentinel-1/SAR/IW_SLC__1S/2026/03/31/S1A_IW_SLC__1SDV_20260331T215213_20260331T215243_063877_080899_02C7.SAFE",
+      "file_size_mb": 8499.4
     },
     {
       "source": "Copernicus",
