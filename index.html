@@ -560,8 +560,9 @@ header {
 }
 .context-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 8px;
 }
@@ -579,6 +580,8 @@ header {
   font-size: calc(8px + var(--font-bump) - 2px);
   letter-spacing: 1px;
   color: var(--muted);
+  white-space: normal;
+  text-align: right;
 }
 .context-select {
   width: 100%;
@@ -616,6 +619,7 @@ header {
   font-size: calc(11px + var(--font-bump) - 1px);
   color: var(--text-hi);
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 /* legend */
@@ -983,8 +987,19 @@ header {
     min-width: 0;
     width: 100%;
   }
+  .layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .map-wrap {
+    order: 1;
+    min-height: 58vh;
+  }
   .sidebar {
+    order: 2;
     max-height: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
   }
   .filter-panel {
     padding: 10px 12px 12px;
@@ -1013,12 +1028,34 @@ header {
   .sat-row {
     padding: 8px 12px;
   }
-  .map-wrap {
-    min-height: 62vh;
-  }
   .map-context,
   .map-stats {
     padding: 10px 10px 0;
+  }
+  .map-stats {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    padding: 8px 10px;
+  }
+  .stat-card .val {
+    font-size: calc(18px + var(--font-bump));
+  }
+  .stat-card .val.small {
+    font-size: calc(11px + var(--font-bump));
+  }
+  .map-context {
+    gap: 6px;
+  }
+  .context-card {
+    padding: 9px 10px;
+  }
+  .context-body {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
   }
   .map-legend {
     left: 10px;
@@ -1065,6 +1102,9 @@ header {
   }
   .d-grid {
     grid-template-columns: 1fr;
+  }
+  .sb-list {
+    max-height: 34vh;
   }
 }
 </style>
@@ -1398,7 +1438,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.5';
+const APP_VERSION = 'v0.6.6';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
