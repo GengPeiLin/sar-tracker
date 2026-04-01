@@ -20,6 +20,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from datetime import datetime, timedelta, timezone
+import glob
 from pathlib import Path
 
 # ── 設定 ──────────────────────────────────────────────────────────────────────
@@ -84,6 +85,70 @@ def infer_product_type(*values: str) -> str:
                 return token
     return ""
 
+def parse_metalink_granules(filepath: Path) -> list[str]:
+    """從 Metalink 檔案解析出 granule 名稱列表"""
+    log(f"  解析 Metalink 檔案: {filepath.name}")
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+        # 處理 Metalink v3.0 的 namespace
+        namespace = ''
+        if 'http://www.metalinker.org/' in root.tag:
+            namespace = '{http://www.metalinker.org/}'
+
+        granules = []
+        for file_elem in root.findall(f'./{namespace}files/{namespace}file'):
+            name = file_elem.get('name')
+            if name:
+                granules.append(name.replace('.zip', ''))
+        log(f"    找到 {len(granules)} 個 granules")
+        return granules
+    except Exception as e:
+        log(f"    解析失敗: {e}")
+        return []
+
+def fetch_asf_from_metalinks() -> list[dict]:
+    """
+    從本地的 tw*.metalink 檔案讀取 granule 清單，
+    然後向 ASF API 查詢這些 granule 的完整 metadata。
+    """
+    log("▶ 從本地 Metalink 檔案讀取 Granule 清單 ...")
+
+    metalink_files = glob.glob(str(OUTPUT_DIR / 'tw*.metalink'))
+    if not metalink_files:
+        log("  未在 data/ 目錄下找到任何 tw*.metalink 檔案。")
+        return []
+
+    all_granules = []
+    for f in metalink_files:
+        all_granules.extend(parse_metalink_granules(Path(f)))
+
+    if not all_granules:
+        log("  從 Metalink 檔案中未讀取到任何 granule。")
+        return []
+
+    unique_granules = sorted(list(set(all_granules)))
+    log(f"  總計 {len(unique_granules)} 個不重複的 granules。開始向 ASF 查詢詳細 metadata...")
+
+    # ASF API 每次最多接受 1000 個 granule，分批查詢
+    all_features = []
+    chunk_size = 250  # 保守一點用 250
+    for i in range(0, len(unique_granules), chunk_size):
+        chunk = unique_granules[i:i + chunk_size]
+        log(f"  查詢批次 {i//chunk_size + 1} ({len(chunk)} granules)...")
+        params = {
+            "granule_list": ",".join(chunk),
+            "output": "geojson",
+        }
+        url = "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(params)
+        data = http_get(url)
+        if data and "features" in data:
+            all_features.extend(data["features"])
+        time.sleep(1)  # 禮貌性延遲
+
+    return all_features
+
 # ── ASF DAAC ──────────────────────────────────────────────────────────────────
 def fetch_asf(start: datetime, end: datetime) -> list[dict]:
     log("▶ ASF DAAC SearchAPI …")
@@ -102,10 +167,12 @@ def fetch_asf(start: datetime, end: datetime) -> list[dict]:
         log("  ASF：無資料")
         return []
 
-    features = data["features"]
-    log(f"  ASF：{len(features)} 筆")
+    return data["features"]
 
+def process_asf_features(features: list[dict]) -> list[dict]:
+    log(f"  ASF：{len(features)} 筆")
     out = []
+
     s1_platforms = {"SA", "SC", "SD"} # Sentinel-1 平台代碼
 
     for f in features:
@@ -145,6 +212,7 @@ def fetch_asf(start: datetime, end: datetime) -> list[dict]:
             "file_size_mb":    round(float(p.get("sizeMB") or 0), 1),
             "processing_date": p.get("processingDate", ""),
         })
+    log(f"  處理完成，保留 {len(out)} 筆")
     return out
 
 # ── Copernicus CDSE ────────────────────────────────────────────────────────────
@@ -289,31 +357,23 @@ def main() -> int:
     start    = now - timedelta(days=DAYS_BACK)
 
     log("=" * 56)
-    log(f"SAR Monitor  資料更新  v2.0")
-    log(f"查詢時段：{date_fmt_asf(start)}  →  {date_fmt_asf(now)}")
-    log(f"查詢區域：台灣涵蓋框  119–123°E  21–26.5°N")
+    log(f"SAR Monitor  資料更新 (Metalink 模式) v2.1")
+    log(f"更新時間：{date_fmt_asf(now)}")
     log("=" * 56)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 1. 查詢兩個來源
-    asf_frames = []
-    try:
-        asf_frames = fetch_asf(start, now)
-    except Exception as e:
-        log(f"ASF 查詢例外：{e}")
+    # 1. 從 Metalink 檔案查詢並取得詳細資料
+    asf_features = fetch_asf_from_metalinks()
+    asf_frames = process_asf_features(asf_features)
 
-    time.sleep(1)  # 避免過快連續請求
+    # 2. 合併（目前只有 ASF 來源）
+    all_frames = deduplicate(asf_frames)
+    if not all_frames:
+        log("\n未從 Metalink 檔案中生成任何資料，程序中止。")
+        return 1
 
-    cop_frames = []
-    try:
-        cop_frames = fetch_copernicus(start, now)
-    except Exception as e:
-        log(f"Copernicus 查詢例外：{e}")
-
-    # 2. 合併去重
-    all_frames = deduplicate(asf_frames + cop_frames)
-    log(f"\n合計（去重後）：{len(all_frames)} 幀")
+    log(f"\n合計：{len(all_frames)} 幀")
 
     # 3. 衛星統計
     sat_summary: dict[str, int] = {}
