@@ -1,335 +1,448 @@
 #!/usr/bin/env python3
 """
-SAR Monitor — Data Fetcher
-===========================
-每週由 GitHub Actions 執行，查詢台灣區域 SAR 衛星取像，
-輸出 data/sar_status.json、data/asf_taiwan.meta4、data/copernicus_taiwan.meta4。
+Fetch Sentinel-1 and NISAR SAR inventory for the Taiwan dashboard.
 
-資料來源：
-  · ASF DAAC  https://api.daac.asf.alaska.edu/services/search/param
-  · Copernicus CDSE OData  https://catalogue.dataspace.copernicus.eu/odata/v1/Products
+Storage model:
+  1. Build and keep a local metadata catalog in data/catalog_db.json
+  2. Export the current merged catalog to data/sar_status.json
+  3. After bootstrap, only fetch data newer than the recorded watermark
 
-查詢 metadata 完全免費、免帳號；下載影像才需要帳號。
+Output:
+  data/catalog_db.json
+  data/sar_status.json
+  data/asf_taiwan.meta4
+  data/copernicus_taiwan.meta4
 """
+
+from __future__ import annotations
 
 import json
 import os
 import sys
-import time
-import urllib.request
-import urllib.parse
 import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# ── 設定 ──────────────────────────────────────────────────────────────────────
-DAYS_BACK   = int(os.environ.get("DAYS_BACK", 7))
-MAX_RESULTS = 500
+__version__ = "0.7.0"
 
-# 台灣涵蓋範圍（含離島）
-TAIWAN_WKT  = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
 
-# ASF 平台代碼
-#   SA=Sentinel-1A  SC=Sentinel-1C  SD=Sentinel-1D
-#   A3=ALOS-2       A4=ALOS-4
-#   R2=RADARSAT-2   RCM=RADARSAT Constellation
-#   NISAR=NISAR
-ASF_PLATFORMS = "SA,SC,SD,A3,A4,R2,RCM,NISAR"
+DAYS_BACK = int(os.environ.get("DAYS_BACK", "7"))
+MAX_RESULTS = int(os.environ.get("MAX_RESULTS", "1000"))
+TAIWAN_WKT = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
+NISAR_LAUNCH = datetime(2024, 3, 1, tzinfo=timezone.utc)
 
-# ASF 處理等級（SLC 和 GRD 都抓）
-ASF_LEVELS = "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD"
+OUTPUT_DIR = Path(__file__).parent / "data"
+CATALOG_FILE = OUTPUT_DIR / "catalog_db.json"
+JSON_FILE = OUTPUT_DIR / "sar_status.json"
+ASF_META4 = OUTPUT_DIR / "asf_taiwan.meta4"
+COP_META4 = OUTPUT_DIR / "copernicus_taiwan.meta4"
+S1_EARLIEST = datetime(2014, 4, 3, tzinfo=timezone.utc)
+INCREMENTAL_OVERLAP_DAYS = int(os.environ.get("INCREMENTAL_OVERLAP_DAYS", "2"))
+FORCE_FULL_REBUILD = os.environ.get("FORCE_FULL_REBUILD", "").lower() in {"1", "true", "yes"}
 
-OUTPUT_DIR  = Path(__file__).parent / "data"
-JSON_FILE   = OUTPUT_DIR / "sar_status.json"
-ASF_META4   = OUTPUT_DIR / "asf_taiwan.meta4"
-COP_META4   = OUTPUT_DIR / "copernicus_taiwan.meta4"
 
-# ── 工具函式 ──────────────────────────────────────────────────────────────────
-def log(msg: str):
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+def log(message: str) -> None:
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}", flush=True)
 
-def http_get(url: str, timeout: int = 40) -> dict | None:
-    req = urllib.request.Request(url, headers={"User-Agent": "SAR-Monitor-GHActions/2.0"})
+
+def http_json(url: str, timeout: int = 60) -> dict | None:
+    request = urllib.request.Request(url, headers={"User-Agent": "sar-tracker/3.0"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        log(f"  HTTP {e.code} → {url[:90]}...")
-    except Exception as e:
-        log(f"  Error: {e}")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        log(f"HTTP {exc.code}: {url[:120]}")
+    except Exception as exc:
+        log(f"Request failed: {exc}")
     return None
 
-def date_fmt_asf(d: datetime) -> str:
-    return d.strftime("%Y-%m-%dT%H:%M:%SUTC")
 
-def date_fmt_odata(d: datetime) -> str:
-    return d.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+def chunk_range(start: datetime, end: datetime, days: int) -> list[tuple[datetime, datetime]]:
+    chunks: list[tuple[datetime, datetime]] = []
+    cursor = start
+    while cursor < end:
+        chunk_end = min(cursor + timedelta(days=days), end)
+        chunks.append((cursor, chunk_end))
+        cursor = chunk_end
+    return chunks
+
+
+def load_catalog() -> dict:
+    if not CATALOG_FILE.exists() or FORCE_FULL_REBUILD:
+        return {
+            "version": __version__,
+            "updated_at": "",
+            "last_successful_fetch": "",
+            "bootstrap_completed": False,
+            "frames": [],
+        }
+    try:
+        return json.loads(CATALOG_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "version": __version__,
+            "updated_at": "",
+            "last_successful_fetch": "",
+            "bootstrap_completed": False,
+            "frames": [],
+        }
+
+
+def save_catalog(payload: dict) -> None:
+    CATALOG_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def fmt_asf(value: datetime) -> str:
+    return value.strftime("%Y-%m-%dT%H:%M:%SUTC")
+
+
+def fmt_odata(value: datetime) -> str:
+    return value.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def normalize_direction(value: str) -> str:
+    text = str(value or "").upper()
+    if text.startswith("A"):
+        return "ASCENDING"
+    if text.startswith("D"):
+        return "DESCENDING"
+    return "UNKNOWN"
+
+
+def safe_int(value) -> int | None:
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return None
+
 
 def infer_product_type(*values: str) -> str:
     known = [
-        "GSLC", "RSLC", "SLC",
-        "GRD_HD", "GRD_MS", "GRD_HS", "GRD_FD", "GRD",
-        "RAW", "SSC",
+        "L1_RSLC",
+        "L1_GSLC",
+        "L2_GCOV",
+        "L2_GUNW",
+        "GSLC",
+        "RSLC",
+        "SLC",
+        "GRD_HD",
+        "GRD_MS",
+        "GRD_HS",
+        "GRD_FD",
+        "GRD",
+        "GCOV",
+        "GUNW",
+        "RAW",
+        "SSC",
     ]
     for raw in values:
-        if not raw:
-            continue
-        text = str(raw).upper().replace(".SAFE", "")
+        text = str(raw or "").upper().replace(".SAFE", "")
         for item in known:
             if item in text:
                 return item
-        for token in text.replace("-", "_").split("_"):
-            if token in known:
-                return token
-    return ""
+    return "UNKNOWN"
 
-# ── ASF DAAC ──────────────────────────────────────────────────────────────────
-def fetch_asf(start: datetime, end: datetime) -> list[dict]:
-    log("▶ ASF DAAC SearchAPI …")
+
+def track_label(satellite_id: str, direction: str, path_number: int | None) -> str:
+    sat = str(satellite_id or "").upper()
+    if "NISAR" in sat:
+        return "NISAR"
+    if direction == "ASCENDING" and path_number == 69:
+        return "A69"
+    if direction == "DESCENDING" and path_number == 105:
+        return "D105"
+    return "OTHER_S1"
+
+
+def wkt_to_geojson(wkt: str):
+    text = str(wkt or "")
+    if not text.startswith("POLYGON(("):
+        return wkt
+    try:
+        points = []
+        for pair in text.replace("POLYGON((", "").replace("))", "").split(","):
+            lon, lat = pair.strip().split()
+            points.append([float(lon), float(lat)])
+        return {"type": "Polygon", "coordinates": [points]}
+    except Exception:
+        return wkt
+
+
+def asf_search(dataset: str, start: datetime, end: datetime, processing_levels: str) -> list[dict]:
     params = {
         "intersectsWith": TAIWAN_WKT,
-        "platform":       ASF_PLATFORMS,
-        "processingLevel": ASF_LEVELS,
-        "start":          date_fmt_asf(start),
-        "end":            date_fmt_asf(end),
-        "output":         "geojson",
-        "maxresults":     MAX_RESULTS,
+        "dataset": dataset,
+        "start": fmt_asf(start),
+        "end": fmt_asf(end),
+        "processingLevel": processing_levels,
+        "output": "geojson",
+        "maxresults": MAX_RESULTS,
     }
-    url  = "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(params)
-    data = http_get(url)
-    if not data or "features" not in data:
-        log("  ASF：無資料")
-        return []
+    url = "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(params)
+    payload = http_json(url)
+    return payload.get("features", []) if payload and "features" in payload else []
 
-    features = data["features"]
-    log(f"  ASF：{len(features)} 筆")
 
-    out = []
-    for f in features:
-        p    = f.get("properties", {})
-        geom = f.get("geometry")
-        out.append({
-            "source":          "ASF",
-            "granule":         p.get("sceneName", ""),
-            "platform":        p.get("platform", ""),
-            "sensor":          p.get("sensor", ""),
-            "date":            p.get("startTime", ""),
-            "stop_time":       p.get("stopTime", ""),
-            "mode":            p.get("beamModeType") or p.get("beamMode", ""),
-            "polarization":    p.get("polarization", ""),
-            "orbit":           p.get("orbit", ""),
-            "path_number":     p.get("pathNumber", ""),
-            "frame_number":    p.get("frameNumber", ""),
-            "direction":       p.get("flightDirection", ""),
-            "product_type":    infer_product_type(p.get("processingLevel"), p.get("sceneName", "")),
-            "processing_level": p.get("processingLevel", ""),
-            "look_direction":  p.get("lookDirection", ""),
-            "footprint":       geom,
-            "asf_url":         p.get("url", ""),
-            "browse_url":      (p.get("browse") or [None])[0] if isinstance(p.get("browse"), list) else p.get("browse", ""),
-            "file_size_mb":    round(float(p.get("sizeMB") or 0), 1),
-            "processing_date": p.get("processingDate", ""),
-        })
-    return out
+def asf_search_windowed(dataset: str, start: datetime, end: datetime, processing_levels: str, chunk_days: int) -> list[dict]:
+    features: list[dict] = []
+    for chunk_start, chunk_end in chunk_range(start, end, chunk_days):
+        log(f"ASF {dataset}: {chunk_start.date()} -> {chunk_end.date()}")
+        features.extend(asf_search(dataset, chunk_start, chunk_end, processing_levels))
+    return features
 
-# ── Copernicus CDSE ────────────────────────────────────────────────────────────
-def fetch_copernicus(start: datetime, end: datetime) -> list[dict]:
-    log("▶ Copernicus CDSE OData API …")
-    # CDSE 接受 INTERSECTS Geography
-    wkt = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
-    filt = (
-        f"OData.CSC.Intersects(area=geography'SRID=4326;{wkt}')"
-        f" and Collection/Name eq 'SENTINEL-1'"
-        f" and ContentDate/Start gt {date_fmt_odata(start)}"
-        f" and ContentDate/Start lt {date_fmt_odata(end)}"
+
+def process_asf_feature(feature: dict) -> dict:
+    props = feature.get("properties", {})
+    platform = props.get("platform", "")
+    direction = normalize_direction(props.get("flightDirection", ""))
+    path_number = safe_int(props.get("pathNumber"))
+    return {
+        "source": "ASF",
+        "granule": props.get("sceneName", ""),
+        "platform": platform,
+        "sensor": props.get("sensor", ""),
+        "date": props.get("startTime", ""),
+        "stop_time": props.get("stopTime", ""),
+        "mode": props.get("beamModeType") or props.get("beamMode", ""),
+        "polarization": props.get("polarization", ""),
+        "orbit": props.get("orbit", ""),
+        "path_number": props.get("pathNumber", ""),
+        "frame_number": props.get("frameNumber", ""),
+        "direction": direction,
+        "product_type": infer_product_type(props.get("processingLevel"), props.get("sceneName", "")),
+        "processing_level": props.get("processingLevel", ""),
+        "footprint": feature.get("geometry"),
+        "asf_url": props.get("url", ""),
+        "download_url": "",
+        "copernicus_url": "",
+        "browse_url": (props.get("browse") or [None])[0] if isinstance(props.get("browse"), list) else props.get("browse", ""),
+        "file_size_mb": round(float(props.get("sizeMB") or 0), 1),
+        "satellite_id": platform,
+        "track_label": track_label(platform, direction, path_number),
+    }
+
+
+def fetch_asf_frames(s1_start: datetime, nisar_start: datetime, end: datetime, bootstrap: bool) -> list[dict]:
+    log("Fetching ASF Sentinel-1 inventory")
+    sentinel = asf_search_windowed(
+        "SENTINEL-1",
+        s1_start,
+        end,
+        "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD",
+        30 if bootstrap else 14,
     )
-    params = {
-        "$filter":  filt,
-        "$orderby": "ContentDate/Start desc",
-        "$top":     min(MAX_RESULTS, 1000),
-        "$expand":  "Attributes",
-    }
-    url  = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products?" + urllib.parse.urlencode(params)
-    data = http_get(url, timeout=60)
-    if not data or "value" not in data:
-        log("  Copernicus：無資料")
-        return []
+    log(f"ASF Sentinel-1 features: {len(sentinel)}")
 
-    items = data["value"]
-    log(f"  Copernicus：{len(items)} 筆")
+    log(f"Fetching ASF NISAR inventory since {nisar_start.date()}")
+    nisar = asf_search_windowed(
+        "NISAR",
+        nisar_start,
+        end,
+        "RSLC,GSLC,GCOV,GUNW,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW",
+        30 if bootstrap else 14,
+    )
+    log(f"ASF NISAR features: {len(nisar)}")
 
-    out = []
-    for item in items:
-        name  = item.get("Name", "")
-        parts = name.replace(".SAFE", "").split("_")
+    return [process_asf_feature(feature) for feature in [*sentinel, *nisar]]
 
-        attrs = {a["Name"]: a.get("Value", "") for a in item.get("Attributes", [])}
-        geom  = item.get("GeoFootprint") or item.get("Footprint")
 
-        # 轉換 GeoJSON（CDSE 有時給 WKT）
-        if isinstance(geom, str) and geom.startswith("POLYGON"):
-            geom = wkt_to_geojson(geom)
-
-        pid = item.get("Id", "")
-        out.append({
-            "source":         "Copernicus",
-            "granule":        name.replace(".SAFE", ""),
-            "product_id":     pid,
-            "platform":       parts[0] if parts else "",
-            "mode":           parts[1] if len(parts) > 1 else "",
-            "product_type":   infer_product_type(parts[2] if len(parts) > 2 else "", name),
-            "date":           item.get("ContentDate", {}).get("Start", ""),
-            "stop_time":      item.get("ContentDate", {}).get("End", ""),
-            "polarization":   attrs.get("polarisationChannels", ""),
-            "orbit":          attrs.get("relativeOrbitNumber", ""),
-            "direction":      attrs.get("orbitDirection", ""),
-            "frame_number":   attrs.get("frameNumber", ""),
-            "footprint":      geom,
-            "download_url":   f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({pid})/$value" if pid else "",
-            "s3_path":        item.get("S3Path", ""),
-            "file_size_mb":   round((item.get("ContentLength") or 0) / 1e6, 1),
-        })
-    return out
-
-def wkt_to_geojson(wkt: str) -> dict:
-    """把 POLYGON((lon lat,...)) 轉成 GeoJSON Polygon"""
-    try:
-        inner = wkt.replace("POLYGON((", "").replace("))", "")
-        coords = [[float(v) for v in pair.split()] for pair in inner.split(",")]
-        return {"type": "Polygon", "coordinates": [coords]}
-    except Exception:
-        return {}
-
-# ── 合併去重 ──────────────────────────────────────────────────────────────────
-def deduplicate(frames: list[dict]) -> list[dict]:
-    """以 granule 名稱去重（ASF 與 Copernicus 的 Sentinel-1 名稱相同）"""
-    seen, out = set(), []
-    for f in frames:
-        key = f.get("granule") or f.get("product_id") or ""
-        if key in seen:
+def fetch_copernicus_frames(start: datetime, end: datetime, bootstrap: bool) -> list[dict]:
+    log("Fetching Copernicus Sentinel-1 inventory")
+    frames: list[dict] = []
+    for chunk_start, chunk_end in chunk_range(start, end, 30 if bootstrap else 14):
+        query = (
+            f"OData.CSC.Intersects(area=geography'SRID=4326;{TAIWAN_WKT}')"
+            f" and Collection/Name eq 'SENTINEL-1'"
+            f" and ContentDate/Start gt {fmt_odata(chunk_start)}"
+            f" and ContentDate/Start lt {fmt_odata(chunk_end)}"
+        )
+        params = {
+            "$filter": query,
+            "$orderby": "ContentDate/Start desc",
+            "$top": min(MAX_RESULTS, 1000),
+            "$expand": "Attributes",
+        }
+        url = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products?" + urllib.parse.urlencode(params)
+        payload = http_json(url, timeout=90)
+        if not payload or "value" not in payload:
             continue
-        seen.add(key)
-        out.append(f)
-    return out
 
-# ── 生成 ASF .meta4 ────────────────────────────────────────────────────────────
-def write_asf_meta4(frames: list[dict], path: Path):
-    """
-    標準 Metalink 4 (RFC 5854) 格式，可直接用 aria2c 搭配 Earthdata cookie 下載。
-    """
-    asf_frames = [f for f in frames if f.get("source") == "ASF" and f.get("granule")]
+        for item in payload["value"]:
+            attrs = {attr["Name"]: attr.get("Value", "") for attr in item.get("Attributes", [])}
+            platform = str(item.get("Name", "")).split("_")[0]
+            direction = normalize_direction(attrs.get("orbitDirection", ""))
+            path_number = safe_int(attrs.get("relativeOrbitNumber"))
+            product_id = item.get("Id", "")
+            frames.append(
+                {
+                    "source": "Copernicus",
+                    "granule": str(item.get("Name", "")).replace(".SAFE", ""),
+                    "platform": platform,
+                    "sensor": "C-SAR",
+                    "date": item.get("ContentDate", {}).get("Start", ""),
+                    "stop_time": item.get("ContentDate", {}).get("End", ""),
+                    "mode": str(item.get("Name", "")).split("_")[1] if "_" in str(item.get("Name", "")) else "",
+                    "polarization": attrs.get("polarisationChannels", ""),
+                    "orbit": attrs.get("relativeOrbitNumber", ""),
+                    "path_number": attrs.get("relativeOrbitNumber", ""),
+                    "frame_number": attrs.get("frameNumber", ""),
+                    "direction": direction,
+                    "product_type": infer_product_type(item.get("Name", "")),
+                    "processing_level": infer_product_type(item.get("Name", "")),
+                    "footprint": wkt_to_geojson(item.get("GeoFootprint") or item.get("Footprint")),
+                    "asf_url": "",
+                    "download_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
+                    "copernicus_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
+                    "browse_url": "",
+                    "file_size_mb": round((item.get("ContentLength") or 0) / 1_000_000, 1),
+                    "satellite_id": platform,
+                    "track_label": track_label(platform, direction, path_number),
+                }
+            )
+    log(f"Copernicus Sentinel-1 products: {len(frames)}")
+    return frames
+
+
+def scene_key(frame: dict) -> str:
+    granule = str(frame.get("granule", "")).replace(".SAFE", "").strip().upper()
+    if granule:
+        return granule
+    return "|".join(
+        [
+            frame.get("platform", ""),
+            frame.get("date", ""),
+            frame.get("direction", ""),
+            str(frame.get("path_number", "")),
+            str(frame.get("frame_number", "")),
+            frame.get("product_type", ""),
+        ]
+    )
+
+
+def merge_frames(frames: list[dict]) -> list[dict]:
+    def source_rank(item: dict) -> int:
+        return 0 if item.get("source") == "ASF" else 1
+
+    merged: dict[str, dict] = {}
+    for frame in sorted(frames, key=source_rank):
+        key = scene_key(frame)
+        current = merged.get(key)
+        if not current:
+            merged[key] = dict(frame)
+            continue
+
+        if current.get("source") != "ASF" and frame.get("source") == "ASF":
+            preferred = dict(frame)
+            preferred["download_url"] = preferred.get("download_url") or current.get("download_url")
+            preferred["copernicus_url"] = preferred.get("copernicus_url") or current.get("copernicus_url")
+            preferred["browse_url"] = preferred.get("browse_url") or current.get("browse_url")
+            preferred["file_size_mb"] = preferred.get("file_size_mb") or current.get("file_size_mb")
+            merged[key] = preferred
+            current = merged[key]
+
+        current["asf_url"] = current.get("asf_url") or frame.get("asf_url")
+        current["download_url"] = current.get("download_url") or frame.get("download_url")
+        current["copernicus_url"] = current.get("copernicus_url") or frame.get("copernicus_url")
+        current["browse_url"] = current.get("browse_url") or frame.get("browse_url")
+        current["file_size_mb"] = current.get("file_size_mb") or frame.get("file_size_mb")
+        current["frame_number"] = current.get("frame_number") or frame.get("frame_number")
+        current["path_number"] = current.get("path_number") or frame.get("path_number")
+        current["direction"] = current.get("direction") or frame.get("direction")
+    return sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)
+
+
+def write_meta4(frames: list[dict], target: Path, source: str) -> None:
+    selected = [frame for frame in frames if (frame.get("asf_url") if source == "ASF" else frame.get("download_url"))]
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<metalink xmlns="urn:ietf:params:xml:ns:metalink">',
-        f'  <!-- 生成時間: {datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")} -->',
-        f'  <!-- 共 {len(asf_frames)} 個場景 -->',
+        f'  <!-- generated {datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")} -->',
+        f'  <!-- {len(selected)} scenes -->',
     ]
-    for f in asf_frames[:200]:
-        g   = f["granule"]
-        url = f.get("asf_url", "")
-        sz  = int(f.get("file_size_mb", 0) * 1_000_000)
-        lines.append(f'  <file name="{g}">')
-        if sz:
-            lines.append(f'    <size>{sz}</size>')
-        if url:
-            lines.append(f'    <url priority="1">{url}</url>')
-        lines.append(f'  </file>')
-    lines.append('</metalink>')
-    path.write_text("\n".join(lines), encoding="utf-8")
-    log(f"  ASF meta4 → {path.name}（{len(asf_frames)} 個場景）")
+    for frame in selected:
+        url = frame.get("asf_url") if source == "ASF" else frame.get("download_url")
+        name = f'{frame.get("granule", "scene")}{".SAFE.zip" if source == "Copernicus" else ""}'
+        size = int(float(frame.get("file_size_mb") or 0) * 1_000_000)
+        lines.append(f'  <file name="{name}">')
+        if size:
+            lines.append(f"    <size>{size}</size>")
+        lines.append(f"    <url priority=\"1\">{url}</url>")
+        lines.append("  </file>")
+    lines.append("</metalink>")
+    target.write_text("\n".join(lines), encoding="utf-8")
 
-# ── 生成 Copernicus .meta4 ────────────────────────────────────────────────────
-def write_copernicus_meta4(frames: list[dict], path: Path):
-    """
-    Copernicus CDSE 下載 Metalink，搭配 Bearer Token 使用。
-    """
-    cop_frames = [f for f in frames if f.get("source") == "Copernicus" and f.get("download_url")]
-    lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<metalink xmlns="urn:ietf:params:xml:ns:metalink">',
-        f'  <!-- 生成時間: {datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")} -->',
-        f'  <!-- 共 {len(cop_frames)} 個場景 -->',
-        '  <!-- 下載前請先取得 Bearer Token：',
-        '       TOKEN=$(curl -s -X POST https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token \\',
-        '         -d "client_id=cdse-public&username=EMAIL&password=PASS&grant_type=password" \\',
-        '         | python3 -c "import sys,json;print(json.load(sys.stdin)[\'access_token\'])") -->',
-        '  <!-- aria2c --header="Authorization: Bearer $TOKEN" copernicus_taiwan.meta4 -->',
-    ]
-    for f in cop_frames[:200]:
-        g   = f["granule"]
-        url = f["download_url"]
-        sz  = int(f.get("file_size_mb", 0) * 1_000_000)
-        lines.append(f'  <file name="{g}.SAFE.zip">')
-        if sz:
-            lines.append(f'    <size>{sz}</size>')
-        lines.append(f'    <url priority="1">{url}</url>')
-        lines.append(f'  </file>')
-    lines.append('</metalink>')
-    path.write_text("\n".join(lines), encoding="utf-8")
-    log(f"  Copernicus meta4 → {path.name}（{len(cop_frames)} 個場景）")
 
-# ── 主程式 ────────────────────────────────────────────────────────────────────
 def main() -> int:
-    now      = datetime.now(timezone.utc)
-    start    = now - timedelta(days=DAYS_BACK)
-
-    log("=" * 56)
-    log(f"SAR Monitor  資料更新  v2.0")
-    log(f"查詢時段：{date_fmt_asf(start)}  →  {date_fmt_asf(now)}")
-    log(f"查詢區域：台灣涵蓋框  119–123°E  21–26.5°N")
-    log("=" * 56)
-
+    now = datetime.now(timezone.utc)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    catalog = load_catalog()
+    bootstrap = FORCE_FULL_REBUILD or not catalog.get("bootstrap_completed")
 
-    # 1. 查詢兩個來源
-    asf_frames = []
-    try:
-        asf_frames = fetch_asf(start, now)
-    except Exception as e:
-        log(f"ASF 查詢例外：{e}")
+    if bootstrap:
+        s1_start = S1_EARLIEST
+        nisar_start = NISAR_LAUNCH
+        cop_start = S1_EARLIEST
+        existing_frames: list[dict] = []
+        log("Starting full metadata bootstrap")
+    else:
+        last_success = catalog.get("last_successful_fetch")
+        try:
+            watermark = datetime.fromisoformat(last_success)
+        except Exception:
+            watermark = now - timedelta(days=DAYS_BACK)
+        incremental_start = watermark - timedelta(days=INCREMENTAL_OVERLAP_DAYS)
+        s1_start = incremental_start
+        nisar_start = max(incremental_start, NISAR_LAUNCH)
+        cop_start = incremental_start
+        existing_frames = catalog.get("frames", [])
+        log(f"Starting incremental update from {incremental_start.isoformat()}")
 
-    time.sleep(1)  # 避免過快連續請求
+    asf_frames = fetch_asf_frames(s1_start, nisar_start, now, bootstrap)
+    cop_frames = fetch_copernicus_frames(cop_start, now, bootstrap)
+    all_frames = merge_frames([*existing_frames, *asf_frames, *cop_frames])
 
-    cop_frames = []
-    try:
-        cop_frames = fetch_copernicus(start, now)
-    except Exception as e:
-        log(f"Copernicus 查詢例外：{e}")
+    track_summary: dict[str, int] = {}
+    satellite_summary: dict[str, int] = {}
+    for frame in all_frames:
+        track_summary[frame["track_label"]] = track_summary.get(frame["track_label"], 0) + 1
+        satellite_summary[frame["platform"]] = satellite_summary.get(frame["platform"], 0) + 1
 
-    # 2. 合併去重
-    all_frames = deduplicate(asf_frames + cop_frames)
-    log(f"\n合計（去重後）：{len(all_frames)} 幀")
-
-    # 3. 衛星統計
-    sat_summary: dict[str, int] = {}
-    for f in all_frames:
-        k = f.get("platform", "unknown")
-        sat_summary[k] = sat_summary.get(k, 0) + 1
-
-    # 4. 輸出 meta4
-    write_asf_meta4(all_frames, ASF_META4)
-    write_copernicus_meta4(all_frames, COP_META4)
-
-    # 5. 輸出 JSON（footprint 保留，前端地圖用）
-    payload = {
-        "updated_at":         now.strftime("%Y-%m-%d %H:%M UTC"),
-        "query_start":        start.isoformat(),
-        "query_end":          now.isoformat(),
-        "days_back":          DAYS_BACK,
-        "total_frames":       len(all_frames),
-        "asf_count":          len([f for f in all_frames if f.get("source") == "ASF"]),
-        "copernicus_count":   len([f for f in all_frames if f.get("source") == "Copernicus"]),
-        "satellite_summary":  sat_summary,
-        "taiwan_frames":      all_frames,
+    catalog_payload = {
+        "version": __version__,
+        "updated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
+        "last_successful_fetch": now.isoformat(),
+        "bootstrap_completed": True,
+        "bootstrap_started_at": catalog.get("bootstrap_started_at") or (s1_start.isoformat() if bootstrap else catalog.get("bootstrap_started_at")),
+        "incremental_overlap_days": INCREMENTAL_OVERLAP_DAYS,
+        "frames": all_frames,
     }
-    JSON_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    log(f"  sar_status.json → {JSON_FILE.name}")
+    save_catalog(catalog_payload)
 
-    log("\n✓ 完成！")
-    log(f"  · JSON  {len(all_frames)} 幀")
-    log(f"  · ASF meta4  {len([f for f in all_frames if f.get('source')=='ASF'])} 筆")
-    log(f"  · Copernicus meta4  {len([f for f in all_frames if f.get('source')=='Copernicus'])} 筆")
+    payload = {
+        "version": __version__,
+        "updated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
+        "query_start": s1_start.isoformat(),
+        "query_end": now.isoformat(),
+        "days_back": DAYS_BACK if not bootstrap else None,
+        "bootstrap_completed": True,
+        "last_successful_fetch": now.isoformat(),
+        "total_frames": len(all_frames),
+        "asf_count": len([frame for frame in all_frames if frame.get("asf_url")]),
+        "copernicus_count": len([frame for frame in all_frames if frame.get("download_url")]),
+        "focus_tracks": ["A69", "D105", "NISAR", "OTHER_S1"],
+        "track_summary": track_summary,
+        "satellite_summary": satellite_summary,
+        "taiwan_frames": all_frames,
+    }
+
+    JSON_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_meta4(all_frames, ASF_META4, "ASF")
+    write_meta4(all_frames, COP_META4, "Copernicus")
+    log(f"Wrote {JSON_FILE.name} with {len(all_frames)} scenes")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

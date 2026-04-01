@@ -1,188 +1,337 @@
-# 🛰 SAR Monitor · 台灣 SAR 衛星動態監測儀表板
+# SAR Tracker
 
-每週自動更新全球 SAR 衛星艦隊動態，互動式地圖顯示過去一週對台灣的取像範圍，
-並提供 ASF 與 Copernicus 兩種格式的 `.meta4` 批次下載清單。
+## English
 
----
+### Overview
 
-## 功能一覽
+SAR Tracker is a GitHub Pages site for monitoring SAR acquisitions over Taiwan. It combines:
 
-| 功能 | 說明 |
-|------|------|
-| 🛰 衛星艦隊總覽 | 25+ 顆現役/退役 SAR 衛星完整資訊（Sentinel-1A/C/D、ALOS-2/4、NISAR、TSX/TDX、COSMO-SkyMed、RCM 1/2/3、RADARSAT-2、SAOCOM、ICEYE、Capella、Umbra 等） |
-| 🗺 互動取像地圖 | 過去 7 天台灣區域所有 SAR 取像 footprint（polygon），點擊查看場景詳情 |
-| ⬇ ASF .meta4 | 靜態 Metalink 檔案，搭配 aria2c + Earthdata 帳號批次下載 |
-| ⬇ Copernicus .meta4 | 靜態 Metalink 檔案，搭配 aria2c + Bearer Token 批次下載 |
-| 📋 CSV 匯出 | 一鍵下載取像 metadata 清單（在瀏覽器端生成）|
-| 🔄 自動更新 | GitHub Actions 每週一 10:00 台灣時間自動執行，無需人工介入 |
-| 🎛 篩選器 | 依頻段（C/L/X/S）、衛星狀態、本週是否取像篩選 |
+- A static frontend in `index.html`
+- A Python data-generation script in `fetch_sar_data.py`
+- A GitHub Actions workflow in `.github/workflows/update.yml`
+- Generated data products under `data/`
 
----
+The site is intended to answer three practical questions:
 
-## 快速部署（5 分鐘）
+1. Which SAR missions recently covered Taiwan
+2. Which frames match the current filter set
+3. How to export filtered download lists as CSV or Metalink
 
-### 1. 建立 Repository 並上傳檔案
+### Current Project Status
 
-```bash
-git clone https://github.com/你的帳號/sar-tracker.git  # 或直接建新 repo
-cd sar-tracker
-# 把本專案所有檔案複製進去
-git add .
-git commit -m "init: SAR Monitor"
-git push -u origin main
-```
+The project is functional, but it is also in a transitional state:
 
-### 2. 啟用 GitHub Pages（透過 Actions 自動部署）
+- The website is already deployable on GitHub Pages
+- The data pipeline is able to write `sar_status.json`, `asf_taiwan.meta4`, and `copernicus_taiwan.meta4`
+- The frontend has accumulated duplicated logic and multiple generations of UI code inside the same `index.html`
+- The previous README had severe encoding and maintainability problems
 
-進入 repo → **Settings** → **Pages** → Source 選 **GitHub Actions**
+This README reflects the current implementation as it exists now, not an idealized target architecture.
 
-### 3. 手動觸發第一次資料更新
+### Repository Structure
 
-進入 **Actions** → 「每週更新 SAR 取像資料」→ 點 **Run workflow**
-
-約 2~3 分鐘後，`data/sar_status.json`、`data/asf_taiwan.meta4`、`data/copernicus_taiwan.meta4` 
-將自動 commit 並重新部署到 Pages。
-
-### 之後完全自動
-
-每週一 UTC 02:00（台灣時間 10:00）自動執行，無需任何人工操作。
-
----
-
-## 檔案結構
-
-```
+```text
 sar-tracker/
-├── index.html                      ← 單頁儀表板（無後端、無框架）
-├── fetch_sar_data.py               ← GitHub Actions 執行的 Python 腳本
-├── data/
-│   ├── sar_status.json             ← 每週自動更新的取像資料（JSON）
-│   ├── asf_taiwan.meta4            ← ASF Metalink 4 下載清單
-│   └── copernicus_taiwan.meta4     ← Copernicus Metalink 4 下載清單
-├── .github/
-│   └── workflows/
-│       └── update.yml              ← 排程 + Pages 部署 workflow
-└── README.md
+├─ .github/
+│  └─ workflows/
+│     └─ update.yml
+├─ data/
+│  ├─ sar_status.json
+│  ├─ asf_taiwan.meta4
+│  ├─ copernicus_taiwan.meta4
+│  └─ tw*.metalink
+├─ fetch_sar_data.py
+├─ index.html
+└─ README.md
 ```
 
----
+### How It Works
 
-## 使用 .meta4 批次下載影像
+#### Frontend
 
-### ASF DAAC（Sentinel-1、ALOS-2、NISAR 等）
+`index.html` is a self-contained static application using Leaflet. It renders:
 
-下載影像需要免費的 [NASA Earthdata 帳號](https://urs.earthdata.nasa.gov/)。
+- Taiwan SAR frame footprints
+- Satellite and mission filters
+- CSV and Metalink export buttons
+- Theme and font-size controls
+- A focused satellite list that prioritizes Sentinel-1 and NISAR
 
-```bash
-# 安裝 aria2c
-sudo apt install aria2     # Ubuntu/Debian
-brew install aria2         # macOS
+#### Data Pipeline
 
-# 方法 A：互動式輸入帳號密碼
-aria2c --http-auth-challenge=true \
-       --http-user=你的Earthdata帳號 \
-       --http-passwd='你的密碼' \
-       data/asf_taiwan.meta4
+`fetch_sar_data.py` currently does the following:
 
-# 方法 B：透過 .netrc 檔案（推薦，可免重複輸入）
-echo "machine urs.earthdata.nasa.gov login 帳號 password 密碼" >> ~/.netrc
-chmod 600 ~/.netrc
-aria2c --netrc-path=~/.netrc data/asf_taiwan.meta4
-```
+1. Reads local `data/tw*.metalink` files if present
+2. Extracts granule names from those Metalink files
+3. Queries ASF metadata for those granules
+4. Normalizes and deduplicates frames
+5. Writes:
+   - `data/sar_status.json`
+   - `data/asf_taiwan.meta4`
+   - `data/copernicus_taiwan.meta4`
 
-### Copernicus CDSE（Sentinel-1）
+The script uses only Python standard-library modules in the current implementation.
 
-下載影像需要免費的 [Copernicus Data Space 帳號](https://dataspace.copernicus.eu/)。
+#### Deployment
 
-```bash
-# 步驟 1：取得 Bearer Token（有效期約 10 分鐘）
-TOKEN=$(curl -s -X POST \
-  "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=cdse-public&username=你的帳號&password=你的密碼&grant_type=password" \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+`.github/workflows/update.yml` has two jobs:
 
-# 步驟 2：批次下載
-aria2c --header="Authorization: Bearer $TOKEN" \
-       --max-connection-per-server=4 \
-       data/copernicus_taiwan.meta4
-```
+1. `update-data`
+   - runs `fetch_sar_data.py`
+   - commits updated files under `data/`
+2. `deploy-pages`
+   - uploads the repository as the Pages artifact
+   - deploys the static site to GitHub Pages
 
-> **提示**：Copernicus Token 10 分鐘過期，下載大量檔案時需要每隔 9 分鐘刷新。
-> 可用 `--on-download-complete` 搭配自動刷新腳本。
+### Requirements
 
----
+#### For GitHub Actions
 
-## 資料來源說明
+- GitHub Pages enabled with source set to `GitHub Actions`
+- Write access for workflow commits
 
-### ASF DAAC（Alaska Satellite Facility）
-- 查詢端點：`https://api.daac.asf.alaska.edu/services/search/param`
-- 支援平台：Sentinel-1A/C/D、ALOS-2、ALOS-4、RADARSAT-2、RCM 1/2/3、NISAR
-- **查詢 metadata 免費無需帳號**；下載需 Earthdata
+#### For Local Script Execution
 
-### Copernicus Data Space Ecosystem (CDSE)
-- 查詢端點：`https://catalogue.dataspace.copernicus.eu/odata/v1/Products`
-- 支援平台：Sentinel-1A/C/D（未來也包含 Sentinel-2/3/6）
-- **查詢 metadata 免費無需帳號**；下載需 Copernicus 帳號
+- Python 3.11 recommended
+- Network access to ASF and Copernicus services when metadata refresh is needed
 
----
+### Local Usage
 
-## 本機測試
+Run the data script:
 
 ```bash
-# 僅需 Python 3.8+ 標準函式庫，無需安裝任何套件
 python fetch_sar_data.py
+```
 
-# 查詢過去 14 天
+Override the default search window:
+
+```bash
 DAYS_BACK=14 python fetch_sar_data.py
 ```
 
+### GitHub Pages Update Flow
+
+If you edit `index.html` or another static file on GitHub:
+
+1. Commit the change to `main`
+2. Wait for the Pages deployment workflow to run
+3. Hard-refresh the site in the browser if the old version is cached
+
+If you edit the site locally:
+
+1. Commit and push to `main`
+2. Confirm `.github/workflows/update.yml` finishes successfully
+3. Verify the Pages URL after deployment
+
+### Known Problems
+
+The current codebase would benefit from cleanup in the following areas:
+
+1. `index.html` contains duplicated functions and repeated logic blocks
+2. UI text language is mixed between English and Chinese
+3. Data-source assumptions are not obvious unless you read the Python script
+4. Frontend state management is concentrated in one large file
+5. Workflow and data-generation behavior are under-documented without reading source
+
+### Recommended Cleanup Plan
+
+#### Phase 1: Stabilize
+
+1. Remove duplicated function definitions in `index.html`
+2. Keep only one active implementation for data loading, rendering, and filtering
+3. Standardize visible UI text in either bilingual mode or one chosen default language
+4. Keep README aligned with actual code paths
+
+#### Phase 2: Separate Concerns
+
+1. Split frontend code into HTML, CSS, and JS files
+2. Move satellite metadata into a dedicated JSON or JS module
+3. Extract shared helpers for filtering, styling, and downloads
+4. Define one canonical frame schema used by both script and frontend
+
+#### Phase 3: Improve Data Pipeline
+
+1. Clarify whether `tw*.metalink` files are required inputs or optional accelerators
+2. Document the exact ASF and Copernicus query strategy
+3. Add validation for generated JSON and Metalink outputs
+4. Add a small sample dataset for offline frontend testing
+
+#### Phase 4: Improve Maintainability
+
+1. Add a local preview workflow for the static site
+2. Add lightweight regression checks for the generated data format
+3. Add release notes or deployment notes for content-only changes
+4. Consider a small frontend framework only if the page continues to grow
+
+### License
+
+MIT
+
 ---
 
-## 自訂設定
+## 中文
 
-### 修改查詢範圍
-編輯 `fetch_sar_data.py`：
-```python
-TAIWAN_WKT = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
+### 專案簡介
+
+SAR Tracker 是一個部署在 GitHub Pages 上的台灣 SAR 取像監看網站，由以下幾部分組成：
+
+- `index.html`：靜態前端頁面
+- `fetch_sar_data.py`：資料整理與輸出腳本
+- `.github/workflows/update.yml`：GitHub Actions 更新與部署流程
+- `data/`：輸出的 JSON 與 Metalink 檔案
+
+這個網站主要解決三件事：
+
+1. 近期有哪些 SAR 任務覆蓋台灣
+2. 哪些 frame 符合目前篩選條件
+3. 如何把篩選後的結果匯出成 CSV 或 Metalink
+
+### 目前狀態
+
+目前專案可以運作，但也處在持續整理中的狀態：
+
+- GitHub Pages 已可正常部署
+- 資料流程可產生 `sar_status.json`、`asf_taiwan.meta4`、`copernicus_taiwan.meta4`
+- `index.html` 內部累積了多版本邏輯與重複函式
+- 舊版 README 存在編碼與可維護性問題
+
+本 README 以目前實際程式狀態為準，而不是以理想架構為前提。
+
+### 專案結構
+
+```text
+sar-tracker/
+├─ .github/
+│  └─ workflows/
+│     └─ update.yml
+├─ data/
+│  ├─ sar_status.json
+│  ├─ asf_taiwan.meta4
+│  ├─ copernicus_taiwan.meta4
+│  └─ tw*.metalink
+├─ fetch_sar_data.py
+├─ index.html
+└─ README.md
 ```
 
-### 修改更新頻率
-編輯 `.github/workflows/update.yml`：
-```yaml
-schedule:
-  - cron: '0 2 * * 1'   # 每週一
-  # - cron: '0 2 * * *'  # 每天
+### 運作方式
+
+#### 前端
+
+`index.html` 是一個以 Leaflet 為核心的單頁靜態應用，負責顯示：
+
+- 台灣 SAR frame footprint
+- 衛星與任務篩選
+- CSV 與 Metalink 匯出
+- 主題與字級切換
+- 以 Sentinel-1 和 NISAR 為優先的衛星清單
+
+#### 資料流程
+
+`fetch_sar_data.py` 目前的流程如下：
+
+1. 讀取本地 `data/tw*.metalink`
+2. 從 Metalink 擷取 granule 名稱
+3. 向 ASF 查詢這些 granule 的 metadata
+4. 做欄位正規化與去重
+5. 輸出：
+   - `data/sar_status.json`
+   - `data/asf_taiwan.meta4`
+   - `data/copernicus_taiwan.meta4`
+
+目前腳本只依賴 Python 標準函式庫。
+
+#### 部署流程
+
+`.github/workflows/update.yml` 目前分成兩個 job：
+
+1. `update-data`
+   - 執行 `fetch_sar_data.py`
+   - 將 `data/` 內更新後的檔案 commit 回 repo
+2. `deploy-pages`
+   - 上傳 repo 內容作為 Pages artifact
+   - 部署到 GitHub Pages
+
+### 執行需求
+
+#### GitHub Actions
+
+- GitHub Pages 來源設為 `GitHub Actions`
+- Workflow 需具備可寫入 repo 的權限
+
+#### 本地執行腳本
+
+- 建議 Python 3.11
+- 若需要更新 metadata，必須可連到 ASF 與 Copernicus 相關服務
+
+### 本地使用方式
+
+執行資料腳本：
+
+```bash
+python fetch_sar_data.py
 ```
 
-### 加入更多衛星平台
-在 `fetch_sar_data.py` 的 `ASF_PLATFORMS` 加入代碼，
-在 `index.html` 的 `SATS` 陣列加入衛星資訊。
+指定不同的搜尋天數：
 
----
-
-## 技術架構
-
-```
-GitHub Actions (Python)          GitHub Pages (靜態 HTML)
-┌─────────────────────┐          ┌──────────────────────┐
-│ fetch_sar_data.py   │  commit  │ index.html           │
-│  ├─ ASF API query   │ ──────→  │  ├─ Leaflet.js 地圖  │
-│  ├─ Copernicus API  │          │  ├─ 衛星資料庫       │
-│  ├─ 生成 JSON       │          │  └─ 下載按鈕         │
-│  ├─ 生成 ASF meta4  │          │                      │
-│  └─ 生成 COP meta4  │          │ data/*.json / *.meta4│
-└─────────────────────┘          └──────────────────────┘
-     每週一自動執行                    瀏覽器直接讀取
+```bash
+DAYS_BACK=14 python fetch_sar_data.py
 ```
 
-- **零後端**：所有運算在 GitHub Actions（資料）與瀏覽器（展示）完成
-- **零成本**：GitHub Actions 免費額度遠超每週一次的需求
-- **零 API 金鑰**：metadata 查詢均為公開 API
-- **CORS fallback**：本地 JSON 失效時，瀏覽器直接向 ASF 即時查詢
+### GitHub Pages 更新方式
 
----
+如果你是在 GitHub Web 上修改 `index.html` 或其他靜態檔：
 
-## License
+1. 直接 commit 到 `main`
+2. 等待 Pages workflow 完成
+3. 若瀏覽器仍看到舊版，請做強制重新整理
 
-MIT © 2025
+如果你是在本地修改：
+
+1. commit 並 push 到 `main`
+2. 確認 `.github/workflows/update.yml` 執行成功
+3. 再檢查 Pages 網址是否已更新
+
+### 目前已知問題
+
+這個專案目前最需要整理的地方有：
+
+1. `index.html` 內有重複函式與重疊邏輯
+2. 前端顯示文字混用中英文
+3. 不看 Python 腳本很難理解資料來源假設
+4. 前端狀態管理過度集中在單一檔案
+5. workflow 與資料生成策略的文件仍不足
+
+### 建議改善規劃
+
+#### 第一階段：先穩定
+
+1. 刪除 `index.html` 內重複的函式定義
+2. 保留單一版本的資料載入、渲染與篩選流程
+3. 決定 UI 文字要採雙語還是固定語言
+4. 確保 README 與實際程式流程一致
+
+#### 第二階段：拆分責任
+
+1. 將前端拆成 HTML、CSS、JS
+2. 將衛星資料表抽到獨立 JSON 或 JS 模組
+3. 抽出篩選、樣式、下載等共用 helper
+4. 定義前後端共用的 frame 欄位格式
+
+#### 第三階段：整理資料流程
+
+1. 說清楚 `tw*.metalink` 是必要輸入還是選擇性加速來源
+2. 文件化 ASF 與 Copernicus 的查詢策略
+3. 為輸出的 JSON 與 Metalink 加上驗證
+4. 提供一份小型樣本資料，方便離線測試前端
+
+#### 第四階段：提升維護性
+
+1. 增加本地預覽流程
+2. 為資料格式加上輕量檢查
+3. 為純內容更新建立部署說明
+4. 若頁面繼續擴張，再評估是否導入小型前端框架
+
+### 授權
+
+MIT
