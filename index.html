@@ -1144,7 +1144,15 @@ function closeDrawer() {
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
 const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC', 'L1_RSLC', 'L1_GSLC'];
-const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'RAW', 'SSC'];
+const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
+  ALL: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'RSLC', 'GSLC', 'L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GCOV', 'GUNW'],
+  NISAR: ['RSLC', 'GSLC', 'L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GCOV', 'GUNW'],
+  S1A: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
+  S1B: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
+  S1C: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
+  S1D: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
+};
+const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'RAW', 'SSC', 'OCN'];
 
 function ensureAdvancedState() {
   state.rawFrames ||= [];
@@ -1295,7 +1303,7 @@ function normalizeProductType(frame) {
       if (text.includes(item)) return item;
     }
   }
-  return 'UNKNOWN';
+  return 'OCN';
 }
 
 function satMatchesFrame(sat, frame) {
@@ -1454,6 +1462,7 @@ function bindAdvancedControls() {
   document.getElementById('filter-satellite')?.addEventListener('change', event => {
     state.filters.satellite = event.target.value;
     state.selectedSat = SATS.find(s => s.id === state.filters.satellite) || null;
+    renderFormatOptions();
     applyAdvancedFilters();
   });
 
@@ -1515,21 +1524,36 @@ function renderSatelliteSelect() {
   select.value = state.filters.satellite;
 }
 
+function getFormatPoolFrames() {
+  ensureAdvancedState();
+  if (state.filters.satellite === 'ALL') return state.rawFrames;
+  return state.rawFrames.filter(frame => frame.satellite_id === state.filters.satellite);
+}
+
+function getDefaultFormatsForSatellite(types) {
+  const satKey = state.filters.satellite === 'ALL' ? 'ALL' : state.filters.satellite;
+  const preferred = DEFAULT_PRODUCT_TYPES_BY_SATELLITE[satKey] || DEFAULT_PRODUCT_TYPES;
+  const defaults = types.filter(type => preferred.includes(type));
+  return defaults.length ? defaults : types;
+}
+
 function renderFormatOptions() {
   ensureAdvancedState();
   const wrap = document.getElementById('format-options');
   if (!wrap) return;
 
-  const types = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))].sort();
+  const types = [...new Set(getFormatPoolFrames().map(frame => frame.product_type_norm).filter(Boolean))].sort();
   if (!types.length) {
     wrap.innerHTML = '<span class="filter-note">No product types in current inventory.</span>';
     state.filters.formats = new Set();
     return;
   }
 
-  if (!state.filters.formats.size) {
-    const defaults = types.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
-    state.filters.formats = new Set(defaults.length ? defaults : types);
+  const stillValid = [...state.filters.formats].filter(type => types.includes(type));
+  if (!stillValid.length) {
+    state.filters.formats = new Set(getDefaultFormatsForSatellite(types));
+  } else if (stillValid.length !== state.filters.formats.size) {
+    state.filters.formats = new Set(stillValid);
   }
 
   wrap.innerHTML = '';
@@ -1551,7 +1575,6 @@ function renderFormatOptions() {
 function resetAdvancedFilters(apply = true) {
   ensureAdvancedState();
   const allTypes = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))];
-  const defaults = allTypes.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
   state.filters.satellite = 'ALL';
   state.filters.direction = 'ALL';
   state.filters.showOtherSentinelTracks = false;
@@ -1561,7 +1584,7 @@ function resetAdvancedFilters(apply = true) {
   state.filters.frameMax = '';
   state.filters.dateStart = '';
   state.filters.dateEnd = '';
-  state.filters.formats = new Set(defaults.length ? defaults : allTypes);
+  state.filters.formats = new Set(getDefaultFormatsForSatellite(allTypes));
   state.selectedSat = null;
 
   const satSel = document.getElementById('filter-satellite');
@@ -1625,6 +1648,7 @@ function getFrameBoundsPreview() {
 
 function applyAdvancedFilters() {
   ensureAdvancedState();
+  renderFormatOptions();
   state.filteredFrames = state.rawFrames.filter(frameMatchesAdvancedFilters);
   if (state.selectedFrameKey && !state.filteredFrames.some(frame => getFrameKey(frame) === state.selectedFrameKey)) {
     state.selectedFrameKey = null;
@@ -1777,7 +1801,8 @@ function updateFilterHints() {
   frameMin.placeholder = String(min);
   frameMax.placeholder = String(max);
   const extra = state.filters.showOtherSentinelTracks ? 'with other Sentinel-1 Taiwan tracks visible' : 'priority tracks only';
-  note.textContent = `Formats: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max} | ${extra}`;
+  const satLabel = state.filters.satellite === 'ALL' ? 'Sentinel-1 + NISAR' : state.filters.satellite;
+  note.textContent = `Formats for ${satLabel}: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max} | ${extra}`;
 }
 
 function openDrawer(sat, row, thisWeek) {
@@ -2266,6 +2291,79 @@ function openFrameDrawer(clickedFrame) {
   state.selectedSat = null;
 
   const seriesKey = getFrameSeriesKey(clickedFrame);
+  const historyFrames = state.filteredFrames
+    .filter(frame => getFrameSeriesKey(frame) === seriesKey)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  const mergedHistory = new Map();
+  for (const frame of historyFrames) {
+    const key = getHistoryEntryKey(frame);
+    const current = mergedHistory.get(key);
+    if (!current) {
+      mergedHistory.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+  }
+
+  const entries = [...mergedHistory.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const primary = entries[0] || clickedFrame;
+
+  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${primary.frame_number_norm ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} in current filter</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'Filtered Files & Downloads';
+
+  const cards = entries.map(frame => {
+    const asfUrl = frame.asf_url || '';
+    const cdseUrl = frame.copernicus_url || frame.download_url || '';
+    const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+    const actions = [
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+    ].filter(Boolean).join('');
+
+    return `
+      <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
+          ${frame.granule || 'Unknown Granule'}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current filters.</span>';
+  document.getElementById('drawer').classList.add('open');
+}
+
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const seriesKey = getFrameSeriesKey(clickedFrame);
   const historyFrames = state.rawFrames
     .filter(frame => getFrameSeriesKey(frame) === seriesKey)
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -2331,6 +2429,79 @@ function openFrameDrawer(clickedFrame) {
   }).join('');
 
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No link available</span>';
+  document.getElementById('drawer').classList.add('open');
+}
+
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const seriesKey = getFrameSeriesKey(clickedFrame);
+  const historyFrames = state.filteredFrames
+    .filter(frame => getFrameSeriesKey(frame) === seriesKey)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  const mergedHistory = new Map();
+  for (const frame of historyFrames) {
+    const key = getHistoryEntryKey(frame);
+    const current = mergedHistory.get(key);
+    if (!current) {
+      mergedHistory.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+  }
+
+  const entries = [...mergedHistory.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const primary = entries[0] || clickedFrame;
+
+  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${primary.frame_number_norm ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} in current filter</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'Filtered Files & Downloads';
+
+  const cards = entries.map(frame => {
+    const asfUrl = frame.asf_url || '';
+    const cdseUrl = frame.copernicus_url || frame.download_url || '';
+    const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+    const actions = [
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+    ].filter(Boolean).join('');
+
+    return `
+      <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
+          ${frame.granule || 'Unknown Granule'}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current filters.</span>';
   document.getElementById('drawer').classList.add('open');
 }
 
