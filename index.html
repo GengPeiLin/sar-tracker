@@ -1253,7 +1253,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.2';
+const APP_VERSION = 'v0.6.3';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -2859,6 +2859,45 @@ function normalizeGranuleKey(granule) {
     .toUpperCase();
 }
 
+function parseGranuleAcquisitionWindow(granule) {
+  const matches = String(granule || '').match(/\d{8}T\d{6}/g) || [];
+  const parseUtc = value => {
+    if (!value) return null;
+    const iso = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T${value.slice(9, 11)}:${value.slice(11, 13)}:${value.slice(13, 15)}Z`;
+    const timestamp = Date.parse(iso);
+    return Number.isFinite(timestamp) ? timestamp : null;
+  };
+
+  return {
+    startMs: parseUtc(matches[0]),
+    stopMs: parseUtc(matches[1]),
+  };
+}
+
+function getFrameAcquisitionInfo(frame) {
+  const granuleWindow = parseGranuleAcquisitionWindow(frame?.granule);
+  const startMs = granuleWindow.startMs ?? getFrameTimestamp(frame);
+  const stopMs = granuleWindow.stopMs ?? startMs;
+  const key = startMs !== null
+    ? new Date(startMs).toISOString().slice(0, 19)
+    : `${getFrameSeriesKey(frame)}|${normalizeGranuleKey(frame?.granule) || 'unknown'}`;
+
+  const label = startMs !== null
+    ? new Date(startMs).toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: 'UTC',
+      }) + ' UTC'
+    : 'Unknown acquisition time';
+
+  return { key, startMs, stopMs, label };
+}
+
 function getQueryEndDate() {
   const raw = state.baseStats?.query_end || state.baseStats?.last_successful_fetch;
   const date = raw ? new Date(raw) : new Date();
@@ -3367,6 +3406,139 @@ function openFrameDrawer(clickedFrame) {
   }).join('');
 
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
+  document.getElementById('drawer').classList.add('open');
+  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
+}
+
+// Final override: group drawer content by the clicked acquisition date, not by the whole track history.
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const clickedPath = getFramePathNumber(clickedFrame);
+  const clickedAcquisition = getFrameAcquisitionInfo(clickedFrame);
+  const trackFrames = state.filteredFrames
+    .filter(frame => {
+      if ((frame.satellite_id || '') !== (clickedFrame.satellite_id || '')) return false;
+      if ((frame.direction_norm || '') !== (clickedFrame.direction_norm || '')) return false;
+      if (getFramePathNumber(frame) !== clickedPath) return false;
+      return true;
+    })
+    .sort((a, b) => (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0));
+
+  const selectedFrames = trackFrames.filter(frame => getFrameAcquisitionInfo(frame).key === clickedAcquisition.key);
+  const framesForDrawer = selectedFrames.length ? selectedFrames : [clickedFrame];
+
+  const mergedEntries = new Map();
+  for (const frame of framesForDrawer) {
+    const key = [
+      frame.product_type_norm || '',
+      frame.mode || '',
+      normalizeGranuleKey(frame.granule) || '',
+    ].join('|');
+    const current = mergedEntries.get(key);
+    if (!current) {
+      mergedEntries.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+    current.frame_number_norm ??= frame.frame_number_norm;
+    current.granule ||= frame.granule;
+  }
+
+  const entries = [...mergedEntries.values()].sort((a, b) => {
+    const aScore = (a.asf_url ? 4 : 0) + (a.frame_number_norm !== null ? 2 : 0) + (a.copernicus_url || a.download_url ? 1 : 0);
+    const bScore = (b.asf_url ? 4 : 0) + (b.frame_number_norm !== null ? 2 : 0) + (b.copernicus_url || b.download_url ? 1 : 0);
+    if (bScore !== aScore) return bScore - aScore;
+    return (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0);
+  });
+
+  const primary = entries[0] || clickedFrame;
+  const acquisition = getFrameAcquisitionInfo(primary);
+  const getSourceState = frame => {
+    const hasAsf = !!frame.asf_url;
+    const hasCdse = !!(frame.copernicus_url || frame.download_url);
+    if (hasAsf && hasCdse) return 'ASF + Copernicus';
+    if (hasCdse) return 'Copernicus only';
+    if (hasAsf) return 'ASF only';
+    return 'No download source';
+  };
+  const getFrameStatus = frame => {
+    if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
+      return String(frame.frame_number_norm);
+    }
+    return frame.asf_url
+      ? 'Frame metadata unavailable in source record'
+      : 'No matched ASF frame metadata in local dataset';
+  };
+
+  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Acquisition</div><div class="v"><small>${acquisition.label}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${getFrameStatus(primary)}</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} file on selected date</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Source</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = `Files for ${acquisition.label}`;
+
+  const groups = new Map();
+  for (const frame of entries) {
+    const info = getFrameAcquisitionInfo(frame);
+    const list = groups.get(info.key) || [];
+    list.push(frame);
+    groups.set(info.key, list);
+  }
+
+  const cards = [...groups.entries()].map(([groupKey, groupFrames]) => {
+    const heading = getFrameAcquisitionInfo(groupFrames[0]).label;
+    const body = groupFrames.map(frame => {
+      const asfUrl = frame.asf_url || '';
+      const cdseUrl = frame.copernicus_url || frame.download_url || '';
+      const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+      const actions = [
+        asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+        cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+      ].filter(Boolean).join('');
+
+      return `
+        <div style="margin-bottom:12px;padding:10px;background:rgba(0,0,0,0.12);border:1px solid var(--border);border-radius:6px;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
+            ${frame.granule || 'Unknown Granule'}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+            ${getSourceState(frame)} · path ${getFramePathNumber(frame) ?? '--'} · frame ${getFrameStatus(frame)}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan);margin-bottom:8px;">${heading}</div>
+        ${body}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the selected acquisition date.</span>';
   document.getElementById('drawer').classList.add('open');
   focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
