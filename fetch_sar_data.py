@@ -25,7 +25,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "7"))
@@ -145,6 +145,18 @@ def infer_product_type(*values: str) -> str:
     return "UNKNOWN"
 
 
+def asf_metadata_url(granule: str) -> str:
+    name = str(granule or "").replace(".SAFE", "").strip()
+    if not name:
+        return ""
+    return "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(
+        {
+            "granule_list": name,
+            "output": "geojson",
+        }
+    )
+
+
 def track_label(satellite_id: str, direction: str, path_number: int | None) -> str:
     sat = str(satellite_id or "").upper()
     if "NISAR" in sat:
@@ -215,6 +227,7 @@ def process_asf_feature(feature: dict) -> dict:
         "processing_level": props.get("processingLevel", ""),
         "footprint": feature.get("geometry"),
         "asf_url": props.get("url", ""),
+        "asf_meta_url": props.get("url", "") or asf_metadata_url(props.get("sceneName", "")),
         "download_url": "",
         "copernicus_url": "",
         "browse_url": (props.get("browse") or [None])[0] if isinstance(props.get("browse"), list) else props.get("browse", ""),
@@ -293,6 +306,7 @@ def fetch_copernicus_frames(start: datetime, end: datetime, bootstrap: bool) -> 
                     "processing_level": infer_product_type(item.get("Name", "")),
                     "footprint": wkt_to_geojson(item.get("GeoFootprint") or item.get("Footprint")),
                     "asf_url": "",
+                    "asf_meta_url": asf_metadata_url(item.get("Name", "")),
                     "download_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
                     "copernicus_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
                     "browse_url": "",
@@ -321,6 +335,57 @@ def scene_key(frame: dict) -> str:
     )
 
 
+def slot_template_key(frame: dict) -> str:
+    return "|".join(
+        [
+            str(frame.get("satellite_id") or frame.get("platform") or ""),
+            str(frame.get("direction") or ""),
+            str(frame.get("path_number") or ""),
+            str(frame.get("product_type") or ""),
+            str(frame.get("mode") or ""),
+        ]
+    )
+
+
+def pass_instance_key(frame: dict) -> str:
+    date = str(frame.get("date") or "")[:10]
+    return f"{slot_template_key(frame)}|{date}"
+
+
+def backfill_from_asf_metadata(frames: list[dict]) -> list[dict]:
+    grouped: dict[str, list[dict]] = {}
+    templates: dict[str, dict[int, int]] = {}
+
+    for frame in frames:
+        grouped.setdefault(pass_instance_key(frame), []).append(frame)
+
+    for items in grouped.values():
+        ordered = sorted(items, key=lambda item: item.get("date", ""))
+        template_key = slot_template_key(ordered[0]) if ordered else ""
+        if not template_key:
+            continue
+        slot_votes = templates.setdefault(template_key, {})
+        for index, item in enumerate(ordered):
+            if item.get("source") != "ASF":
+                continue
+            frame_number = safe_int(item.get("frame_number"))
+            if frame_number is None:
+                continue
+            slot_votes.setdefault(index, frame_number)
+
+    for items in grouped.values():
+        ordered = sorted(items, key=lambda item: item.get("date", ""))
+        template_key = slot_template_key(ordered[0]) if ordered else ""
+        slot_map = templates.get(template_key, {})
+        for index, item in enumerate(ordered):
+            if not item.get("frame_number") and index in slot_map:
+                item["frame_number"] = slot_map[index]
+            if not item.get("asf_meta_url"):
+                item["asf_meta_url"] = asf_metadata_url(item.get("granule", ""))
+
+    return frames
+
+
 def merge_frames(frames: list[dict]) -> list[dict]:
     def source_rank(item: dict) -> int:
         return 0 if item.get("source") == "ASF" else 1
@@ -343,6 +408,7 @@ def merge_frames(frames: list[dict]) -> list[dict]:
             current = merged[key]
 
         current["asf_url"] = current.get("asf_url") or frame.get("asf_url")
+        current["asf_meta_url"] = current.get("asf_meta_url") or frame.get("asf_meta_url")
         current["download_url"] = current.get("download_url") or frame.get("download_url")
         current["copernicus_url"] = current.get("copernicus_url") or frame.get("copernicus_url")
         current["browse_url"] = current.get("browse_url") or frame.get("browse_url")
@@ -350,7 +416,9 @@ def merge_frames(frames: list[dict]) -> list[dict]:
         current["frame_number"] = current.get("frame_number") or frame.get("frame_number")
         current["path_number"] = current.get("path_number") or frame.get("path_number")
         current["direction"] = current.get("direction") or frame.get("direction")
-    return sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)
+        current["asf_meta_url"] = current.get("asf_url") or current.get("asf_meta_url") or asf_metadata_url(current.get("granule", ""))
+    merged_frames = sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)
+    return sorted(backfill_from_asf_metadata(merged_frames), key=lambda item: item.get("date", ""), reverse=True)
 
 
 def write_meta4(frames: list[dict], target: Path, source: str) -> None:

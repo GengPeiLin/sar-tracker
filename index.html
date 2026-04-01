@@ -161,7 +161,7 @@ header {
 
 .hdr-tabs {
   margin-left: auto;
-  display: flex;
+  display: none;
   gap: 6px;
 }
 
@@ -184,7 +184,7 @@ header {
 
 /* ═══ SIDEBAR ══════════════════════════════════════════════════════════════ */
 .sidebar {
-  width: var(--sidebar);
+  width: 360px;
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -303,6 +303,14 @@ header {
   gap: 8px;
   flex-wrap: wrap;
 }
+.date-shortcuts {
+  display: flex;
+  gap: 8px;
+}
+.date-shortcuts .dl-btn {
+  flex: 1;
+  text-align: center;
+}
 .filter-note {
   font-size: calc(10px + var(--font-bump) - 1px);
   color: var(--muted);
@@ -321,9 +329,10 @@ header {
 
 /* satellite list */
 .sb-list {
-  flex: 1;
+  flex: 0 1 auto;
   overflow-y: auto;
   padding: 4px 0 8px;
+  max-height: 34vh;
 }
 .sb-list::-webkit-scrollbar { width: 3px; }
 .sb-list::-webkit-scrollbar-thumb { background: var(--border2); }
@@ -481,13 +490,15 @@ header {
 /* legend */
 .map-legend {
   position: absolute;
-  bottom: 70px; right: 12px;
+  left: 12px;
+  bottom: 70px;
   z-index: 400;
   background: rgba(11,19,32,.9);
   border: 1px solid var(--border2);
   padding: 10px 14px;
   backdrop-filter: blur(6px);
   min-width: 150px;
+  max-width: 260px;
 }
 .legend-title {
   font-family: var(--mono);
@@ -512,6 +523,40 @@ header {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
   color: var(--text);
+}
+
+.map-sat-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 410;
+  width: 280px;
+  max-height: min(38vh, 360px);
+  background: rgba(11,19,32,.92);
+  border: 1px solid var(--border2);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.map-sat-head {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.map-sat-head .group-label {
+  padding: 0;
+}
+.map-sat-head .sub {
+  font-size: calc(10px + var(--font-bump) - 1px);
+  color: var(--muted);
+  margin-top: 3px;
+}
+.map-sat-panel .sb-list {
+  padding-top: 0;
+  max-height: none;
+}
+.map-sat-panel .group-label {
+  padding-top: 12px;
 }
 
 /* ═══ DOWNLOAD BAR ══════════════════════════════════════════════════════════ */
@@ -772,6 +817,10 @@ header {
           <div class="format-options" id="format-options"></div>
         </div>
       </div>
+      <div class="date-shortcuts">
+        <button class="dl-btn csv" type="button" onclick="applyQuickDateRange('week')">This Week</button>
+        <button class="dl-btn csv" type="button" onclick="applyQuickDateRange('month')">This Month</button>
+      </div>
       <div class="filter-actions">
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()">Reset Filters</button>
         <label class="filter-toggle" for="filter-show-other-tracks">
@@ -781,7 +830,6 @@ header {
         <span class="filter-note" id="filter-note">SLC / GSLC / RSLC are selected by default.</span>
       </div>
     </div>
-    <div class="sb-list" id="sat-list"></div>
   </aside>
 
   <!-- MAP -->
@@ -802,15 +850,20 @@ header {
       </div>
     </div>
 
+    <div class="map-sat-panel">
+      <div class="map-sat-head">
+        <div class="group-label">Visible Satellites</div>
+        <div class="sub">Focused missions stay visible without pushing the filters below the fold.</div>
+      </div>
+      <div class="sb-list" id="sat-list"></div>
+    </div>
+
     <div id="map"></div>
 
     <!-- legend -->
     <div class="map-legend">
-      <div class="legend-title">衛星 / 顏色</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#00e5ff"></div><span>Sentinel-1</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ce93d8"></div><span>ALOS-2 / ALOS-4</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ffc107"></div><span>RADARSAT</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ff7043"></div><span>其他</span></div>
+      <div class="legend-title">Visible Tracks</div>
+      <div id="legend-items"></div>
     </div>
 
     <!-- download bar -->
@@ -1343,6 +1396,67 @@ function enhanceFrame(frame) {
   };
 }
 
+function buildAsfMetadataUrl(granule) {
+  const name = String(granule || '').replace(/\.SAFE$/i, '').trim();
+  if (!name) return '';
+  return `https://api.daac.asf.alaska.edu/services/search/param?granule_list=${encodeURIComponent(name)}&output=geojson`;
+}
+
+function getSlotTemplateKey(frame) {
+  return [
+    frame.satellite_id || frame.platform || '',
+    frame.direction_norm || normalizeDirection(frame.direction),
+    getFramePathNumber(frame) ?? '',
+    frame.product_type_norm || normalizeProductType(frame),
+    frame.mode || '',
+  ].join('|');
+}
+
+function getPassInstanceKey(frame) {
+  return [
+    getSlotTemplateKey(frame),
+    String(frame.date || '').slice(0, 10),
+  ].join('|');
+}
+
+function backfillMissingSentinelMetadata(frames) {
+  const groups = new Map();
+  const slotTemplates = new Map();
+
+  for (const frame of frames) {
+    const passKey = getPassInstanceKey(frame);
+    if (!groups.has(passKey)) groups.set(passKey, []);
+    groups.get(passKey).push(frame);
+    if (!frame.asf_meta_url) frame.asf_meta_url = buildAsfMetadataUrl(frame.granule);
+  }
+
+  for (const items of groups.values()) {
+    const ordered = [...items].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+    const templateKey = getSlotTemplateKey(ordered[0]);
+    if (!slotTemplates.has(templateKey)) slotTemplates.set(templateKey, new Map());
+    const slotMap = slotTemplates.get(templateKey);
+    ordered.forEach((frame, index) => {
+      if (frame.source !== 'ASF' || frame.frame_number_norm == null) return;
+      if (!slotMap.has(index)) slotMap.set(index, frame.frame_number_norm);
+    });
+  }
+
+  for (const items of groups.values()) {
+    const ordered = [...items].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+    const slotMap = slotTemplates.get(getSlotTemplateKey(ordered[0])) || new Map();
+    ordered.forEach((frame, index) => {
+      if (frame.frame_number_norm == null && slotMap.has(index)) {
+        frame.frame_number = slotMap.get(index);
+        frame.frame_number_norm = slotMap.get(index);
+      }
+    });
+  }
+}
+
+function getPreferredAsfLink(frame) {
+  return frame.asf_url || frame.asf_meta_url || buildAsfMetadataUrl(frame.granule);
+}
+
 async function loadData() {
   ensureAdvancedState();
   ldmsg('Loading cached frame inventory...');
@@ -1355,6 +1469,7 @@ async function loadData() {
     document.getElementById('hdr-time').textContent = `${data.updated_at || '--'}${data.version ? ` · data ${data.version}` : ''}`;
     state.baseStats = data;
     state.rawFrames = data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data);
+    backfillMissingSentinelMetadata(state.rawFrames);
     applyTabDateWindow();
     bindAdvancedControls();
     renderSatelliteSelect();
@@ -1428,6 +1543,7 @@ async function liveFetchASF() {
         file_size_mb: +(p.sizeMB || 0).toFixed(1),
       });
     }).filter(frame => frame.is_open_data);
+    backfillMissingSentinelMetadata(state.rawFrames);
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
@@ -1660,6 +1776,7 @@ function applyAdvancedFilters() {
   renderSatelliteSelect();
   renderSatList();
   renderFrames();
+  renderDynamicLegend();
   updateStats();
   updateFilterHints();
   updateDownloadButtons();
@@ -2312,6 +2429,29 @@ function getDefaultWeekWindow() {
   };
 }
 
+function getDefaultMonthWindow() {
+  const end = getQueryEndDate();
+  const start = new Date(end.getFullYear(), end.getMonth(), 1);
+  return {
+    start: formatDateInputValue(start),
+    end: formatDateInputValue(end),
+  };
+}
+
+function applyQuickDateRange(range) {
+  const dateStart = document.getElementById('filter-date-start');
+  const dateEnd = document.getElementById('filter-date-end');
+  if (!dateStart || !dateEnd) return;
+
+  const window = range === 'month' ? getDefaultMonthWindow() : getDefaultWeekWindow();
+  state.filters.dateStart = window.start;
+  state.filters.dateEnd = window.end;
+  dateStart.value = window.start;
+  dateEnd.value = window.end;
+  state.tab = range === 'week' ? 'tw' : 'all';
+  applyAdvancedFilters();
+}
+
 function applyTabDateWindow() {
   const dateStart = document.getElementById('filter-date-start');
   const dateEnd = document.getElementById('filter-date-end');
@@ -2349,6 +2489,54 @@ function updateNextExpected() {
   el.textContent = `${latestFor('ASCENDING', 69)} | ${latestFor('DESCENDING', 105)}`;
 }
 
+function getLegendEntries() {
+  const entries = [];
+  const seen = new Set();
+
+  for (const frame of state.filteredFrames || []) {
+    let label = frame.track_label || frame.satellite_name || frame.platform || 'Other';
+    let color = platColor(frame.platform || frame.satellite_name);
+
+    if (frame.track_label === 'A69') {
+      label = 'Sentinel-1 A69';
+      color = '#00e5ff';
+    } else if (frame.track_label === 'D105') {
+      label = 'Sentinel-1 D105';
+      color = '#ff7043';
+    } else if (frame.track_label === 'NISAR') {
+      label = 'NISAR';
+      color = '#00e676';
+    } else if (String(frame.platform || '').toUpperCase().includes('S1')) {
+      label = `Sentinel-1 Other${getFramePathNumber(frame) ? ` P${getFramePathNumber(frame)}` : ''}`;
+    }
+
+    const key = `${label}|${color}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push({ label, color });
+  }
+
+  return entries.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function renderDynamicLegend() {
+  const wrap = document.getElementById('legend-items');
+  if (!wrap) return;
+
+  const entries = getLegendEntries();
+  if (!entries.length) {
+    wrap.innerHTML = '<div class="legend-item"><span>No visible tracks</span></div>';
+    return;
+  }
+
+  wrap.innerHTML = entries.map(entry => `
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:${entry.color}"></div>
+      <span>${entry.label}</span>
+    </div>
+  `).join('');
+}
+
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;
@@ -2368,6 +2556,7 @@ function openFrameDrawer(clickedFrame) {
       continue;
     }
     current.asf_url ||= frame.asf_url;
+    current.asf_meta_url ||= frame.asf_meta_url;
     current.copernicus_url ||= frame.copernicus_url;
     current.download_url ||= frame.download_url;
     current.file_size_mb ||= frame.file_size_mb;
@@ -2393,11 +2582,11 @@ function openFrameDrawer(clickedFrame) {
   if (section) section.textContent = 'Filtered Files & Downloads';
 
   const cards = entries.map(frame => {
-    const asfUrl = frame.asf_url || '';
+    const asfUrl = getPreferredAsfLink(frame);
     const cdseUrl = frame.copernicus_url || frame.download_url || '';
     const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
     const actions = [
-      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">${frame.asf_url ? 'Copy ASF' : 'Copy ASF Metadata'}</button>` : '',
       cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
     ].filter(Boolean).join('');
 
@@ -2442,6 +2631,7 @@ function openFrameDrawer(clickedFrame) {
       continue;
     }
     current.asf_url ||= frame.asf_url;
+    current.asf_meta_url ||= frame.asf_meta_url;
     current.copernicus_url ||= frame.copernicus_url;
     current.download_url ||= frame.download_url;
     current.file_size_mb ||= frame.file_size_mb;
@@ -2539,11 +2729,11 @@ function openFrameDrawer(clickedFrame) {
   if (section) section.textContent = 'Filtered Files & Downloads';
 
   const cards = entries.map(frame => {
-    const asfUrl = frame.asf_url || '';
+    const asfUrl = getPreferredAsfLink(frame);
     const cdseUrl = frame.copernicus_url || frame.download_url || '';
     const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
     const actions = [
-      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">${frame.asf_url ? 'Copy ASF' : 'Copy ASF Metadata'}</button>` : '',
       cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
     ].filter(Boolean).join('');
 
@@ -2680,6 +2870,83 @@ function openFrameDrawer(clickedFrame) {
     const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
     const actions = [
       asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+    ].filter(Boolean).join('');
+
+    return `
+      <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
+          ${frame.granule || 'Unknown Granule'}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? 'Unavailable'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
+  document.getElementById('drawer').classList.add('open');
+}
+
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const clickedGranuleKey = normalizeGranuleKey(clickedFrame.granule);
+  const relatedFrames = state.filteredFrames
+    .filter(frame => normalizeGranuleKey(frame.granule) === clickedGranuleKey)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  const mergedEntries = new Map();
+  for (const frame of (relatedFrames.length ? relatedFrames : [clickedFrame])) {
+    const key = normalizeGranuleKey(frame.granule) || getHistoryEntryKey(frame);
+    const current = mergedEntries.get(key);
+    if (!current) {
+      mergedEntries.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.asf_meta_url ||= frame.asf_meta_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+    current.frame_number_norm ??= frame.frame_number_norm;
+    current.frame_number ??= frame.frame_number;
+  }
+
+  const entries = [...mergedEntries.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const primary = entries[0] || clickedFrame;
+  const frameLabel = primary.frame_number_norm ?? 'Unavailable in source metadata';
+
+  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${frameLabel}</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} matching file</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'File Links';
+
+  const cards = entries.map(frame => {
+    const asfUrl = getPreferredAsfLink(frame);
+    const cdseUrl = frame.copernicus_url || frame.download_url || '';
+    const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+    const actions = [
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">${frame.asf_url ? 'Copy ASF' : 'Copy ASF Metadata'}</button>` : '',
       cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
     ].filter(Boolean).join('');
 
