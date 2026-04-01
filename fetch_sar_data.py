@@ -49,8 +49,13 @@ COP_META4   = OUTPUT_DIR / "copernicus_taiwan.meta4"
 def log(msg: str):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
-def http_get(url: str, timeout: int = 40) -> dict | None:
-    req = urllib.request.Request(url, headers={"User-Agent": "SAR-Monitor-GHActions/2.0"})
+def http_request(url: str, post_data: dict = None, timeout: int = 40) -> dict | None:
+    headers = {"User-Agent": "SAR-Monitor-GHActions/2.0"}
+    if post_data:
+        req_data = urllib.parse.urlencode(post_data).encode("utf-8")
+        req = urllib.request.Request(url, data=req_data, headers=headers)
+    else:
+        req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read().decode("utf-8"))
@@ -133,7 +138,7 @@ def fetch_asf_from_metalinks() -> list[dict]:
 
     # ASF API 每次最多接受 1000 個 granule，分批查詢
     all_features = []
-    chunk_size = 250  # 保守一點用 250
+    chunk_size = 500  # 改用 POST 後可以加大批次
     for i in range(0, len(unique_granules), chunk_size):
         chunk = unique_granules[i:i + chunk_size]
         log(f"  查詢批次 {i//chunk_size + 1} ({len(chunk)} granules)...")
@@ -141,8 +146,8 @@ def fetch_asf_from_metalinks() -> list[dict]:
             "granule_list": ",".join(chunk),
             "output": "geojson",
         }
-        url = "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(params)
-        data = http_get(url)
+        url = "https://api.daac.asf.alaska.edu/services/search/param"
+        data = http_request(url, post_data=params)
         if data and "features" in data:
             all_features.extend(data["features"])
         time.sleep(1)  # 禮貌性延遲
@@ -162,7 +167,7 @@ def fetch_asf(start: datetime, end: datetime) -> list[dict]:
         "maxresults":     MAX_RESULTS,
     }
     url  = "https://api.daac.asf.alaska.edu/services/search/param?" + urllib.parse.urlencode(params)
-    data = http_get(url)
+    data = http_request(url)
     if not data or "features" not in data:
         log("  ASF：無資料")
         return []
@@ -233,7 +238,7 @@ def fetch_copernicus(start: datetime, end: datetime) -> list[dict]:
         "$expand":  "Attributes",
     }
     url  = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products?" + urllib.parse.urlencode(params)
-    data = http_get(url, timeout=60)
+    data = http_request(url, timeout=60)
     if not data or "value" not in data:
         log("  Copernicus：無資料")
         return []
