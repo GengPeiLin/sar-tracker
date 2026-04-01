@@ -723,13 +723,29 @@ header {
           <span class="filter-label">Satellite</span>
           <select class="filter-select" id="filter-satellite"></select>
         </label>
-        <label class="filter-field">
-          <span class="filter-label">Orbit</span>
+        <label class="filter-field wide">
+          <span class="filter-label">Orbit Direction</span>
           <select class="filter-select" id="filter-direction">
             <option value="ALL">All</option>
             <option value="ASCENDING">Ascending</option>
             <option value="DESCENDING">Descending</option>
           </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Date Start</span>
+          <input class="filter-input" id="filter-date-start" type="date">
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Date End</span>
+          <input class="filter-input" id="filter-date-end" type="date">
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Track Min</span>
+          <input class="filter-input" id="filter-path-min" type="number" inputmode="numeric" placeholder="Any">
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Track Max</span>
+          <input class="filter-input" id="filter-path-max" type="number" inputmode="numeric" placeholder="Any">
         </label>
         <label class="filter-field">
           <span class="filter-label">Frame Min</span>
@@ -784,9 +800,10 @@ header {
     <!-- download bar -->
     <div class="dl-bar">
       <span class="dl-label">下載清單</span>
-      <a class="dl-btn asf" id="btn-asf"  href="data/asf_taiwan.meta4"         download>ASF .meta4</a>
-      <a class="dl-btn cop" id="btn-cop"  href="data/copernicus_taiwan.meta4"   download>Copernicus .meta4</a>
-      <button class="dl-btn csv"          onclick="exportCSV()">CSV 匯出</button>
+      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 複製所有下載連結</button>
+      <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
+      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
+      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV 匯出</button>
       <span class="dl-count" id="dl-info">— 幀</span>
     </div>
 
@@ -1098,8 +1115,12 @@ function ensureAdvancedState() {
   state.filters ||= {
     satellite: 'ALL',
     direction: 'ALL',
+    pathMin: '',
+    pathMax: '',
     frameMin: '',
     frameMax: '',
+    dateStart: '',
+    dateEnd: '',
     formats: new Set(),
   };
   if (!(state.filters.formats instanceof Set)) {
@@ -1194,8 +1215,9 @@ function setupReadableUI() {
   if (dlBar) {
     dlBar.innerHTML = `
       <span class="dl-label">Filtered Downloads</span>
+      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 Copy All Links</button>
       <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
-      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">Copernicus .meta4</button>
+      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
       <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV Export</button>
       <span class="dl-count" id="dl-info">0 frames</span>
     `;
@@ -1366,10 +1388,19 @@ function bindAdvancedControls() {
     applyAdvancedFilters();
   });
 
-  for (const id of ['filter-frame-min', 'filter-frame-max']) {
+  for (const id of ['filter-frame-min', 'filter-frame-max', 'filter-path-min', 'filter-path-max', 'filter-date-start', 'filter-date-end']) {
     document.getElementById(id)?.addEventListener('input', event => {
-      state.filters[id === 'filter-frame-min' ? 'frameMin' : 'frameMax'] = event.target.value.trim();
-      applyAdvancedFilters();
+      let key = '';
+      if (id === 'filter-frame-min') key = 'frameMin';
+      if (id === 'filter-frame-max') key = 'frameMax';
+      if (id === 'filter-path-min') key = 'pathMin';
+      if (id === 'filter-path-max') key = 'pathMax';
+      if (id === 'filter-date-start') key = 'dateStart';
+      if (id === 'filter-date-end') key = 'dateEnd';
+      if (key) {
+        state.filters[key] = event.target.value.trim();
+        applyAdvancedFilters();
+      }
     });
   }
 
@@ -1444,19 +1475,31 @@ function resetAdvancedFilters(apply = true) {
   const defaults = allTypes.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
   state.filters.satellite = 'ALL';
   state.filters.direction = 'ALL';
+  state.filters.pathMin = '';
+  state.filters.pathMax = '';
   state.filters.frameMin = '';
   state.filters.frameMax = '';
+  state.filters.dateStart = '';
+  state.filters.dateEnd = '';
   state.filters.formats = new Set(defaults.length ? defaults : allTypes);
   state.selectedSat = null;
 
   const satSel = document.getElementById('filter-satellite');
   const dirSel = document.getElementById('filter-direction');
+  const pathMin = document.getElementById('filter-path-min');
+  const pathMax = document.getElementById('filter-path-max');
   const frameMin = document.getElementById('filter-frame-min');
   const frameMax = document.getElementById('filter-frame-max');
+  const dateStart = document.getElementById('filter-date-start');
+  const dateEnd = document.getElementById('filter-date-end');
   if (satSel) satSel.value = 'ALL';
   if (dirSel) dirSel.value = 'ALL';
+  if (pathMin) pathMin.value = '';
+  if (pathMax) pathMax.value = '';
   if (frameMin) frameMin.value = '';
   if (frameMax) frameMax.value = '';
+  if (dateStart) dateStart.value = '';
+  if (dateEnd) dateEnd.value = '';
   renderFormatOptions();
   if (apply) applyAdvancedFilters();
 }
@@ -1468,10 +1511,20 @@ function frameMatchesAdvancedFilters(frame) {
   if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
   if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) return false;
 
+  const pathMinVal = normalizeFrameNumber(state.filters.pathMin);
+  const pathMaxVal = normalizeFrameNumber(state.filters.pathMax);
+  const pathVal = normalizeFrameNumber(frame.path_number) ?? normalizeFrameNumber(frame.orbit);
+  if (pathMinVal !== null && (pathVal === null || pathVal < pathMinVal)) return false;
+  if (pathMaxVal !== null && (pathVal === null || pathVal > pathMaxVal)) return false;
+
   const min = normalizeFrameNumber(state.filters.frameMin);
   const max = normalizeFrameNumber(state.filters.frameMax);
   if (min !== null && (frame.frame_number_norm === null || frame.frame_number_norm < min)) return false;
   if (max !== null && (frame.frame_number_norm === null || frame.frame_number_norm > max)) return false;
+
+  if (state.filters.dateStart && frame.date && frame.date.slice(0, 10) < state.filters.dateStart) return false;
+  if (state.filters.dateEnd && frame.date && frame.date.slice(0, 10) > state.filters.dateEnd) return false;
+
   return true;
 }
 
@@ -1735,6 +1788,7 @@ function updateDownloadButtons() {
   ensureAdvancedState();
   const asfMeta4 = createMeta4(state.filteredFrames, 'ASF');
   const copMeta4 = createMeta4(state.filteredFrames, 'Copernicus');
+  const copyBtn = document.getElementById('btn-copy-urls');
   const asfBtn = document.getElementById('btn-asf');
   const copBtn = document.getElementById('btn-cop');
   if (!asfBtn || !copBtn) return;
@@ -1744,6 +1798,36 @@ function updateDownloadButtons() {
   copBtn.style.pointerEvents = copMeta4.count ? 'auto' : 'none';
   asfBtn.style.opacity = asfMeta4.count ? '1' : '.35';
   copBtn.style.opacity = copMeta4.count ? '1' : '.35';
+  if (copyBtn) {
+    const totalUrls = state.filteredFrames.filter(f => f.asf_url || f.copernicus_url || f.download_url).length;
+    copyBtn.style.pointerEvents = totalUrls ? 'auto' : 'none';
+    copyBtn.style.opacity = totalUrls ? '1' : '.35';
+  }
+}
+
+window.copyFilteredUrls = function() {
+  ensureAdvancedState();
+  const urls = state.filteredFrames.map(f => f.asf_url || f.copernicus_url || (f.source === 'Copernicus' ? f.download_url : null)).filter(Boolean);
+  if (!urls.length) {
+    alert('No URLs available for the current filters.');
+    return;
+  }
+  navigator.clipboard.writeText(urls.join('\n')).then(() => {
+    const btn = document.getElementById('btn-copy-urls');
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = `📋 Copied ${urls.length} Links!`;
+      btn.style.background = 'var(--green)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--green)';
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    }
+  });
 }
 
 function downloadMeta4(source) {
@@ -1852,6 +1936,20 @@ function updateMapSelectionState() {
   }
 }
 
+window.copyDrawerLink = function(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '📋 Copied!';
+    btn.style.background = 'var(--green)';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 1500);
+  });
+};
+
 // 顯示 Frame 詳細資訊到右側抽屜
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
@@ -1907,16 +2005,16 @@ function openFrameDrawer(clickedFrame) {
     linksHtml += `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
 
     if (f.asf_url) {
-      linksHtml += `<a href="${f.asf_url}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ ASF DAAC</a>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.asf_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy ASF</button>`;
     }
 
     const copUrl = f.copernicus_url || (f.source === 'Copernicus' ? f.download_url : null);
     if (copUrl) {
-      linksHtml += `<a href="${copUrl}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ Copernicus CDSE</a>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${copUrl}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy CDSE</button>`;
     }
 
     if (!f.asf_url && !copUrl && f.download_url) {
-      linksHtml += `<a href="${f.download_url}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ Direct Source</a>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.download_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy URL</button>`;
     }
 
     linksHtml += `</div></div>`;
