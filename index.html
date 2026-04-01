@@ -84,6 +84,23 @@
   --muted:   #7b9383;
 }
 
+:root[data-theme="soft-slate"] {
+  --bg:      #e9ece8;
+  --surface: #f4f6f2;
+  --card:    #edf0ea;
+  --border:  #cfd5cd;
+  --border2: #bcc5bc;
+  --cyan:    #46656a;
+  --cyan-dim:#7b9191;
+  --orange:  #8b6b58;
+  --green:   #5b7a62;
+  --amber:   #8c7a4f;
+  --purple:  #7f7a94;
+  --text:    #4d554f;
+  --text-hi: #232a25;
+  --muted:   #7d877d;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--sans); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
@@ -836,6 +853,10 @@ header {
   filter: hue-rotate(18deg) saturate(.75) brightness(.95);
 }
 
+:root[data-theme="soft-slate"] .leaflet-tile-pane {
+  filter: saturate(.3) brightness(1.08) contrast(.88);
+}
+
 .fp { font-family: var(--mono); }
 .fp h4 { font-size: calc(10px + var(--font-bump) - 1px); color: var(--cyan); margin-bottom: 7px; line-height: 1.4; }
 .fp p  { font-size: calc(9px + var(--font-bump) - 1px); color: var(--muted); margin: 2px 0; }
@@ -946,6 +967,7 @@ header {
     <div class="control-field">
       <label for="theme-select">Theme</label>
       <select id="theme-select">
+        <option value="soft-slate">Soft Slate</option>
         <option value="night-ops">Night Ops</option>
         <option value="paper-radar">Paper Radar</option>
         <option value="field-survey">Field Survey</option>
@@ -1251,7 +1273,7 @@ const SATS = [
 const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'S1B', 'NISAR']);
 const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
-const THEME_OPTIONS = new Set(['night-ops', 'paper-radar', 'field-survey']);
+const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
 const APP_VERSION = 'v0.6.3';
 
@@ -1497,7 +1519,7 @@ function ensureAdvancedState() {
   state.framePolygons ||= [];
   state.selectedFrameKey ||= null;
   state.ui ||= {
-    theme: 'paper-radar',
+    theme: 'soft-slate',
     fontSize: '4',
   };
   state.filters ||= {
@@ -1522,7 +1544,7 @@ function isFeaturedSatellite(sat) {
 }
 
 function getThemeValue(raw) {
-  return THEME_OPTIONS.has(raw) ? raw : 'night-ops';
+  return THEME_OPTIONS.has(raw) ? raw : 'soft-slate';
 }
 
 function getFontSizeValue(raw) {
@@ -2898,6 +2920,54 @@ function getFrameAcquisitionInfo(frame) {
   return { key, startMs, stopMs, label };
 }
 
+function parseGranuleMetadata(granule) {
+  const text = String(granule || '').replace(/\.SAFE$/i, '').trim();
+  if (!text) return [];
+
+  if (/^S1[ABCD]_/.test(text)) {
+    const parts = text.split('_');
+    const start = parts[4] || '';
+    const stop = parts[5] || '';
+    return [
+      { label: 'Mission', value: parts[0] || '--' },
+      { label: 'Beam', value: parts[1] || '--' },
+      { label: 'Product', value: parts[2] || '--' },
+      { label: 'Level/Class/Pol', value: parts[3] || '--' },
+      { label: 'Start', value: start || '--' },
+      { label: 'Stop', value: stop || '--' },
+      { label: 'Absolute Orbit', value: parts[6] || '--' },
+      { label: 'Data-take', value: parts[7] || '--' },
+      { label: 'Unique ID', value: parts[8] || '--' },
+    ];
+  }
+
+  if (/^NISAR_/.test(text)) {
+    const parts = text.split('_');
+    const start = parts[10] || '';
+    const stop = parts[11] || '';
+    return [
+      { label: 'Mission', value: parts[0] || '--' },
+      { label: 'Level', value: parts[1] || '--' },
+      { label: 'Instrument', value: parts[2] || '--' },
+      { label: 'Product', value: parts[3] || '--' },
+      { label: 'Release', value: parts[4] || '--' },
+      { label: 'Orbit', value: parts[5] || '--' },
+      { label: 'Direction', value: parts[6] || '--' },
+      { label: 'Track', value: parts[7] || '--' },
+      { label: 'Frame Group', value: parts[8] || '--' },
+      { label: 'Pol', value: parts[9] || '--' },
+      { label: 'Start', value: start || '--' },
+      { label: 'Stop', value: stop || '--' },
+      { label: 'Build', value: parts[12] || '--' },
+      { label: 'Mode', value: parts[13] || '--' },
+      { label: 'Provider', value: parts[14] || '--' },
+      { label: 'Version', value: parts[15] || '--' },
+    ];
+  }
+
+  return [{ label: 'Granule', value: text }];
+}
+
 function getQueryEndDate() {
   const raw = state.baseStats?.query_end || state.baseStats?.last_successful_fetch;
   const date = raw ? new Date(raw) : new Date();
@@ -3506,6 +3576,9 @@ function openFrameDrawer(clickedFrame) {
       const asfUrl = frame.asf_url || '';
       const cdseUrl = frame.copernicus_url || frame.download_url || '';
       const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+      const granuleMeta = parseGranuleMetadata(frame.granule)
+        .map(item => `<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:var(--muted);">${item.label}</span><span style="color:var(--text-hi);text-align:right;word-break:break-all;">${item.value}</span></div>`)
+        .join('');
       const actions = [
         asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
         cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
@@ -3522,6 +3595,9 @@ function openFrameDrawer(clickedFrame) {
           </div>
           <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
             ${getSourceState(frame)} · path ${getFramePathNumber(frame) ?? '--'} · frame ${getFrameStatus(frame)}
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;line-height:1.55;border-top:1px solid var(--border);padding-top:8px;margin-bottom:10px;">
+            ${granuleMeta}
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
