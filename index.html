@@ -1169,9 +1169,9 @@ function bindAppearanceControls() {
 }
 
 function setupReadableUI() {
-  document.title = 'SAR Track Monitor';
+  document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
-  if (logo) logo.innerHTML = 'SAR <em>Track</em> Monitor';
+  if (logo) logo.innerHTML = 'SAR <em>Tracker</em>';
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
@@ -1308,11 +1308,11 @@ async function liveFetchASF() {
   const now  = new Date();
   const wa   = new Date(now - 7 * 24 * 3600 * 1000);
   const fmt  = d => d.toISOString().replace(/\.\d+Z$/, 'UTC');
-  const WKT  = 'POLYGON((121.6005 25.6251,121.0751 25.5135,120.3437 25.1689,119.087 23.7334,119.5505 21.8234,121.4975 21.3346,122.5585 24.8793,121.6005 25.6251))';
+  const WKT  = 'POLYGON((121.5902 25.467,121.209 25.3739,120.8073 25.0382,119.9008 23.7334,119.9935 22.7865,120.5601 21.8426,120.9412 21.7277,122.167 25.0289,121.5902 25.467))';
 
   const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
     intersectsWith: WKT,
-    platform: 'SA,SC,SD,A3,A4,R2,RCM,NISAR',
+    platform: 'S1A,S1C,S1D,A3,A4,R2,RCM,NISAR',
     processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW',
     start: fmt(wa),
     end: fmt(now),
@@ -1324,7 +1324,7 @@ async function liveFetchASF() {
     const response = await fetch(url);
     const gj = await response.json();
 
-    const s1Platforms = ['SA', 'SC', 'SD']; // Sentinel-1 平台代碼
+    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 平台代碼
 
     const filteredFeatures = (gj.features || []).filter(feature => {
       const p = feature.properties || {};
@@ -1332,9 +1332,9 @@ async function liveFetchASF() {
       if (s1Platforms.includes(platform)) {
         const pathNumber = String(p.pathNumber);
         const direction = (p.flightDirection || '').toUpperCase();
-        // 根據使用者需求過濾 Sentinel-1 軌道 (105 為升軌, 69 為降軌)
-        return (pathNumber === '105' && direction === 'ASCENDING') ||
-               (pathNumber === '69' && direction === 'DESCENDING');
+        // 根據使用者需求過濾 Sentinel-1 軌道 (105 為降軌, 69 為升軌)
+        return (pathNumber === '105' && direction === 'DESCENDING') ||
+               (pathNumber === '69' && direction === 'ASCENDING');
       }
       return true; // 保留非 S1 的衛星
     });
