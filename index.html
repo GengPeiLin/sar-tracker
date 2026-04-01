@@ -1550,6 +1550,90 @@ function enhanceFrame(frame) {
   };
 }
 
+function getFrameTimestamp(frame) {
+  const timestamp = new Date(frame?.date || '').getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function findNearestFrameWithValue(frames, sourceFrame, predicate, maxDiffMs = 120000) {
+  const sourceTime = getFrameTimestamp(sourceFrame);
+  let best = null;
+  let bestDiff = Number.POSITIVE_INFINITY;
+
+  for (const frame of frames) {
+    if (frame === sourceFrame || !predicate(frame)) continue;
+
+    const frameTime = getFrameTimestamp(frame);
+    const diff = sourceTime === null || frameTime === null ? 0 : Math.abs(frameTime - sourceTime);
+    if (diff > maxDiffMs) continue;
+    if (diff < bestDiff) {
+      best = frame;
+      bestDiff = diff;
+    }
+  }
+
+  return best;
+}
+
+function reconcileFrameMetadata(frames) {
+  const pathGroups = new Map();
+  const productGroups = new Map();
+
+  for (const frame of frames) {
+    const pathKey = [
+      frame.satellite_id || '',
+      frame.direction_norm || '',
+      getFramePathNumber(frame) ?? '',
+      frame.mode || '',
+    ].join('|');
+    if (!pathGroups.has(pathKey)) pathGroups.set(pathKey, []);
+    pathGroups.get(pathKey).push(frame);
+
+    const productKey = `${pathKey}|${frame.product_type_norm || ''}`;
+    if (!productGroups.has(productKey)) productGroups.set(productKey, []);
+    productGroups.get(productKey).push(frame);
+  }
+
+  for (const frame of frames) {
+    const pathKey = [
+      frame.satellite_id || '',
+      frame.direction_norm || '',
+      getFramePathNumber(frame) ?? '',
+      frame.mode || '',
+    ].join('|');
+    const productKey = `${pathKey}|${frame.product_type_norm || ''}`;
+    const samePathFrames = pathGroups.get(pathKey) || [];
+    const sameProductFrames = productGroups.get(productKey) || [];
+
+    if (!frame.asf_url) {
+      const asfMatch = findNearestFrameWithValue(
+        sameProductFrames,
+        frame,
+        candidate => !!candidate.asf_url
+      );
+      if (asfMatch?.asf_url) frame.asf_url = asfMatch.asf_url;
+    }
+
+    if (frame.frame_number_norm === null) {
+      const exactMatch = findNearestFrameWithValue(
+        sameProductFrames,
+        frame,
+        candidate => candidate.frame_number_norm !== null
+      );
+      const fallbackMatch = exactMatch || findNearestFrameWithValue(
+        samePathFrames,
+        frame,
+        candidate => candidate.frame_number_norm !== null
+      );
+      if (fallbackMatch && fallbackMatch.frame_number_norm !== null) {
+        frame.frame_number_norm = fallbackMatch.frame_number_norm;
+      }
+    }
+  }
+
+  return frames;
+}
+
 async function loadData() {
   ensureAdvancedState();
   ldmsg('Loading cached frame inventory...');
@@ -1561,7 +1645,9 @@ async function loadData() {
 
     document.getElementById('hdr-time').textContent = `${data.updated_at || '--'}${data.version ? ` · data ${data.version}` : ''}`;
     state.baseStats = data;
-    state.rawFrames = data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data);
+    state.rawFrames = reconcileFrameMetadata(
+      data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
+    );
     applyTabDateWindow();
     bindAdvancedControls();
     renderSatelliteSelect();
@@ -1613,28 +1699,30 @@ async function liveFetchASF() {
       return true; // 保留非 S1 的衛星
     });
 
-    state.rawFrames = filteredFeatures.map(feature => {
-      const p = feature.properties || {};
-      return enhanceFrame({
-        source: 'ASF',
-        granule: p.sceneName || '',
-        platform: p.platform || '',
-        sensor: p.sensor || '',
-        date: p.startTime || '',
-        stop_time: p.stopTime || '',
-        mode: p.beamModeType || p.beamMode || '',
-        polarization: p.polarization || '',
-        orbit: p.orbit || '',
-        path_number: p.pathNumber || '',
-        frame_number: p.frameNumber || '',
-        direction: p.flightDirection || '',
-        product_type: p.processingLevel || '',
-        processing_level: p.processingLevel || '',
-        footprint: feature.geometry,
-        asf_url: p.url || '',
-        file_size_mb: +(p.sizeMB || 0).toFixed(1),
-      });
-    }).filter(frame => frame.is_open_data);
+    state.rawFrames = reconcileFrameMetadata(
+      filteredFeatures.map(feature => {
+        const p = feature.properties || {};
+        return enhanceFrame({
+          source: 'ASF',
+          granule: p.sceneName || '',
+          platform: p.platform || '',
+          sensor: p.sensor || '',
+          date: p.startTime || '',
+          stop_time: p.stopTime || '',
+          mode: p.beamModeType || p.beamMode || '',
+          polarization: p.polarization || '',
+          orbit: p.orbit || '',
+          path_number: p.pathNumber || '',
+          frame_number: p.frameNumber || '',
+          direction: p.flightDirection || '',
+          product_type: p.processingLevel || '',
+          processing_level: p.processingLevel || '',
+          footprint: feature.geometry,
+          asf_url: p.url || '',
+          file_size_mb: +(p.sizeMB || 0).toFixed(1),
+        });
+      }).filter(frame => frame.is_open_data)
+    );
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
@@ -2985,14 +3073,31 @@ function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;
 
-  const clickedGranuleKey = normalizeGranuleKey(clickedFrame.granule);
+  const clickedTime = getFrameTimestamp(clickedFrame);
+  const clickedPath = getFramePathNumber(clickedFrame);
   const relatedFrames = state.filteredFrames
-    .filter(frame => normalizeGranuleKey(frame.granule) === clickedGranuleKey)
-    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    .filter(frame => {
+      if ((frame.satellite_id || '') !== (clickedFrame.satellite_id || '')) return false;
+      if ((frame.direction_norm || '') !== (clickedFrame.direction_norm || '')) return false;
+      if (getFramePathNumber(frame) !== clickedPath) return false;
+
+      const frameTime = getFrameTimestamp(frame);
+      if (clickedTime === null || frameTime === null) return true;
+      return Math.abs(frameTime - clickedTime) <= 120000;
+    })
+    .sort((a, b) => {
+      const aTime = getFrameTimestamp(a) ?? 0;
+      const bTime = getFrameTimestamp(b) ?? 0;
+      return bTime - aTime;
+    });
 
   const mergedEntries = new Map();
   for (const frame of (relatedFrames.length ? relatedFrames : [clickedFrame])) {
-    const key = normalizeGranuleKey(frame.granule) || getHistoryEntryKey(frame);
+    const key = [
+      frame.product_type_norm || '',
+      frame.mode || '',
+      (frame.date || '').slice(0, 16),
+    ].join('|');
     const current = mergedEntries.get(key);
     if (!current) {
       mergedEntries.set(key, { ...frame });
@@ -3003,9 +3108,15 @@ function openFrameDrawer(clickedFrame) {
     current.download_url ||= frame.download_url;
     current.file_size_mb ||= frame.file_size_mb;
     current.frame_number_norm ??= frame.frame_number_norm;
+    current.granule ||= frame.granule;
   }
 
-  const entries = [...mergedEntries.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const entries = [...mergedEntries.values()].sort((a, b) => {
+    const aScore = (a.asf_url ? 4 : 0) + (a.frame_number_norm !== null ? 2 : 0) + (a.copernicus_url || a.download_url ? 1 : 0);
+    const bScore = (b.asf_url ? 4 : 0) + (b.frame_number_norm !== null ? 2 : 0) + (b.copernicus_url || b.download_url ? 1 : 0);
+    if (bScore !== aScore) return bScore - aScore;
+    return (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0);
+  });
   const primary = entries[0] || clickedFrame;
   const frameLabel = primary.frame_number_norm ?? 'Unavailable in source metadata';
 
