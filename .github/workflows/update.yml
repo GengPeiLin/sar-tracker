@@ -62,7 +62,7 @@ jobs:
           import os; print(f"ASF meta4   : {os.path.getsize('data/asf_taiwan.meta4')} bytes")
           print(f"COP meta4   : {os.path.getsize('data/copernicus_taiwan.meta4')} bytes")
           EOF
-
+          
       - name: Commit & Push 更新後的資料
         id: commit
         run: |
@@ -74,10 +74,11 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             git commit -m "data: 自動更新 SAR 取像資料 $(date -u '+%Y-%m-%d')"
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
-
   # ── Job 2：部署到 GitHub Pages ────────────────────────────────────────────
   deploy-pages:
     name: 部署到 GitHub Pages
