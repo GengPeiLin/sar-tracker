@@ -301,10 +301,22 @@ header {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .filter-note {
   font-size: calc(10px + var(--font-bump) - 1px);
   color: var(--muted);
+}
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--text);
+}
+.filter-toggle input {
+  accent-color: var(--cyan);
 }
 
 /* satellite list */
@@ -762,6 +774,10 @@ header {
       </div>
       <div class="filter-actions">
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()">Reset Filters</button>
+        <label class="filter-toggle" for="filter-show-other-tracks">
+          <input id="filter-show-other-tracks" type="checkbox">
+          Show other Taiwan Sentinel-1 tracks
+        </label>
         <span class="filter-note" id="filter-note">SLC / GSLC / RSLC are selected by default.</span>
       </div>
     </div>
@@ -929,6 +945,8 @@ const SATS = [
 
 // ── 顏色映射 ──────────────────────────────────────────────────────────────
 const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'S1B', 'NISAR']);
+const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
+const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
 
@@ -947,6 +965,32 @@ function platColor(platform) {
     if (p.startsWith(k.toUpperCase())) return PLATFORM_COLORS[k];
   }
   return PLATFORM_COLORS._default;
+}
+
+function isOpenDataSatelliteId(id) {
+  return OPEN_DATA_SATELLITES.has(String(id || '').toUpperCase());
+}
+
+function isSentinelSatelliteId(id) {
+  return SENTINEL_SATELLITES.has(String(id || '').toUpperCase());
+}
+
+function getFramePathNumber(frame) {
+  return normalizeFrameNumber(frame.path_number) ?? normalizeFrameNumber(frame.orbit);
+}
+
+function getTrackLabelForFrame(frame) {
+  const satId = String(frame.satellite_id || frame.platform || '').toUpperCase();
+  const direction = normalizeDirection(frame.direction_norm || frame.direction);
+  const pathNumber = getFramePathNumber(frame);
+
+  if (satId.includes('NISAR')) return 'NISAR';
+  if (isSentinelSatelliteId(satId)) {
+    if (direction === 'ASCENDING' && pathNumber === 69) return 'A69';
+    if (direction === 'DESCENDING' && pathNumber === 105) return 'D105';
+    return 'OTHER_S1';
+  }
+  return 'OTHER';
 }
 
 // ── 台灣輪廓（簡化）────────────────────────────────────────────────────────
@@ -1115,6 +1159,7 @@ function ensureAdvancedState() {
   state.filters ||= {
     satellite: 'ALL',
     direction: 'ALL',
+    showOtherSentinelTracks: false,
     pathMin: '',
     pathMax: '',
     frameMin: '',
@@ -1129,7 +1174,7 @@ function ensureAdvancedState() {
 }
 
 function isFeaturedSatellite(sat) {
-  return FEATURED_SATELLITES.has(sat.id);
+  return FEATURED_SATELLITES.has(sat.id) && isOpenDataSatelliteId(sat.id);
 }
 
 function getThemeValue(raw) {
@@ -1202,7 +1247,7 @@ function setupReadableUI() {
   if (statsWrap && !document.getElementById('st-next')) {
     const card = document.createElement('div');
     card.className = 'stat-card';
-    card.innerHTML = '<div class="lbl">Next Expected</div><div class="val small" id="st-next">Need history</div>';
+    card.innerHTML = '<div class="lbl">Latest A69 / D105</div><div class="val small" id="st-next">Need history</div>';
     statsWrap.appendChild(card);
   }
 
@@ -1265,15 +1310,27 @@ function getSatForFrame(frame) {
 
 function enhanceFrame(frame) {
   const sat = getSatForFrame(frame) || {};
-  return {
+  const satelliteId = sat.id || frame.platform || 'UNKNOWN';
+  const directionNorm = normalizeDirection(frame.direction);
+  const pathNumberNorm = getFramePathNumber(frame);
+  const frameNumberNorm = normalizeFrameNumber(frame.frame_number);
+  const enriched = {
     ...frame,
-    satellite_id: sat.id || frame.platform || 'UNKNOWN',
+    satellite_id: satelliteId,
     satellite_name: sat.name || frame.platform || 'Unknown',
     satellite_band: sat.band || '',
     sat_status: sat.status || '',
-    direction_norm: normalizeDirection(frame.direction),
-    frame_number_norm: normalizeFrameNumber(frame.frame_number),
+    direction_norm: directionNorm,
+    path_number_norm: pathNumberNorm,
+    frame_number_norm: frameNumberNorm,
     product_type_norm: normalizeProductType(frame),
+  };
+  const trackLabel = getTrackLabelForFrame(enriched);
+  return {
+    ...enriched,
+    track_label: trackLabel,
+    is_open_data: isOpenDataSatelliteId(satelliteId),
+    is_priority_track: trackLabel === 'A69' || trackLabel === 'D105' || trackLabel === 'NISAR',
   };
 }
 
@@ -1288,7 +1345,7 @@ async function loadData() {
 
     document.getElementById('hdr-time').textContent = data.updated_at || '--';
     state.baseStats = data;
-    state.rawFrames = data.taiwan_frames.map(enhanceFrame);
+    state.rawFrames = data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data);
     bindAdvancedControls();
     renderSatelliteSelect();
     renderFormatOptions();
@@ -1360,7 +1417,7 @@ async function liveFetchASF() {
         asf_url: p.url || '',
         file_size_mb: +(p.sizeMB || 0).toFixed(1),
       });
-    });
+    }).filter(frame => frame.is_open_data);
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
@@ -1383,6 +1440,7 @@ async function liveFetchASF() {
 
 function matchesSidebarFilters(sat) {
   ensureAdvancedState();
+  if (!isOpenDataSatelliteId(sat.id)) return false;
   if (state.band !== 'ALL' && sat.band !== state.band) return false;
   if (state.tab === 'op' && sat.status === 'ret') return false;
   if (state.tab === 'tw') return state.rawFrames.some(frame => satMatchesFrame(sat, frame));
@@ -1401,6 +1459,11 @@ function bindAdvancedControls() {
 
   document.getElementById('filter-direction')?.addEventListener('change', event => {
     state.filters.direction = event.target.value;
+    applyAdvancedFilters();
+  });
+
+  document.getElementById('filter-show-other-tracks')?.addEventListener('change', event => {
+    state.filters.showOtherSentinelTracks = !!event.target.checked;
     applyAdvancedFilters();
   });
 
@@ -1434,7 +1497,7 @@ function renderSatelliteSelect() {
   const counts = new Map();
   for (const frame of state.rawFrames) counts.set(frame.satellite_id, (counts.get(frame.satellite_id) || 0) + 1);
 
-  const visibleSats = SATS.filter(matchesSidebarFilters);
+  const visibleSats = SATS.filter(matchesSidebarFilters).filter(sat => (counts.get(sat.id) || 0) > 0);
   const orderedSats = [
     ...visibleSats.filter(isFeaturedSatellite),
     ...visibleSats.filter(sat => !isFeaturedSatellite(sat)),
@@ -1491,6 +1554,7 @@ function resetAdvancedFilters(apply = true) {
   const defaults = allTypes.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
   state.filters.satellite = 'ALL';
   state.filters.direction = 'ALL';
+  state.filters.showOtherSentinelTracks = false;
   state.filters.pathMin = '';
   state.filters.pathMax = '';
   state.filters.frameMin = '';
@@ -1508,8 +1572,10 @@ function resetAdvancedFilters(apply = true) {
   const frameMax = document.getElementById('filter-frame-max');
   const dateStart = document.getElementById('filter-date-start');
   const dateEnd = document.getElementById('filter-date-end');
+  const showOtherTracks = document.getElementById('filter-show-other-tracks');
   if (satSel) satSel.value = 'ALL';
   if (dirSel) dirSel.value = 'ALL';
+  if (showOtherTracks) showOtherTracks.checked = false;
   if (pathMin) pathMin.value = '';
   if (pathMax) pathMax.value = '';
   if (frameMin) frameMin.value = '';
@@ -1521,6 +1587,8 @@ function resetAdvancedFilters(apply = true) {
 }
 
 function frameMatchesAdvancedFilters(frame) {
+  if (!frame.is_open_data) return false;
+  if (frame.track_label === 'OTHER_S1' && !state.filters.showOtherSentinelTracks) return false;
   if (state.band !== 'ALL' && frame.satellite_band !== state.band) return false;
   if (state.tab === 'op' && frame.sat_status === 'ret') return false;
   if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
@@ -1631,8 +1699,8 @@ function updateStats(data = state.baseStats || {}) {
   const fmt = value => `${value.getMonth()+1}/${value.getDate()}`;
   document.getElementById('st-period').textContent = `${fmt(start)} - ${fmt(end)}`;
 
-  const asf = state.filteredFrames.filter(frame => frame.source === 'ASF').length;
-  const cop = state.filteredFrames.filter(frame => frame.source === 'Copernicus').length;
+  const asf = state.filteredFrames.filter(frame => frame.asf_url).length;
+  const cop = state.filteredFrames.filter(frame => frame.copernicus_url || frame.download_url).length;
   document.getElementById('dl-info').textContent = `${state.filteredFrames.length} frames | ASF ${asf} | Copernicus ${cop}`;
   updateNextExpected();
 }
@@ -1698,7 +1766,9 @@ function updateFilterHints() {
   if (!values.length) {
     frameMin.placeholder = 'Any';
     frameMax.placeholder = 'Any';
-    note.textContent = 'SLC / GSLC / RSLC are selected by default.';
+    note.textContent = state.filters.showOtherSentinelTracks
+      ? 'Showing Sentinel-1 Track 69 / 105 plus other Taiwan Sentinel-1 tracks and NISAR.'
+      : 'Default focus is Sentinel-1 Track 69, Track 105, and NISAR.';
     return;
   }
 
@@ -1706,7 +1776,8 @@ function updateFilterHints() {
   const max = Math.max(...values);
   frameMin.placeholder = String(min);
   frameMax.placeholder = String(max);
-  note.textContent = `Default formats: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max}`;
+  const extra = state.filters.showOtherSentinelTracks ? 'with other Sentinel-1 Taiwan tracks visible' : 'priority tracks only';
+  note.textContent = `Formats: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max} | ${extra}`;
 }
 
 function openDrawer(sat, row, thisWeek) {
@@ -1760,8 +1831,9 @@ function escapeXml(value) {
 
 function createMeta4(frames, source) {
   const selected = frames.filter(frame => {
-    if (frame.source !== source) return false;
-    return source === 'ASF' ? !!frame.asf_url : !!frame.download_url;
+    return source === 'ASF'
+      ? !!frame.asf_url
+      : !!(frame.copernicus_url || frame.download_url);
   });
 
   const lines = [
@@ -1772,7 +1844,7 @@ function createMeta4(frames, source) {
   ];
 
   for (const frame of selected) {
-    const url = source === 'ASF' ? frame.asf_url : frame.download_url;
+    const url = source === 'ASF' ? frame.asf_url : (frame.copernicus_url || frame.download_url);
     const name = source === 'Copernicus' ? `${frame.granule}.SAFE.zip` : frame.granule;
     lines.push(`  <file name="${escapeXml(name)}">`);
     if (frame.file_size_mb) lines.push(`    <size>${Math.round(Number(frame.file_size_mb) * 1000000)}</size>`);
@@ -1910,6 +1982,7 @@ function renderSatList() {
 
 function appendSatelliteRow(container, sat) {
   const count = state.rawFrames.filter(frame => frame.satellite_id === sat.id).length;
+  if (!count) return 0;
   const row = document.createElement('div');
   row.className = 'sat-row' + (state.filters.satellite === sat.id ? ' active' : '');
   row.onclick = () => selectSatellite(sat, row);
@@ -2079,6 +2152,238 @@ function renderFrames() {
       } else {
         state.selectedFrameKey = key;
         openFrameDrawer(frame); // 開啟抽屜並顯示群組化資訊
+      }
+      updateMapSelectionState();
+    });
+
+    state.frameLayer.addLayer(polygon);
+    state.framePolygons.push({ key, polygon });
+  }
+
+  updateMapSelectionState();
+}
+
+async function liveFetchASF() {
+  ensureAdvancedState();
+  const now = new Date();
+  const start = new Date(now - 7 * 24 * 3600 * 1000);
+  const fmt = value => value.toISOString().replace(/\.\d+Z$/, 'UTC');
+  const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
+    intersectsWith: 'POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))',
+    platform: 'S1A,S1B,S1C,S1D,NISAR',
+    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW',
+    start: fmt(start),
+    end: fmt(now),
+    output: 'geojson',
+    maxresults: 1000,
+  });
+
+  try {
+    const response = await fetch(url);
+    const payload = await response.json();
+    state.rawFrames = (payload.features || []).map(feature => {
+      const p = feature.properties || {};
+      return enhanceFrame({
+        source: 'ASF',
+        granule: p.sceneName || '',
+        platform: p.platform || '',
+        sensor: p.sensor || '',
+        date: p.startTime || '',
+        stop_time: p.stopTime || '',
+        mode: p.beamModeType || p.beamMode || '',
+        polarization: p.polarization || '',
+        orbit: p.orbit || '',
+        path_number: p.pathNumber || '',
+        frame_number: p.frameNumber || '',
+        direction: p.flightDirection || '',
+        product_type: p.processingLevel || '',
+        processing_level: p.processingLevel || '',
+        footprint: feature.geometry,
+        asf_url: p.url || '',
+        file_size_mb: +(p.sizeMB || 0).toFixed(1),
+      });
+    }).filter(frame => frame.is_open_data);
+
+    state.baseStats = {
+      total_frames: state.rawFrames.length,
+      query_start: start.toISOString(),
+      query_end: now.toISOString(),
+      asf_count: state.rawFrames.length,
+      copernicus_count: 0,
+    };
+    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString('zh-TW');
+    renderSatelliteSelect();
+    renderFormatOptions();
+    resetAdvancedFilters(false);
+    applyAdvancedFilters();
+  } catch (error) {
+    document.getElementById('hdr-time').textContent = 'Load failed';
+    console.error('ASF API failed', error);
+  }
+}
+
+function getFrameSeriesKey(frame) {
+  return [
+    frame.satellite_id || '',
+    frame.direction_norm || '',
+    getFramePathNumber(frame) ?? '',
+    frame.frame_number_norm ?? '',
+  ].join('|');
+}
+
+function getFrameKey(frame) {
+  return [
+    getFrameSeriesKey(frame),
+    (frame.date || '').slice(0, 19),
+  ].join('|');
+}
+
+function getHistoryEntryKey(frame) {
+  return [
+    getFrameSeriesKey(frame),
+    (frame.date || '').slice(0, 19),
+    frame.product_type_norm || '',
+    frame.mode || '',
+  ].join('|');
+}
+
+function updateNextExpected() {
+  const el = document.getElementById('st-next');
+  if (!el) return;
+  const latestFor = (direction, path) => {
+    const match = state.rawFrames
+      .filter(frame => frame.direction_norm === direction && getFramePathNumber(frame) === path)
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
+    if (!match || !match.date) return `${direction === 'ASCENDING' ? 'A69' : 'D105'} --`;
+    const date = new Date(match.date);
+    return `${direction === 'ASCENDING' ? 'A69' : 'D105'} ${date.getMonth() + 1}/${date.getDate()}`;
+  };
+  el.textContent = `${latestFor('ASCENDING', 69)} | ${latestFor('DESCENDING', 105)}`;
+}
+
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const seriesKey = getFrameSeriesKey(clickedFrame);
+  const historyFrames = state.rawFrames
+    .filter(frame => getFrameSeriesKey(frame) === seriesKey)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  const mergedHistory = new Map();
+  for (const frame of historyFrames) {
+    const key = getHistoryEntryKey(frame);
+    const current = mergedHistory.get(key);
+    if (!current) {
+      mergedHistory.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+  }
+
+  const entries = [...mergedHistory.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const primary = entries[0] || clickedFrame;
+  const baseGranule = primary.granule?.split('_').slice(0, -1).join('_') || primary.granule || 'Unknown Granule';
+
+  document.getElementById('d-name').textContent = baseGranule;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${primary.frame_number_norm ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Scenes</div><div class="v"><small>${entries.length} acquisitions in period</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'Frame History & Downloads';
+
+  const cards = entries.map(frame => {
+    const asfUrl = frame.asf_url || '';
+    const cdseUrl = frame.copernicus_url || frame.download_url || '';
+    const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+    const buttons = [
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+    ].filter(Boolean).join('');
+
+    return `
+      <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text-hi);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'UNKNOWN'} · ${size}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;word-break:break-all;line-height:1.4;">
+          ${frame.granule || 'Unknown Granule'}<br>
+          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${buttons || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No link available</span>';
+  document.getElementById('drawer').classList.add('open');
+}
+
+function renderFrames() {
+  ensureAdvancedState();
+  state.frameLayer.clearLayers();
+  state.framePolygons = [];
+
+  const seenKeys = new Set();
+
+  for (const frame of state.filteredFrames) {
+    const geom = frame.footprint;
+    if (!geom || geom.type !== 'Polygon' || !Array.isArray(geom.coordinates)) continue;
+
+    const key = getFrameKey(frame);
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+
+    const rings = geom.coordinates.map(ring => ring.map(coord => [coord[1], coord[0]]));
+    const color = frame.track_label === 'A69'
+      ? '#00e5ff'
+      : frame.track_label === 'D105'
+        ? '#ff7043'
+        : frame.track_label === 'NISAR'
+          ? '#00e676'
+          : platColor(frame.platform || frame.satellite_name);
+
+    const polygon = L.polygon(rings, {
+      color,
+      baseColor: color,
+      weight: 1.8,
+      fillColor: color,
+      fillOpacity: 0.1,
+      opacity: 0.85,
+    });
+
+    polygon.on('mouseover', function() {
+      if (state.selectedFrameKey === key) return;
+      this.setStyle({ weight: 3.2, fillOpacity: 0.28, opacity: 1 });
+    });
+    polygon.on('mouseout', function() {
+      if (state.selectedFrameKey === key) return;
+      const hasSelection = !!state.selectedFrameKey;
+      this.setStyle({ weight: hasSelection ? 1 : 1.8, fillOpacity: hasSelection ? 0.03 : 0.1, opacity: hasSelection ? 0.2 : 0.85 });
+    });
+    polygon.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      if (state.selectedFrameKey === key) {
+        state.selectedFrameKey = null;
+        closeDrawer();
+      } else {
+        state.selectedFrameKey = key;
+        openFrameDrawer(frame);
       }
       updateMapSelectionState();
     });
