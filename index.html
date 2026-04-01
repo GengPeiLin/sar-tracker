@@ -3026,6 +3026,9 @@ function openFrameDrawer(clickedFrame) {
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
           ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'} · ${frame.asf_url ? 'ASF' : ''}${frame.asf_url && (frame.copernicus_url || frame.download_url) ? ' + ' : ''}${(frame.copernicus_url || frame.download_url) ? 'CDSE' : ''}
         </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          ${getSourceState(frame)} · frame status: ${getFrameStatus(frame)}
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
         </div>
@@ -3296,7 +3299,23 @@ function openFrameDrawer(clickedFrame) {
     return (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0);
   });
   const primary = entries[0] || clickedFrame;
-  const frameLabel = primary.frame_number_norm ?? 'Unavailable in source metadata';
+  const getSourceState = frame => {
+    const hasAsf = !!frame.asf_url;
+    const hasCdse = !!(frame.copernicus_url || frame.download_url);
+    if (hasAsf && hasCdse) return 'ASF + Copernicus';
+    if (hasCdse) return 'Copernicus only';
+    if (hasAsf) return 'ASF only';
+    return 'No download source';
+  };
+  const getFrameStatus = frame => {
+    if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
+      return String(frame.frame_number_norm);
+    }
+    return frame.asf_url
+      ? 'Frame metadata unavailable in source record'
+      : 'No matched ASF frame metadata in local dataset';
+  };
+  const frameLabel = getFrameStatus(primary);
 
   document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
   document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
@@ -3308,6 +3327,10 @@ function openFrameDrawer(clickedFrame) {
     <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} matching file</small></div></div>
     <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
     <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
+  document.getElementById('d-grid').innerHTML += `
+    <div class="d-item"><div class="k">Source</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
   `;
 
   const section = document.querySelector('.d-section');

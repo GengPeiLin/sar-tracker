@@ -1,101 +1,71 @@
 # SAR Tracker
 
-## English
+SAR Tracker is a static GitHub Pages app for monitoring SAR acquisitions over Taiwan. It combines a Leaflet-based frontend in `index.html`, a Python data-generation script in `fetch_sar_data.py`, and scheduled deployment through `.github/workflows/update.yml`.
 
-### Overview
+## Current Status
 
-SAR Tracker is a GitHub Pages site for monitoring SAR acquisitions over Taiwan. It combines:
+The project is usable and deployable, and the recent work focused on making the UI clearer while keeping the current single-file frontend architecture intact.
 
-- A static frontend in `index.html`
-- A Python data-generation script in `fetch_sar_data.py`
-- A GitHub Actions workflow in `.github/workflows/update.yml`
-- Generated data products under `data/`
+### Completed Recently
 
-The site is intended to answer three practical questions:
+- Moved time shortcuts into the left filter area with `This Week` and `This Month`
+- Removed the old top-right mode buttons
+- Moved the satellite context card to the top-right map area
+- Moved the legend to the lower-left and made it react to current visible data
+- Reworked the bottom download bar into a lighter `Export` entry instead of a permanently dominant toolbar
+- Widened and cleaned up the right-side detail drawer
+- Added automatic map focus behavior for filtered data and selected frames
+- Added product-filter summary behavior and reduced left-panel clutter
+- Added safer metadata reconciliation logic so nearby records can fill missing `frame_number_norm` and `asf_url` when a valid local match exists
+- Added automatic wrapping for long file titles in the right-side drawer
+- Removed the non-functional filter summary pills such as `All Satellites`, date range, `DESCENDING`, and `All tracks`
 
-1. Which SAR missions recently covered Taiwan
-2. Which frames match the current filter set
-3. How to export filtered download lists as CSV or Metalink
-
-### Current Project Status
-
-The project is functional, but it is also in a transitional state:
-
-- The website is already deployable on GitHub Pages
-- The data pipeline is able to write `sar_status.json`, `asf_taiwan.meta4`, and `copernicus_taiwan.meta4`
-- The frontend has accumulated duplicated logic and multiple generations of UI code inside the same `index.html`
-- The previous README had severe encoding and maintainability problems
-
-This README reflects the current implementation as it exists now, not an idealized target architecture.
-
-### Repository Structure
+## Repository Structure
 
 ```text
-sar-tracker/
-├─ .github/
-│  └─ workflows/
-│     └─ update.yml
-├─ data/
-│  ├─ sar_status.json
-│  ├─ asf_taiwan.meta4
-│  ├─ copernicus_taiwan.meta4
-│  └─ tw*.metalink
-├─ fetch_sar_data.py
-├─ index.html
-└─ README.md
+SAR_data_monitor/
+|-- .github/
+|   `-- workflows/
+|       `-- update.yml
+|-- data/
+|   |-- sar_status.json
+|   |-- asf_taiwan.meta4
+|   |-- copernicus_taiwan.meta4
+|   `-- catalog_db.json
+|-- fetch_sar_data.py
+|-- index.html
+`-- README.md
 ```
 
-### How It Works
+## How It Works
 
-#### Frontend
+### Frontend
 
-`index.html` is a self-contained static application using Leaflet. It renders:
+`index.html` is a self-contained application. It currently handles:
 
-- Taiwan SAR frame footprints
-- Satellite and mission filters
-- CSV and Metalink export buttons
-- Theme and font-size controls
-- A focused satellite list that prioritizes Sentinel-1 and NISAR
+- map rendering with Leaflet
+- filter state
+- satellite list rendering
+- detail drawer rendering
+- export button state
+- legend and context updates
+- data-source reconciliation at display time
 
-#### Data Pipeline
+### Data Pipeline
 
-`fetch_sar_data.py` currently does the following:
+`fetch_sar_data.py` generates the data consumed by the frontend and writes:
 
-1. Reads local `data/tw*.metalink` files if present
-2. Extracts granule names from those Metalink files
-3. Queries ASF metadata for those granules
-4. Normalizes and deduplicates frames
-5. Writes:
-   - `data/sar_status.json`
-   - `data/asf_taiwan.meta4`
-   - `data/copernicus_taiwan.meta4`
+- `data/sar_status.json`
+- `data/asf_taiwan.meta4`
+- `data/copernicus_taiwan.meta4`
 
-The script uses only Python standard-library modules in the current implementation.
+The frontend mainly reads `data/sar_status.json`, especially the `taiwan_frames` array.
 
-#### Deployment
+### Deployment
 
-`.github/workflows/update.yml` has two jobs:
+`.github/workflows/update.yml` updates the data outputs and deploys the site to GitHub Pages.
 
-1. `update-data`
-   - runs `fetch_sar_data.py`
-   - commits updated files under `data/`
-2. `deploy-pages`
-   - uploads the repository as the Pages artifact
-   - deploys the static site to GitHub Pages
-
-### Requirements
-
-#### For GitHub Actions
-
-- GitHub Pages enabled with source set to `GitHub Actions`
-- Write access for workflow commits
-
-#### For Local Script Execution
-
-- Python 3.11 recommended
-- Network access to ASF and Copernicus services when metadata refresh is needed
-
-### Local Usage
+## Local Usage
 
 Run the data script:
 
@@ -103,235 +73,145 @@ Run the data script:
 python fetch_sar_data.py
 ```
 
-Override the default search window:
+Run with a limited lookback window:
 
 ```bash
 DAYS_BACK=14 python fetch_sar_data.py
 ```
 
-### GitHub Pages Update Flow
+For frontend-only changes, edit `index.html`, commit, and let GitHub Pages redeploy through the workflow.
 
-If you edit `index.html` or another static file on GitHub:
+## Progress Summary
 
-1. Commit the change to `main`
-2. Wait for the Pages deployment workflow to run
-3. Hard-refresh the site in the browser if the old version is cached
+### UI Progress
 
-If you edit the site locally:
+The UI is noticeably cleaner than before:
 
-1. Commit and push to `main`
-2. Confirm `.github/workflows/update.yml` finishes successfully
-3. Verify the Pages URL after deployment
+- the highest-friction controls were regrouped
+- redundant summary badges were removed
+- the map is given more visual priority
+- the right drawer is more readable
+- export actions are less intrusive
 
-### Known Problems
+### Data Handling Progress
 
-The current codebase would benefit from cleanup in the following areas:
+The frontend now tries to reconcile incomplete records more carefully. When the local dataset contains matching entries for the same event, missing frame numbers and ASF URLs can be filled into the selected view.
 
-1. `index.html` contains duplicated functions and repeated logic blocks
-2. UI text language is mixed between English and Chinese
-3. Data-source assumptions are not obvious unless you read the Python script
-4. Frontend state management is concentrated in one large file
-5. Workflow and data-generation behavior are under-documented without reading source
+## Remaining Problems
 
-### Recommended Cleanup Plan
+The project still has structural and data-quality limits that should be treated explicitly.
 
-#### Phase 1: Stabilize
+### 1. `index.html` still contains duplicated logic
 
-1. Remove duplicated function definitions in `index.html`
-2. Keep only one active implementation for data loading, rendering, and filtering
-3. Standardize visible UI text in either bilingual mode or one chosen default language
-4. Keep README aligned with actual code paths
+There are multiple definitions of functions such as `openFrameDrawer()` and render helpers inside the same file. The last definition wins at runtime, which makes the code fragile and difficult to maintain.
 
-#### Phase 2: Separate Concerns
+Impact:
 
-1. Split frontend code into HTML, CSS, and JS files
-2. Move satellite metadata into a dedicated JSON or JS module
-3. Extract shared helpers for filtering, styling, and downloads
-4. Define one canonical frame schema used by both script and frontend
+- edits can accidentally target an older inactive implementation
+- regressions are easy to introduce
+- behavior is harder to reason about during debugging
 
-#### Phase 3: Improve Data Pipeline
+### 2. Some local data records are incomplete by source
 
-1. Clarify whether `tw*.metalink` files are required inputs or optional accelerators
-2. Document the exact ASF and Copernicus query strategy
-3. Add validation for generated JSON and Metalink outputs
-4. Add a small sample dataset for offline frontend testing
+The UI cannot invent an ASF link or frame number when the local dataset does not contain a valid corresponding ASF record.
 
-#### Phase 4: Improve Maintainability
+Confirmed example:
 
-1. Add a local preview workflow for the static site
-2. Add lightweight regression checks for the generated data format
-3. Add release notes or deployment notes for content-only changes
-4. Consider a small frontend framework only if the page continues to grow
+- `S1A / path 105 / DESCENDING / SLC / 2026-03-31` appears in local Copernicus data
+- the nearest local ASF candidate is about 12 days away
+- because it is not the same acquisition event, it should not be merged
 
-### License
+Impact:
 
-MIT
+- some drawer entries correctly remain Copernicus-only
+- users may interpret this as a UI error unless the interface explains it clearly
 
----
+### 3. Legacy text and encoding residue still exist
 
-## 中文
+Some old strings and comments in `index.html` still contain garbled characters from previous encoding issues.
 
-### 專案簡介
+Impact:
 
-SAR Tracker 是一個部署在 GitHub Pages 上的台灣 SAR 取像監看網站，由以下幾部分組成：
+- source readability is reduced
+- future copy edits are riskier
 
-- `index.html`：靜態前端頁面
-- `fetch_sar_data.py`：資料整理與輸出腳本
-- `.github/workflows/update.yml`：GitHub Actions 更新與部署流程
-- `data/`：輸出的 JSON 與 Metalink 檔案
+### 4. No browser-based regression verification yet
 
-這個網站主要解決三件事：
+Recent work has been validated by source inspection and local data checks, but not by automated browser tests.
 
-1. 近期有哪些 SAR 任務覆蓋台灣
-2. 哪些 frame 符合目前篩選條件
-3. 如何把篩選後的結果匯出成 CSV 或 Metalink
+Impact:
 
-### 目前狀態
+- layout edge cases may still exist on some viewport sizes
+- interaction regressions can slip through
 
-目前專案可以運作，但也處在持續整理中的狀態：
+### 5. Frontend state is still centralized in one large file
 
-- GitHub Pages 已可正常部署
-- 資料流程可產生 `sar_status.json`、`asf_taiwan.meta4`、`copernicus_taiwan.meta4`
-- `index.html` 內部累積了多版本邏輯與重複函式
-- 舊版 README 存在編碼與可維護性問題
+Rendering, filtering, map state, drawer state, and export state are all tightly coupled.
 
-本 README 以目前實際程式狀態為準，而不是以理想架構為前提。
+Impact:
 
-### 專案結構
+- small changes have wide blast radius
+- onboarding is slower
 
-```text
-sar-tracker/
-├─ .github/
-│  └─ workflows/
-│     └─ update.yml
-├─ data/
-│  ├─ sar_status.json
-│  ├─ asf_taiwan.meta4
-│  ├─ copernicus_taiwan.meta4
-│  └─ tw*.metalink
-├─ fetch_sar_data.py
-├─ index.html
-└─ README.md
-```
+## Recommended Next Steps
 
-### 運作方式
+### Priority 1: Stabilize User-Facing Truth
 
-#### 前端
+1. In the right drawer, explicitly label entries as:
+   - `ASF + Copernicus`
+   - `Copernicus only`
+   - `ASF only`
+2. When `frame_number_norm` is unavailable, show a clear reason such as `No matched ASF frame metadata in local dataset`
+3. Keep the current conservative merge rule. Do not merge across days just to fill missing fields.
 
-`index.html` 是一個以 Leaflet 為核心的單頁靜態應用，負責顯示：
+### Priority 2: Remove Dead and Duplicate Frontend Paths
 
-- 台灣 SAR frame footprint
-- 衛星與任務篩選
-- CSV 與 Metalink 匯出
-- 主題與字級切換
-- 以 Sentinel-1 和 NISAR 為優先的衛星清單
+1. Deduplicate repeated functions in `index.html`
+2. Keep only one active implementation for:
+   - data loading
+   - frame rendering
+   - drawer rendering
+   - export panel updates
+3. Add short comments at the real active implementation boundaries
 
-#### 資料流程
+### Priority 3: Improve Maintainability
 
-`fetch_sar_data.py` 目前的流程如下：
-
-1. 讀取本地 `data/tw*.metalink`
-2. 從 Metalink 擷取 granule 名稱
-3. 向 ASF 查詢這些 granule 的 metadata
-4. 做欄位正規化與去重
-5. 輸出：
-   - `data/sar_status.json`
-   - `data/asf_taiwan.meta4`
-   - `data/copernicus_taiwan.meta4`
-
-目前腳本只依賴 Python 標準函式庫。
-
-#### 部署流程
-
-`.github/workflows/update.yml` 目前分成兩個 job：
-
-1. `update-data`
-   - 執行 `fetch_sar_data.py`
-   - 將 `data/` 內更新後的檔案 commit 回 repo
-2. `deploy-pages`
-   - 上傳 repo 內容作為 Pages artifact
-   - 部署到 GitHub Pages
-
-### 執行需求
-
-#### GitHub Actions
-
-- GitHub Pages 來源設為 `GitHub Actions`
-- Workflow 需具備可寫入 repo 的權限
-
-#### 本地執行腳本
-
-- 建議 Python 3.11
-- 若需要更新 metadata，必須可連到 ASF 與 Copernicus 相關服務
-
-### 本地使用方式
-
-執行資料腳本：
-
-```bash
-python fetch_sar_data.py
-```
-
-指定不同的搜尋天數：
-
-```bash
-DAYS_BACK=14 python fetch_sar_data.py
-```
-
-### GitHub Pages 更新方式
-
-如果你是在 GitHub Web 上修改 `index.html` 或其他靜態檔：
-
-1. 直接 commit 到 `main`
-2. 等待 Pages workflow 完成
-3. 若瀏覽器仍看到舊版，請做強制重新整理
-
-如果你是在本地修改：
-
-1. commit 並 push 到 `main`
-2. 確認 `.github/workflows/update.yml` 執行成功
-3. 再檢查 Pages 網址是否已更新
-
-### 目前已知問題
-
-這個專案目前最需要整理的地方有：
-
-1. `index.html` 內有重複函式與重疊邏輯
-2. 前端顯示文字混用中英文
-3. 不看 Python 腳本很難理解資料來源假設
-4. 前端狀態管理過度集中在單一檔案
-5. workflow 與資料生成策略的文件仍不足
-
-### 建議改善規劃
-
-#### 第一階段：先穩定
-
-1. 刪除 `index.html` 內重複的函式定義
-2. 保留單一版本的資料載入、渲染與篩選流程
-3. 決定 UI 文字要採雙語還是固定語言
-4. 確保 README 與實際程式流程一致
-
-#### 第二階段：拆分責任
-
-1. 將前端拆成 HTML、CSS、JS
-2. 將衛星資料表抽到獨立 JSON 或 JS 模組
-3. 抽出篩選、樣式、下載等共用 helper
-4. 定義前後端共用的 frame 欄位格式
-
-#### 第三階段：整理資料流程
-
-1. 說清楚 `tw*.metalink` 是必要輸入還是選擇性加速來源
-2. 文件化 ASF 與 Copernicus 的查詢策略
-3. 為輸出的 JSON 與 Metalink 加上驗證
-4. 提供一份小型樣本資料，方便離線測試前端
-
-#### 第四階段：提升維護性
-
-1. 增加本地預覽流程
-2. 為資料格式加上輕量檢查
-3. 為純內容更新建立部署說明
-4. 若頁面繼續擴張，再評估是否導入小型前端框架
-
-### 授權
+1. Split `index.html` into:
+   - `index.html`
+   - `styles.css`
+   - `app.js`
+2. Move static configuration such as satellite metadata into a dedicated module
+3. Normalize text language and encoding in the source
+
+### Priority 4: Add Lightweight Verification
+
+1. Add a small fixture dataset for frontend-only checks
+2. Add a script that verifies required fields in generated JSON
+3. Add a manual QA checklist for:
+   - desktop layout
+   - mobile layout
+   - D105 descending drawer behavior
+   - export button behavior
+   - legend updates
+
+## Suggested QA Checklist
+
+Before shipping future UI changes, verify:
+
+1. Left filters fit in one screen on common desktop widths without unnecessary scrolling
+2. The map auto-focuses correctly when filters change
+3. The legend reflects the selected or visible dataset
+4. The right drawer wraps long titles and remains readable
+5. A known `D105 DESCENDING` Copernicus-only record does not falsely show an ASF link
+6. Export actions open, close, and disable correctly
+
+## Notes for Future Contributors
+
+- When editing `index.html`, search for duplicate function names before changing logic
+- Treat the last function definition as the active one unless the file is refactored
+- Validate data-source claims against `data/sar_status.json`, not assumptions from the UI
+- Prefer explicit absence messaging over aggressive fallback inference
+
+## License
 
 MIT
