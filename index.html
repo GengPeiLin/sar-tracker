@@ -128,7 +128,9 @@ header {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
+.hdr-tabs { display: none; }
 
 .control-field {
   display: flex;
@@ -159,25 +161,6 @@ header {
   border-color: var(--cyan);
 }
 
-.hdr-tabs {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-}
-
-.tab {
-  font-family: var(--mono);
-  font-size: calc(9px + var(--font-bump) - 1px);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 5px 14px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all .15s;
-}
-.tab:hover, .tab.on { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,.06); }
 
 /* ═══ BODY LAYOUT ══════════════════════════════════════════════════════════ */
 .layout { flex: 1; display: flex; overflow: hidden; }
@@ -234,25 +217,59 @@ header {
 .chip[data-b="S"].on { border-color: var(--amber);   color: var(--amber);   background: rgba(255,193,7,.07); }
 
 .filter-panel {
-  padding: 12px 16px 14px;
+  padding: 10px 16px 12px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+}
+.filter-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.filter-head .filter-field {
+  gap: 4px;
+}
+.date-shortcuts {
+  display: inline-flex;
+  gap: 6px;
+  align-self: center;
+}
+.date-shortcut {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  letter-spacing: .5px;
+  padding: 7px 10px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.date-shortcut.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,229,255,.08);
 }
 .filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 .filter-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 .filter-field.wide {
   grid-column: 1 / -1;
+}
+.filter-field.span-2 {
+  grid-column: span 2;
 }
 .filter-label {
   font-family: var(--mono);
@@ -267,9 +284,9 @@ header {
   background: var(--card);
   color: var(--text-hi);
   border: 1px solid var(--border2);
-  padding: 7px 9px;
+  padding: 6px 8px;
   font-family: var(--mono);
-  font-size: calc(11px + var(--font-bump) - 1px);
+  font-size: calc(10px + var(--font-bump) - 1px);
 }
 .filter-select:focus,
 .filter-input:focus {
@@ -285,7 +302,7 @@ header {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
   letter-spacing: .4px;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border: 1px solid var(--border2);
   background: transparent;
   color: var(--muted);
@@ -300,12 +317,13 @@ header {
 .filter-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
   flex-wrap: wrap;
 }
 .filter-note {
-  font-size: calc(10px + var(--font-bump) - 1px);
+  font-size: calc(9px + var(--font-bump) - 1px);
   color: var(--muted);
+  line-height: 1.4;
 }
 .filter-toggle {
   display: inline-flex;
@@ -478,16 +496,93 @@ header {
 .stat-card .val.orange { color: var(--orange); }
 .stat-card .val.small  { font-size: calc(13px + var(--font-bump)); padding-top: 4px; }
 
+.map-context {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+}
+.context-card {
+  background: rgba(11,19,32,.92);
+  border: 1px solid var(--border2);
+  padding: 10px 12px;
+  backdrop-filter: blur(8px);
+}
+.context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.context-title,
+.context-meta {
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+.context-title {
+  font-size: calc(9px + var(--font-bump) - 1px);
+  letter-spacing: 1px;
+  color: var(--text-hi);
+}
+.context-meta {
+  font-size: calc(8px + var(--font-bump) - 2px);
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.context-select {
+  width: 100%;
+  background: var(--card);
+  color: var(--text-hi);
+  border: 1px solid var(--border2);
+  padding: 7px 9px;
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+}
+.context-select:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+.context-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.context-pill {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  padding: 8px 9px;
+}
+.context-pill .k {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.context-pill .v {
+  font-family: var(--mono);
+  font-size: calc(11px + var(--font-bump) - 1px);
+  color: var(--text-hi);
+  line-height: 1.2;
+}
+
 /* legend */
 .map-legend {
   position: absolute;
-  bottom: 70px; right: 12px;
+  bottom: 74px; left: 12px;
   z-index: 400;
   background: rgba(11,19,32,.9);
   border: 1px solid var(--border2);
   padding: 10px 14px;
   backdrop-filter: blur(6px);
-  min-width: 150px;
+  min-width: 210px;
+  max-width: 320px;
 }
 .legend-title {
   font-family: var(--mono);
@@ -500,18 +595,43 @@ header {
 .legend-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+.legend-main {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 5px;
+  min-width: 0;
 }
 .legend-swatch {
-  width: 24px; height: 3px;
-  border-radius: 1px;
+  width: 24px; height: 6px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 .legend-item span {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.legend-value {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.legend-empty {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 /* ═══ DOWNLOAD BAR ══════════════════════════════════════════════════════════ */
@@ -668,6 +788,52 @@ header {
   margin-top: 14px;
   letter-spacing: 1px;
 }
+
+@media (max-width: 1280px) {
+  :root { --sidebar: 360px; }
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filter-field.span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 980px) {
+  html, body { overflow: auto; }
+  .layout {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-list {
+    max-height: 38vh;
+  }
+  .map-wrap {
+    min-height: 68vh;
+  }
+  .map-stats,
+  .map-context {
+    position: static;
+    width: 100%;
+    padding: 12px 12px 0;
+  }
+  .map-stats {
+    flex-wrap: wrap;
+  }
+  .map-legend {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+  .drawer {
+    width: min(360px, 92vw);
+  }
+}
 </style>
 </head>
 <body>
@@ -730,12 +896,22 @@ header {
       <button class="chip"     data-b="S"   onclick="setFilter('S',this)">S-Band</button>
     </div>
     <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field wide">
-          <span class="filter-label">Satellite</span>
-          <select class="filter-select" id="filter-satellite"></select>
+      <div class="filter-head">
+        <label class="filter-field">
+          <span class="filter-label">View Mode</span>
+          <select class="filter-select" id="filter-view-mode">
+            <option value="all">All satellites</option>
+            <option value="op">Operational</option>
+            <option value="tw">This week</option>
+          </select>
         </label>
-        <label class="filter-field wide">
+        <div class="date-shortcuts">
+          <button class="date-shortcut" id="preset-week" type="button" onclick="applyPresetDateWindow(7, this)">This Week</button>
+          <button class="date-shortcut" id="preset-month" type="button" onclick="applyPresetDateWindow(30, this)">This Month</button>
+        </div>
+      </div>
+      <div class="filter-grid">
+        <label class="filter-field span-2">
           <span class="filter-label">Orbit Direction</span>
           <select class="filter-select" id="filter-direction">
             <option value="ALL">All</option>
@@ -743,11 +919,11 @@ header {
             <option value="DESCENDING">Descending</option>
           </select>
         </label>
-        <label class="filter-field">
+        <label class="filter-field span-2">
           <span class="filter-label">Date Start</span>
           <input class="filter-input" id="filter-date-start" type="date">
         </label>
-        <label class="filter-field">
+        <label class="filter-field span-2">
           <span class="filter-label">Date End</span>
           <input class="filter-input" id="filter-date-end" type="date">
         </label>
@@ -799,6 +975,40 @@ header {
       <div class="stat-card">
         <div class="lbl">查詢時段</div>
         <div class="val small" id="st-period">—</div>
+      </div>
+    </div>
+
+    <div class="map-context">
+      <div class="context-card">
+        <div class="context-head">
+          <div class="context-title">Satellite Focus</div>
+          <div class="context-meta" id="context-selection-mode">Filtered view</div>
+        </div>
+        <select class="context-select" id="filter-satellite"></select>
+      </div>
+      <div class="context-card">
+        <div class="context-head">
+          <div class="context-title">Selection Summary</div>
+          <div class="context-meta" id="context-selection-count">0 frames</div>
+        </div>
+        <div class="context-body">
+          <div class="context-pill">
+            <div class="k">Satellite</div>
+            <div class="v" id="context-satellite">All visible</div>
+          </div>
+          <div class="context-pill">
+            <div class="k">Track</div>
+            <div class="v" id="context-track">Mixed</div>
+          </div>
+          <div class="context-pill">
+            <div class="k">Date Range</div>
+            <div class="v" id="context-range">--</div>
+          </div>
+          <div class="context-pill">
+            <div class="k">Direction</div>
+            <div class="v" id="context-direction">Mixed</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1135,6 +1345,8 @@ function closeDrawer() {
   state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
   if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  updateContextPanel();
+  updateLegend();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1232,10 +1444,7 @@ function setupReadableUI() {
     hdrStatus.innerHTML = `Updated: <b id="hdr-time">--</b>&nbsp;|&nbsp;ASF DAAC &amp; Copernicus CDSE&nbsp;|&nbsp;${APP_VERSION}`;
   }
 
-  const tabs = document.querySelectorAll('.hdr-tabs .tab');
-  if (tabs[0]) tabs[0].textContent = 'All Satellites';
-  if (tabs[1]) tabs[1].textContent = 'Operational';
-  if (tabs[2]) tabs[2].textContent = 'This Week';
+  syncViewModeControl();
 
   const sbHead = document.querySelector('.sb-head h2');
   if (sbHead) sbHead.textContent = 'SAR Satellites';
@@ -1260,10 +1469,8 @@ function setupReadableUI() {
     statsWrap.appendChild(card);
   }
 
-  const legendTitle = document.querySelector('.legend-title');
-  if (legendTitle) legendTitle.textContent = 'Satellite Families';
-  const legendItems = document.querySelectorAll('.legend-item span');
-  if (legendItems[3]) legendItems[3].textContent = 'Other SAR missions';
+  const legend = document.querySelector('.map-legend');
+  if (legend) legend.innerHTML = '<div class="legend-title">Visible Data</div><div id="legend-items"></div>';
 
   const dlBar = document.querySelector('.dl-bar');
   if (dlBar) {
@@ -1461,6 +1668,10 @@ function bindAdvancedControls() {
   if (bindAdvancedControls.done) return;
   bindAdvancedControls.done = true;
 
+  document.getElementById('filter-view-mode')?.addEventListener('change', event => {
+    setTab(event.target.value);
+  });
+
   document.getElementById('filter-satellite')?.addEventListener('change', event => {
     state.filters.satellite = event.target.value;
     state.selectedSat = SATS.find(s => s.id === state.filters.satellite) || null;
@@ -1489,6 +1700,7 @@ function bindAdvancedControls() {
       if (id === 'filter-date-end') key = 'dateEnd';
       if (key) {
         state.filters[key] = event.target.value.trim();
+        if (key === 'dateStart' || key === 'dateEnd') updateDateShortcutState();
         applyAdvancedFilters();
       }
     });
@@ -1608,6 +1820,8 @@ function resetAdvancedFilters(apply = true) {
   if (frameMax) frameMax.value = '';
   if (dateStart) dateStart.value = window.start;
   if (dateEnd) dateEnd.value = window.end;
+  updateDateShortcutState();
+  syncViewModeControl();
   renderFormatOptions();
   if (apply) applyAdvancedFilters();
 }
@@ -1730,6 +1944,93 @@ function updateStats(data = state.baseStats || {}) {
   const cop = state.filteredFrames.filter(frame => frame.copernicus_url || frame.download_url).length;
   document.getElementById('dl-info').textContent = `${state.filteredFrames.length} frames | ASF ${asf} | Copernicus ${cop}`;
   updateNextExpected();
+  updateContextPanel();
+  updateLegend();
+  updateDateShortcutState();
+}
+
+function summarizeSelectedFrames() {
+  const selectedFrame = state.selectedFrameKey
+    ? state.filteredFrames.find(frame => getFrameKey(frame) === state.selectedFrameKey)
+    : null;
+  if (selectedFrame) return [selectedFrame];
+  if (state.filters.satellite !== 'ALL') return state.filteredFrames.filter(frame => frame.satellite_id === state.filters.satellite);
+  return state.filteredFrames;
+}
+
+function updateContextPanel() {
+  const frames = summarizeSelectedFrames();
+  const satelliteEl = document.getElementById('context-satellite');
+  const trackEl = document.getElementById('context-track');
+  const rangeEl = document.getElementById('context-range');
+  const directionEl = document.getElementById('context-direction');
+  const countEl = document.getElementById('context-selection-count');
+  const modeEl = document.getElementById('context-selection-mode');
+  if (!satelliteEl || !trackEl || !rangeEl || !directionEl || !countEl || !modeEl) return;
+
+  if (!frames.length) {
+    satelliteEl.textContent = 'No data';
+    trackEl.textContent = '--';
+    rangeEl.textContent = '--';
+    directionEl.textContent = '--';
+    countEl.textContent = '0 frames';
+    modeEl.textContent = 'No selection';
+    return;
+  }
+
+  const satellites = [...new Set(frames.map(frame => frame.satellite_name || frame.platform || frame.satellite_id).filter(Boolean))];
+  const tracks = [...new Set(frames.map(frame => frame.track_label || getFramePathNumber(frame) || '--').filter(Boolean))];
+  const directions = [...new Set(frames.map(frame => frame.direction_norm || '--').filter(Boolean))];
+  const dated = frames.filter(frame => frame.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const fmt = value => `${value.getMonth() + 1}/${value.getDate()}`;
+
+  satelliteEl.textContent = satellites.length === 1 ? satellites[0] : `${satellites[0]} +${satellites.length - 1}`;
+  trackEl.textContent = tracks.length === 1 ? String(tracks[0]) : `${tracks.length} tracks`;
+  rangeEl.textContent = dated.length ? `${fmt(new Date(dated[0].date))} - ${fmt(new Date(dated[dated.length - 1].date))}` : '--';
+  directionEl.textContent = directions.length === 1 ? directions[0] : 'Mixed';
+  countEl.textContent = `${frames.length} frame${frames.length === 1 ? '' : 's'}`;
+  modeEl.textContent = state.selectedFrameKey ? 'Selected frame' : (state.filters.satellite !== 'ALL' ? 'Selected satellite' : 'Filtered view');
+}
+
+function updateLegend() {
+  const wrap = document.getElementById('legend-items');
+  if (!wrap) return;
+
+  const frames = summarizeSelectedFrames();
+  if (!frames.length) {
+    wrap.innerHTML = '<div class="legend-empty">No visible data matches the current filters.</div>';
+    return;
+  }
+
+  const groups = new Map();
+  for (const frame of frames) {
+    const rawLabel = frame.track_label || frame.satellite_name || frame.platform || frame.satellite_id || 'Other';
+    const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
+    const color = rawLabel === 'A69'
+      ? '#00e5ff'
+      : rawLabel === 'D105'
+        ? '#ff7043'
+        : rawLabel === 'NISAR'
+          ? '#00e676'
+          : platColor(frame.platform || frame.satellite_name);
+    const current = groups.get(label) || { label, color, count: 0 };
+    current.count += 1;
+    groups.set(label, current);
+  }
+
+  const items = [...groups.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map(item => `
+      <div class="legend-item">
+        <div class="legend-main">
+          <div class="legend-swatch" style="background:${item.color}"></div>
+          <span>${item.label}</span>
+        </div>
+        <div class="legend-value">${item.count}</div>
+      </div>
+    `);
+  wrap.innerHTML = items.join('');
 }
 
 function estimateNextExpected() {
@@ -1843,8 +2144,11 @@ function setFilter(band, el) {
 
 function setTab(tab, el) {
   state.tab = tab;
-  document.querySelectorAll('.tab').forEach(button => button.classList.remove('on'));
-  el.classList.add('on');
+  syncViewModeControl();
+  if (el) {
+    document.querySelectorAll('.tab').forEach(button => button.classList.remove('on'));
+    el.classList.add('on');
+  }
   applyTabDateWindow();
   renderSatelliteSelect();
   applyAdvancedFilters();
@@ -2057,6 +2361,8 @@ function updateMapSelectionState() {
       item.polygon.setStyle({ color, weight: 1.6, fillColor: color, fillOpacity: 0.1, opacity: 0.82, dashArray: null });
     }
   }
+  updateContextPanel();
+  updateLegend();
 }
 
 window.copyDrawerLink = function(btn, url) {
@@ -2312,6 +2618,48 @@ function getDefaultWeekWindow() {
   };
 }
 
+function getPresetWindow(days) {
+  const end = getQueryEndDate();
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  return {
+    start: formatDateInputValue(start),
+    end: formatDateInputValue(end),
+  };
+}
+
+function syncViewModeControl() {
+  const select = document.getElementById('filter-view-mode');
+  if (select) select.value = state.tab || 'all';
+}
+
+function updateDateShortcutState() {
+  const weekBtn = document.getElementById('preset-week');
+  const monthBtn = document.getElementById('preset-month');
+  if (!weekBtn || !monthBtn) return;
+
+  const week = getPresetWindow(7);
+  const month = getPresetWindow(30);
+  const currentStart = state.filters?.dateStart || '';
+  const currentEnd = state.filters?.dateEnd || '';
+
+  weekBtn.classList.toggle('on', currentStart === week.start && currentEnd === week.end);
+  monthBtn.classList.toggle('on', currentStart === month.start && currentEnd === month.end);
+}
+
+function applyPresetDateWindow(days) {
+  ensureAdvancedState();
+  const window = getPresetWindow(days);
+  state.filters.dateStart = window.start;
+  state.filters.dateEnd = window.end;
+  const dateStart = document.getElementById('filter-date-start');
+  const dateEnd = document.getElementById('filter-date-end');
+  if (dateStart) dateStart.value = window.start;
+  if (dateEnd) dateEnd.value = window.end;
+  updateDateShortcutState();
+  applyAdvancedFilters();
+}
+
 function applyTabDateWindow() {
   const dateStart = document.getElementById('filter-date-start');
   const dateEnd = document.getElementById('filter-date-end');
@@ -2323,6 +2671,7 @@ function applyTabDateWindow() {
     state.filters.dateEnd = window.end;
     dateStart.value = window.start;
     dateEnd.value = window.end;
+    updateDateShortcutState();
     return;
   }
 
@@ -2333,6 +2682,7 @@ function applyTabDateWindow() {
     dateStart.value = window.start;
     dateEnd.value = window.end;
   }
+  updateDateShortcutState();
 }
 
 function updateNextExpected() {
