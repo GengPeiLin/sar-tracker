@@ -19,6 +19,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+__version__ = "0.6.1"
+
 
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "7"))
 MAX_RESULTS = int(os.environ.get("MAX_RESULTS", "1000"))
@@ -254,18 +256,34 @@ def scene_key(frame: dict) -> str:
 
 
 def merge_frames(frames: list[dict]) -> list[dict]:
+    def source_rank(item: dict) -> int:
+        return 0 if item.get("source") == "ASF" else 1
+
     merged: dict[str, dict] = {}
-    for frame in frames:
+    for frame in sorted(frames, key=source_rank):
         key = scene_key(frame)
         current = merged.get(key)
         if not current:
             merged[key] = dict(frame)
             continue
+
+        if current.get("source") != "ASF" and frame.get("source") == "ASF":
+            preferred = dict(frame)
+            preferred["download_url"] = preferred.get("download_url") or current.get("download_url")
+            preferred["copernicus_url"] = preferred.get("copernicus_url") or current.get("copernicus_url")
+            preferred["browse_url"] = preferred.get("browse_url") or current.get("browse_url")
+            preferred["file_size_mb"] = preferred.get("file_size_mb") or current.get("file_size_mb")
+            merged[key] = preferred
+            current = merged[key]
+
         current["asf_url"] = current.get("asf_url") or frame.get("asf_url")
         current["download_url"] = current.get("download_url") or frame.get("download_url")
         current["copernicus_url"] = current.get("copernicus_url") or frame.get("copernicus_url")
         current["browse_url"] = current.get("browse_url") or frame.get("browse_url")
         current["file_size_mb"] = current.get("file_size_mb") or frame.get("file_size_mb")
+        current["frame_number"] = current.get("frame_number") or frame.get("frame_number")
+        current["path_number"] = current.get("path_number") or frame.get("path_number")
+        current["direction"] = current.get("direction") or frame.get("direction")
     return sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)
 
 
@@ -307,6 +325,7 @@ def main() -> int:
         satellite_summary[frame["platform"]] = satellite_summary.get(frame["platform"], 0) + 1
 
     payload = {
+        "version": __version__,
         "updated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
         "query_start": start.isoformat(),
         "query_end": now.isoformat(),
