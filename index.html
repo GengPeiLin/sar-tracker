@@ -963,6 +963,15 @@ function initMap() {
   L.polygon(TW_OUTLINE, { color:'#00e5ff', weight:1, fillColor:'#00e5ff', fillOpacity:.04, dashArray:'4 3' }).addTo(state.map);
 
   state.frameLayer = L.layerGroup().addTo(state.map);
+
+  // 點擊地圖背景時取消選取
+  state.map.on('click', () => {
+    if (state.selectedFrameKey) {
+      state.selectedFrameKey = null;
+      if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
+      closeDrawer();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1039,50 +1048,6 @@ function hasThisWeek(sat, activePlatforms) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RENDER FRAME FOOTPRINTS ON MAP
-// ═══════════════════════════════════════════════════════════════════════════
-function renderFrames() {
-  state.frameLayer.clearLayers();
-
-  state.frames.forEach(f => {
-    const geom = f.footprint;
-    if (!geom || geom.type !== 'Polygon') return;
-
-    const col = platColor(f.platform);
-    // GeoJSON → [lat,lon]
-    const rings = geom.coordinates.map(ring => ring.map(c => [c[1], c[0]]));
-
-    const poly = L.polygon(rings, {
-      color: col,
-      weight: 1.5,
-      fillColor: col,
-      fillOpacity: .07,
-      opacity: .7,
-    });
-
-    const date  = f.date ? new Date(f.date).toLocaleString('zh-TW') : '—';
-    const sz    = f.file_size_mb ? `${f.file_size_mb} MB` : '—';
-
-    poly.bindPopup(`
-      <div class="fp">
-        <h4>${f.granule||'未知場景'}</h4>
-        <p><b>衛星：</b>${f.platform||'—'}</p>
-        <p><b>日期：</b>${date}</p>
-        <p><b>模式：</b>${f.mode||'—'}</p>
-        <p><b>極化：</b>${f.polarization||'—'}</p>
-        <p><b>軌道方向：</b>${f.direction||'—'}</p>
-        <p><b>路徑編號：</b>${f.path_number||'—'}</p>
-        <p><b>檔案大小：</b>${sz}</p>
-        <p><b>來源：</b>${f.source||'—'}</p>
-      </div>
-    `, { maxWidth:260 });
-
-    poly.on('mouseover', function() { this.setStyle({ fillOpacity:.22, weight:2 }); });
-    poly.on('mouseout',  function() { this.setStyle({ fillOpacity:.07, weight:1.5 }); });
-    state.frameLayer.addLayer(poly);
-  });
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // STATS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1102,38 +1067,11 @@ function updateStats(d) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DETAIL DRAWER
-// ═══════════════════════════════════════════════════════════════════════════
-function openDrawer(sat, row, thisWeek) {
-  state.selectedSat = sat;
-  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
-  row.classList.add('active');
-
-  document.getElementById('d-name').textContent   = sat.name;
-  document.getElementById('d-agency').textContent = sat.agency;
-
-  const ww = document.getElementById('d-week-wrap');
-  ww.innerHTML = thisWeek
-    ? '<div class="d-week-badge">✓ 本週有台灣取像</div>'
-    : '';
-
-  const statusTxt = { op:'🟢 運作中', ret:'⚫ 退役', up:'🟠 即將發射' }[sat.status]||sat.status;
-  document.getElementById('d-grid').innerHTML = `
-    <div class="d-item"><div class="k">狀態</div><div class="v">${statusTxt}</div></div>
-    <div class="d-item"><div class="k">頻段</div><div class="v"><span class="badge b${sat.band}">${sat.band}-band</span></div></div>
-    <div class="d-item"><div class="k">頻率</div><div class="v"><small>${sat.freq}</small></div></div>
-    <div class="d-item"><div class="k">解析度</div><div class="v"><small>${sat.res}</small></div></div>
-    <div class="d-item"><div class="k">刈幅寬</div><div class="v"><small>${sat.swath}</small></div></div>
-    <div class="d-item"><div class="k">發射日期</div><div class="v"><small>${sat.launched}</small></div></div>
-    ${sat.retired ? `<div class="d-item"><div class="k">退役日期</div><div class="v"><small>${sat.retired}</small></div></div>`:''}
-  `;
-  document.getElementById('d-desc').textContent = sat.desc;
-  document.getElementById('drawer').classList.add('open');
-}
-
 function closeDrawer() {
   document.getElementById('drawer').classList.remove('open');
   state.selectedSat = null;
+  state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
+  if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
 }
 
@@ -1154,7 +1092,7 @@ function ensureAdvancedState() {
   state.framePolygons ||= [];
   state.selectedFrameKey ||= null;
   state.ui ||= {
-    theme: 'night-ops',
+    theme: 'paper-radar',
     fontSize: '4',
   };
   state.filters ||= {
@@ -1743,6 +1681,9 @@ function openDrawer(sat, row, thisWeek) {
   document.querySelectorAll('.sat-row').forEach(item => item.classList.remove('active'));
   if (row) row.classList.add('active');
 
+  state.selectedFrameKey = null;
+  if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
+
   document.getElementById('d-name').textContent = sat.name;
   document.getElementById('d-agency').textContent = sat.agency;
   document.getElementById('d-week-wrap').innerHTML = thisWeek ? '<div class="d-week-badge">Frames available this week</div>' : '';
@@ -1998,6 +1939,42 @@ function refreshFrameContrast(hoveredKey = null) {
   }
 }
 
+// 顯示 Frame 詳細資訊到右側抽屜
+function openFrameDrawer(frame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  document.getElementById('d-name').textContent = frame.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = frame.satellite_name || frame.platform || '--';
+  document.getElementById('d-week-wrap').innerHTML = '';
+
+  const dateStr = frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--';
+  const sizeStr = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+  const band = frame.satellite_band || 'X';
+
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Date</div><div class="v"><small>${dateStr}</small></div></div>
+    <div class="d-item"><div class="k">Product</div><div class="v"><span class="badge b${band}">${frame.product_type_norm || '--'}</span></div></div>
+    <div class="d-item"><div class="k">Orbit</div><div class="v"><small>${frame.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${frame.frame_number_norm ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Path</div><div class="v"><small>${frame.path_number || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${frame.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Polarization</div><div class="v"><small>${frame.polarization || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Size</div><div class="v"><small>${sizeStr}</small></div></div>
+    <div class="d-item"><div class="k">Source</div><div class="v"><small>${frame.source || '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'Frame Links';
+  
+  const url = frame.asf_url || frame.download_url;
+  document.getElementById('d-desc').innerHTML = url 
+    ? `<a href="${url}" target="_blank" style="color: var(--cyan); text-decoration: none; border-bottom: 1px solid var(--cyan-dim); padding-bottom: 2px;">View / Download from Source ↗</a>`
+    : '<span style="color: var(--muted)">No link available</span>';
+
+  document.getElementById('drawer').classList.add('open');
+}
+
 function renderFrames() {
   ensureAdvancedState();
   state.frameLayer.clearLayers();
@@ -2019,26 +1996,18 @@ function renderFrames() {
       opacity: 0.82,
     });
 
-    polygon.bindPopup(`
-      <div class="fp">
-        <h4>${frame.granule || 'Unknown granule'}</h4>
-        <p><b>Satellite:</b> ${frame.satellite_name || frame.platform || '--'}</p>
-        <p><b>Time:</b> ${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</p>
-        <p><b>Product:</b> ${frame.product_type_norm || '--'}</p>
-        <p><b>Orbit:</b> ${frame.direction_norm}</p>
-        <p><b>Frame:</b> ${frame.frame_number_norm ?? '--'}</p>
-        <p><b>Path:</b> ${frame.path_number || '--'}</p>
-        <p><b>Mode:</b> ${frame.mode || '--'}</p>
-        <p><b>Source:</b> ${frame.source || '--'}</p>
-      </div>
-    `, { maxWidth:280 });
-
     polygon.on('mouseover', () => refreshFrameContrast(key));
     polygon.on('mouseout', () => refreshFrameContrast());
-    polygon.on('click', () => {
-      state.selectedFrameKey = key;
+    polygon.on('click', (e) => {
+      L.DomEvent.stopPropagation(e); // 避免觸發 map click
+      if (state.selectedFrameKey === key) {
+        state.selectedFrameKey = null; // 點擊第二次取消選取
+        closeDrawer();
+      } else {
+        state.selectedFrameKey = key;
+        openFrameDrawer(frame); // 使用抽屜顯示詳細資訊
+      }
       refreshFrameContrast();
-      polygon.openPopup();
     });
 
     state.frameLayer.addLayer(polygon);
