@@ -1187,6 +1187,10 @@ header {
       </div>
       <div class="filter-grid">
         <label class="filter-field span-2">
+          <span class="filter-label">Satellite</span>
+          <select class="filter-select" id="filter-satellite"></select>
+        </label>
+        <label class="filter-field span-2">
           <span class="filter-label">Orbit Direction</span>
           <select class="filter-select" id="filter-direction">
             <option value="ALL">All</option>
@@ -1256,40 +1260,6 @@ header {
       <div class="stat-card">
         <div class="lbl">查詢時段</div>
         <div class="val small" id="st-period">—</div>
-      </div>
-    </div>
-
-    <div class="map-context">
-      <div class="context-card">
-        <div class="context-head">
-          <div class="context-title">Satellite Focus</div>
-          <div class="context-meta" id="context-selection-mode">Filtered view</div>
-        </div>
-        <select class="context-select" id="filter-satellite"></select>
-      </div>
-      <div class="context-card">
-        <div class="context-head">
-          <div class="context-title">Selection Summary</div>
-          <div class="context-meta" id="context-selection-count">0 frames</div>
-        </div>
-        <div class="context-body">
-          <div class="context-pill">
-            <div class="k">Satellite</div>
-            <div class="v" id="context-satellite">All visible</div>
-          </div>
-          <div class="context-pill">
-            <div class="k">Track</div>
-            <div class="v" id="context-track">Mixed</div>
-          </div>
-          <div class="context-pill">
-            <div class="k">Date Range</div>
-            <div class="v" id="context-range">--</div>
-          </div>
-          <div class="context-pill">
-            <div class="k">Direction</div>
-            <div class="v" id="context-direction">Mixed</div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1440,7 +1410,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.8';
+const APP_VERSION = 'v0.6.9';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -1654,7 +1624,6 @@ function closeDrawer() {
   state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
   if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
-  updateContextPanel();
   updateLegend();
   focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
 }
@@ -2387,7 +2356,6 @@ function updateStats(data = state.baseStats || {}) {
   const cop = state.filteredFrames.filter(frame => frame.copernicus_url || frame.download_url).length;
   document.getElementById('dl-info').textContent = `${state.filteredFrames.length} frames | ASF ${asf} | Copernicus ${cop}`;
   updateNextExpected();
-  updateContextPanel();
   updateLegend();
   updateDateShortcutState();
 }
@@ -2399,40 +2367,6 @@ function summarizeSelectedFrames() {
   if (selectedFrame) return [selectedFrame];
   if (state.filters.satellite !== 'ALL') return state.filteredFrames.filter(frame => frame.satellite_id === state.filters.satellite);
   return state.filteredFrames;
-}
-
-function updateContextPanel() {
-  const frames = summarizeSelectedFrames();
-  const satelliteEl = document.getElementById('context-satellite');
-  const trackEl = document.getElementById('context-track');
-  const rangeEl = document.getElementById('context-range');
-  const directionEl = document.getElementById('context-direction');
-  const countEl = document.getElementById('context-selection-count');
-  const modeEl = document.getElementById('context-selection-mode');
-  if (!satelliteEl || !trackEl || !rangeEl || !directionEl || !countEl || !modeEl) return;
-
-  if (!frames.length) {
-    satelliteEl.textContent = 'No data';
-    trackEl.textContent = '--';
-    rangeEl.textContent = '--';
-    directionEl.textContent = '--';
-    countEl.textContent = '0 frames';
-    modeEl.textContent = 'No selection';
-    return;
-  }
-
-  const satellites = [...new Set(frames.map(frame => frame.satellite_name || frame.platform || frame.satellite_id).filter(Boolean))];
-  const tracks = [...new Set(frames.map(frame => frame.track_label || getFramePathNumber(frame) || '--').filter(Boolean))];
-  const directions = [...new Set(frames.map(frame => frame.direction_norm || '--').filter(Boolean))];
-  const dated = frames.filter(frame => frame.date).sort((a, b) => new Date(a.date) - new Date(b.date));
-  const fmt = value => `${value.getMonth() + 1}/${value.getDate()}`;
-
-  satelliteEl.textContent = satellites.length === 1 ? satellites[0] : `${satellites[0]} +${satellites.length - 1}`;
-  trackEl.textContent = tracks.length === 1 ? String(tracks[0]) : `${tracks.length} tracks`;
-  rangeEl.textContent = dated.length ? `${fmt(new Date(dated[0].date))} - ${fmt(new Date(dated[dated.length - 1].date))}` : '--';
-  directionEl.textContent = directions.length === 1 ? directions[0] : 'Mixed';
-  countEl.textContent = `${frames.length} frame${frames.length === 1 ? '' : 's'}`;
-  modeEl.textContent = state.selectedFrameKey ? 'Selected frame' : (state.filters.satellite !== 'ALL' ? 'Selected satellite' : 'Filtered view');
 }
 
 function updateLegend() {
@@ -2886,7 +2820,6 @@ function updateMapSelectionState() {
       item.polygon.setStyle({ color, weight: 1.6, fillColor: color, fillOpacity: 0.1, opacity: 0.82, dashArray: null });
     }
   }
-  updateContextPanel();
   updateLegend();
 }
 
