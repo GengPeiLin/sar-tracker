@@ -65,6 +65,24 @@ def date_fmt_asf(d: datetime) -> str:
 def date_fmt_odata(d: datetime) -> str:
     return d.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
+def infer_product_type(*values: str) -> str:
+    known = [
+        "GSLC", "RSLC", "SLC",
+        "GRD_HD", "GRD_MS", "GRD_HS", "GRD_FD", "GRD",
+        "RAW", "SSC",
+    ]
+    for raw in values:
+        if not raw:
+            continue
+        text = str(raw).upper().replace(".SAFE", "")
+        for item in known:
+            if item in text:
+                return item
+        for token in text.replace("-", "_").split("_"):
+            if token in known:
+                return token
+    return ""
+
 # ── ASF DAAC ──────────────────────────────────────────────────────────────────
 def fetch_asf(start: datetime, end: datetime) -> list[dict]:
     log("▶ ASF DAAC SearchAPI …")
@@ -103,6 +121,8 @@ def fetch_asf(start: datetime, end: datetime) -> list[dict]:
             "path_number":     p.get("pathNumber", ""),
             "frame_number":    p.get("frameNumber", ""),
             "direction":       p.get("flightDirection", ""),
+            "product_type":    infer_product_type(p.get("processingLevel"), p.get("sceneName", "")),
+            "processing_level": p.get("processingLevel", ""),
             "look_direction":  p.get("lookDirection", ""),
             "footprint":       geom,
             "asf_url":         p.get("url", ""),
@@ -157,12 +177,13 @@ def fetch_copernicus(start: datetime, end: datetime) -> list[dict]:
             "product_id":     pid,
             "platform":       parts[0] if parts else "",
             "mode":           parts[1] if len(parts) > 1 else "",
-            "product_type":   parts[2] if len(parts) > 2 else "",
+            "product_type":   infer_product_type(parts[2] if len(parts) > 2 else "", name),
             "date":           item.get("ContentDate", {}).get("Start", ""),
             "stop_time":      item.get("ContentDate", {}).get("End", ""),
             "polarization":   attrs.get("polarisationChannels", ""),
             "orbit":          attrs.get("relativeOrbitNumber", ""),
             "direction":      attrs.get("orbitDirection", ""),
+            "frame_number":   attrs.get("frameNumber", ""),
             "footprint":      geom,
             "download_url":   f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({pid})/$value" if pid else "",
             "s3_path":        item.get("S3Path", ""),

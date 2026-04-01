@@ -145,6 +145,80 @@ header {
 .chip[data-b="X"].on { border-color: var(--orange);  color: var(--orange);  background: rgba(255,112,67,.07); }
 .chip[data-b="S"].on { border-color: var(--amber);   color: var(--amber);   background: rgba(255,193,7,.07); }
 
+.filter-panel {
+  padding: 12px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.filter-field.wide {
+  grid-column: 1 / -1;
+}
+.filter-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.filter-select,
+.filter-input {
+  width: 100%;
+  background: var(--card);
+  color: var(--text-hi);
+  border: 1px solid var(--border2);
+  padding: 7px 9px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+.format-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.format-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .12s;
+}
+.format-chip.on {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(0,230,118,.08);
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-note {
+  font-size: 10px;
+  color: var(--muted);
+}
+
 /* satellite list */
 .sb-list {
   flex: 1;
@@ -344,6 +418,10 @@ header {
 .dl-btn.cop:hover  { background: rgba(255,112,67,.12); }
 .dl-btn.csv  { border-color: var(--muted);   color: var(--muted);   }
 .dl-btn.csv:hover  { border-color: var(--text); color: var(--text); }
+.dl-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
 
 .dl-count {
   font-family: var(--mono);
@@ -486,6 +564,38 @@ header {
       <button class="chip"     data-b="L"   onclick="setFilter('L',this)">L-Band</button>
       <button class="chip"     data-b="X"   onclick="setFilter('X',this)">X-Band</button>
       <button class="chip"     data-b="S"   onclick="setFilter('S',this)">S-Band</button>
+    </div>
+    <div class="filter-panel">
+      <div class="filter-grid">
+        <label class="filter-field wide">
+          <span class="filter-label">Satellite</span>
+          <select class="filter-select" id="filter-satellite"></select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Orbit</span>
+          <select class="filter-select" id="filter-direction">
+            <option value="ALL">All</option>
+            <option value="ASCENDING">Ascending</option>
+            <option value="DESCENDING">Descending</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Frame Min</span>
+          <input class="filter-input" id="filter-frame-min" type="number" inputmode="numeric" placeholder="Any">
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Frame Max</span>
+          <input class="filter-input" id="filter-frame-max" type="number" inputmode="numeric" placeholder="Any">
+        </label>
+        <div class="filter-field wide">
+          <span class="filter-label">Product Type</span>
+          <div class="format-options" id="format-options"></div>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()">Reset Filters</button>
+        <span class="filter-note" id="filter-note">SLC / GSLC / RSLC are selected by default.</span>
+      </div>
     </div>
     <div class="sb-list" id="sat-list"></div>
   </aside>
@@ -992,6 +1102,686 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     document.getElementById('loading').classList.add('gone');
   }, 700);
+});
+
+const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC'];
+const KNOWN_PRODUCT_TYPES = ['GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'RAW', 'SSC'];
+
+function ensureAdvancedState() {
+  state.rawFrames ||= [];
+  state.filteredFrames ||= [];
+  state.baseStats ||= null;
+  state.filters ||= {
+    satellite: 'ALL',
+    direction: 'ALL',
+    frameMin: '',
+    frameMax: '',
+    formats: new Set(),
+  };
+  if (!(state.filters.formats instanceof Set)) {
+    state.filters.formats = new Set(state.filters.formats || []);
+  }
+}
+
+function setupReadableUI() {
+  document.title = 'SAR Track Monitor';
+  const logo = document.querySelector('.hdr-logo');
+  if (logo) logo.innerHTML = 'SAR <em>Track</em> Monitor';
+
+  const hdrStatus = document.querySelector('.hdr-status');
+  if (hdrStatus) {
+    hdrStatus.innerHTML = 'Updated: <b id="hdr-time">--</b>&nbsp;|&nbsp;ASF DAAC &amp; Copernicus CDSE';
+  }
+
+  const tabs = document.querySelectorAll('.hdr-tabs .tab');
+  if (tabs[0]) tabs[0].textContent = 'All Satellites';
+  if (tabs[1]) tabs[1].textContent = 'Operational';
+  if (tabs[2]) tabs[2].textContent = 'This Week';
+
+  const sbHead = document.querySelector('.sb-head h2');
+  if (sbHead) sbHead.textContent = 'SAR Satellites';
+  const sbCount = document.getElementById('sb-count');
+  if (sbCount && !state.rawFrames.length) sbCount.textContent = 'Waiting for inventory...';
+
+  const loadingText = document.querySelector('.ld-txt');
+  if (loadingText) loadingText.textContent = 'SAR MONITOR';
+  const loadingSub = document.getElementById('ld-msg');
+  if (loadingSub && !loadingSub.textContent.trim()) loadingSub.textContent = 'Loading latest frame inventory...';
+
+  const statLabels = document.querySelectorAll('.map-stats .lbl');
+  if (statLabels[0]) statLabels[0].textContent = 'Filtered Frames';
+  if (statLabels[1]) statLabels[1].textContent = 'Active Satellites';
+  if (statLabels[2]) statLabels[2].textContent = 'Query Window';
+
+  const statsWrap = document.querySelector('.map-stats');
+  if (statsWrap && !document.getElementById('st-next')) {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = '<div class="lbl">Next Expected</div><div class="val small" id="st-next">Need history</div>';
+    statsWrap.appendChild(card);
+  }
+
+  const legendTitle = document.querySelector('.legend-title');
+  if (legendTitle) legendTitle.textContent = 'Satellite Families';
+  const legendItems = document.querySelectorAll('.legend-item span');
+  if (legendItems[3]) legendItems[3].textContent = 'Other SAR missions';
+
+  const dlBar = document.querySelector('.dl-bar');
+  if (dlBar) {
+    dlBar.innerHTML = `
+      <span class="dl-label">Filtered Downloads</span>
+      <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
+      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">Copernicus .meta4</button>
+      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV Export</button>
+      <span class="dl-count" id="dl-info">0 frames</span>
+    `;
+  }
+
+  const closeBtn = document.querySelector('.drawer-close');
+  if (closeBtn) closeBtn.textContent = 'Close';
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'Mission Notes';
+}
+
+function normalizeDirection(value) {
+  const text = String(value || '').toUpperCase();
+  if (text.startsWith('A')) return 'ASCENDING';
+  if (text.startsWith('D')) return 'DESCENDING';
+  return 'UNKNOWN';
+}
+
+function normalizeFrameNumber(value) {
+  const num = Number.parseInt(String(value ?? '').trim(), 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeProductType(frame) {
+  const candidates = [frame.product_type, frame.processing_level, frame.processingLevel, frame.granule];
+  for (const raw of candidates) {
+    const text = String(raw || '').toUpperCase().replace('.SAFE', '');
+    if (!text) continue;
+    for (const item of KNOWN_PRODUCT_TYPES) {
+      if (text.includes(item)) return item;
+    }
+  }
+  return 'UNKNOWN';
+}
+
+function satMatchesFrame(sat, frame) {
+  const haystack = [frame.platform, frame.granule, frame.satellite_name, frame.satellite_id].join(' ').toUpperCase();
+  const names = [sat.id, sat.name, ...(sat.asf_prefix || [])].map(v => String(v || '').toUpperCase());
+  return names.some(name => name && haystack.includes(name));
+}
+
+function getSatForFrame(frame) {
+  return SATS.find(sat => satMatchesFrame(sat, frame)) || null;
+}
+
+function enhanceFrame(frame) {
+  const sat = getSatForFrame(frame) || {};
+  return {
+    ...frame,
+    satellite_id: sat.id || frame.platform || 'UNKNOWN',
+    satellite_name: sat.name || frame.platform || 'Unknown',
+    satellite_band: sat.band || '',
+    sat_status: sat.status || '',
+    direction_norm: normalizeDirection(frame.direction),
+    frame_number_norm: normalizeFrameNumber(frame.frame_number),
+    product_type_norm: normalizeProductType(frame),
+  };
+}
+
+async function loadData() {
+  ensureAdvancedState();
+  ldmsg('Loading cached frame inventory...');
+  try {
+    const response = await fetch('./data/sar_status.json?v=' + Date.now());
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
+
+    document.getElementById('hdr-time').textContent = data.updated_at || '--';
+    state.baseStats = data;
+    state.rawFrames = data.taiwan_frames.map(enhanceFrame);
+    bindAdvancedControls();
+    renderSatelliteSelect();
+    renderFormatOptions();
+    resetAdvancedFilters(false);
+    applyAdvancedFilters();
+    return;
+  } catch (error) {
+    console.warn('Cached JSON unavailable, fallback to live ASF query.', error);
+  }
+
+  ldmsg('Loading live ASF frames...');
+  await liveFetchASF();
+}
+
+async function liveFetchASF() {
+  ensureAdvancedState();
+  const now  = new Date();
+  const wa   = new Date(now - 7 * 24 * 3600 * 1000);
+  const fmt  = d => d.toISOString().replace(/\.\d+Z$/, 'UTC');
+  const WKT  = 'POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))';
+
+  const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
+    intersectsWith: WKT,
+    platform: 'SA,SC,SD,A3,A4,R2,RCM',
+    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD',
+    start: fmt(wa),
+    end: fmt(now),
+    output: 'geojson',
+    maxresults: 300,
+  });
+
+  try {
+    const response = await fetch(url);
+    const gj = await response.json();
+    state.rawFrames = (gj.features || []).map(feature => {
+      const p = feature.properties || {};
+      return enhanceFrame({
+        source: 'ASF',
+        granule: p.sceneName || '',
+        platform: p.platform || '',
+        sensor: p.sensor || '',
+        date: p.startTime || '',
+        stop_time: p.stopTime || '',
+        mode: p.beamModeType || p.beamMode || '',
+        polarization: p.polarization || '',
+        orbit: p.orbit || '',
+        path_number: p.pathNumber || '',
+        frame_number: p.frameNumber || '',
+        direction: p.flightDirection || '',
+        product_type: p.processingLevel || '',
+        processing_level: p.processingLevel || '',
+        footprint: feature.geometry,
+        asf_url: p.url || '',
+        file_size_mb: +(p.sizeMB || 0).toFixed(1),
+      });
+    });
+
+    state.baseStats = {
+      total_frames: state.rawFrames.length,
+      query_start: wa.toISOString(),
+      query_end: now.toISOString(),
+      asf_count: state.rawFrames.length,
+      copernicus_count: 0,
+    };
+    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString('zh-TW');
+    bindAdvancedControls();
+    renderSatelliteSelect();
+    renderFormatOptions();
+    resetAdvancedFilters(false);
+    applyAdvancedFilters();
+  } catch (error) {
+    document.getElementById('hdr-time').textContent = 'Load failed';
+    console.error('ASF API failed', error);
+  }
+}
+
+function matchesSidebarFilters(sat) {
+  ensureAdvancedState();
+  if (state.band !== 'ALL' && sat.band !== state.band) return false;
+  if (state.tab === 'op' && sat.status === 'ret') return false;
+  if (state.tab === 'tw') return state.rawFrames.some(frame => satMatchesFrame(sat, frame));
+  return true;
+}
+
+function bindAdvancedControls() {
+  if (bindAdvancedControls.done) return;
+  bindAdvancedControls.done = true;
+
+  document.getElementById('filter-satellite')?.addEventListener('change', event => {
+    state.filters.satellite = event.target.value;
+    state.selectedSat = SATS.find(s => s.id === state.filters.satellite) || null;
+    applyAdvancedFilters();
+  });
+
+  document.getElementById('filter-direction')?.addEventListener('change', event => {
+    state.filters.direction = event.target.value;
+    applyAdvancedFilters();
+  });
+
+  for (const id of ['filter-frame-min', 'filter-frame-max']) {
+    document.getElementById(id)?.addEventListener('input', event => {
+      state.filters[id === 'filter-frame-min' ? 'frameMin' : 'frameMax'] = event.target.value.trim();
+      applyAdvancedFilters();
+    });
+  }
+
+  for (const id of ['btn-asf', 'btn-cop']) {
+    const el = document.getElementById(id);
+    if (el && el.tagName === 'A') el.removeAttribute('href');
+  }
+}
+
+function renderSatelliteSelect() {
+  ensureAdvancedState();
+  const select = document.getElementById('filter-satellite');
+  if (!select) return;
+
+  const counts = new Map();
+  for (const frame of state.rawFrames) counts.set(frame.satellite_id, (counts.get(frame.satellite_id) || 0) + 1);
+
+  const options = ['<option value="ALL">All satellites</option>'];
+  for (const sat of SATS.filter(matchesSidebarFilters)) {
+    const count = counts.get(sat.id) || 0;
+    options.push(`<option value="${sat.id}">${sat.name}${count ? ` (${count})` : ''}</option>`);
+  }
+  select.innerHTML = options.join('');
+  if (![...select.options].some(opt => opt.value === state.filters.satellite)) {
+    state.filters.satellite = 'ALL';
+  }
+  select.value = state.filters.satellite;
+}
+
+function renderFormatOptions() {
+  ensureAdvancedState();
+  const wrap = document.getElementById('format-options');
+  if (!wrap) return;
+
+  const types = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))].sort();
+  if (!types.length) {
+    wrap.innerHTML = '<span class="filter-note">No product types in current inventory.</span>';
+    state.filters.formats = new Set();
+    return;
+  }
+
+  if (!state.filters.formats.size) {
+    const defaults = types.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
+    state.filters.formats = new Set(defaults.length ? defaults : types);
+  }
+
+  wrap.innerHTML = '';
+  for (const type of types) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'format-chip' + (state.filters.formats.has(type) ? ' on' : '');
+    button.textContent = type;
+    button.onclick = () => {
+      if (state.filters.formats.has(type)) state.filters.formats.delete(type);
+      else state.filters.formats.add(type);
+      renderFormatOptions();
+      applyAdvancedFilters();
+    };
+    wrap.appendChild(button);
+  }
+}
+
+function resetAdvancedFilters(apply = true) {
+  ensureAdvancedState();
+  const allTypes = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))];
+  const defaults = allTypes.filter(type => DEFAULT_PRODUCT_TYPES.includes(type));
+  state.filters.satellite = 'ALL';
+  state.filters.direction = 'ALL';
+  state.filters.frameMin = '';
+  state.filters.frameMax = '';
+  state.filters.formats = new Set(defaults.length ? defaults : allTypes);
+  state.selectedSat = null;
+
+  const satSel = document.getElementById('filter-satellite');
+  const dirSel = document.getElementById('filter-direction');
+  const frameMin = document.getElementById('filter-frame-min');
+  const frameMax = document.getElementById('filter-frame-max');
+  if (satSel) satSel.value = 'ALL';
+  if (dirSel) dirSel.value = 'ALL';
+  if (frameMin) frameMin.value = '';
+  if (frameMax) frameMax.value = '';
+  renderFormatOptions();
+  if (apply) applyAdvancedFilters();
+}
+
+function frameMatchesAdvancedFilters(frame) {
+  if (state.band !== 'ALL' && frame.satellite_band !== state.band) return false;
+  if (state.tab === 'op' && frame.sat_status === 'ret') return false;
+  if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
+  if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
+  if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) return false;
+
+  const min = normalizeFrameNumber(state.filters.frameMin);
+  const max = normalizeFrameNumber(state.filters.frameMax);
+  if (min !== null && (frame.frame_number_norm === null || frame.frame_number_norm < min)) return false;
+  if (max !== null && (frame.frame_number_norm === null || frame.frame_number_norm > max)) return false;
+  return true;
+}
+
+function getFrameBoundsPreview() {
+  return state.rawFrames.filter(frame => {
+    if (state.band !== 'ALL' && frame.satellite_band !== state.band) return false;
+    if (state.tab === 'op' && frame.sat_status === 'ret') return false;
+    if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
+    if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
+    if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) return false;
+    return frame.frame_number_norm !== null;
+  }).map(frame => frame.frame_number_norm);
+}
+
+function applyAdvancedFilters() {
+  ensureAdvancedState();
+  state.filteredFrames = state.rawFrames.filter(frameMatchesAdvancedFilters);
+  state.frames = state.filteredFrames;
+  renderSatelliteSelect();
+  renderSatList();
+  renderFrames();
+  updateStats();
+  updateFilterHints();
+  updateDownloadButtons();
+}
+
+function renderSatList() {
+  ensureAdvancedState();
+  const list = document.getElementById('sat-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const filteredSats = SATS.filter(matchesSidebarFilters);
+  const groups = [
+    { key:'op',  label:'Operational' },
+    { key:'ret', label:'Retired' },
+  ];
+
+  let total = 0;
+  for (const group of groups) {
+    const sats = filteredSats.filter(sat => sat.status === group.key);
+    if (!sats.length) continue;
+    const label = document.createElement('div');
+    label.className = 'group-label';
+    label.textContent = group.label;
+    list.appendChild(label);
+
+    for (const sat of sats) {
+      total++;
+      const count = state.rawFrames.filter(frame => frame.satellite_id === sat.id).length;
+      const row = document.createElement('div');
+      row.className = 'sat-row' + (state.filters.satellite === sat.id ? ' active' : '');
+      row.onclick = () => selectSatellite(sat, row);
+      row.innerHTML = `
+        <div class="dot ${sat.status}"></div>
+        <div class="sat-info">
+          <div class="sat-name">${sat.name}</div>
+          <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
+        </div>
+        <div class="badges">
+          ${state.rawFrames.some(frame => satMatchesFrame(sat, frame)) ? '<span class="this-week">THIS WEEK</span>' : ''}
+          <span class="badge b${sat.band}">${sat.band}</span>
+        </div>`;
+      list.appendChild(row);
+    }
+  }
+  document.getElementById('sb-count').textContent = `${total} satellites listed`;
+}
+
+function selectSatellite(sat, row) {
+  ensureAdvancedState();
+  state.selectedSat = sat;
+  state.filters.satellite = sat.id;
+  const select = document.getElementById('filter-satellite');
+  if (select) select.value = sat.id;
+  openDrawer(sat, row, state.rawFrames.some(frame => satMatchesFrame(sat, frame)));
+  applyAdvancedFilters();
+}
+
+function renderFrames() {
+  ensureAdvancedState();
+  state.frameLayer.clearLayers();
+  for (const frame of state.filteredFrames) {
+    const geom = frame.footprint;
+    if (!geom || geom.type !== 'Polygon' || !Array.isArray(geom.coordinates)) continue;
+
+    const rings = geom.coordinates.map(ring => ring.map(coord => [coord[1], coord[0]]));
+    const color = platColor(frame.platform || frame.satellite_name);
+    const polygon = L.polygon(rings, {
+      color,
+      weight: 1.5,
+      fillColor: color,
+      fillOpacity: 0.08,
+      opacity: 0.75,
+    });
+
+    polygon.bindPopup(`
+      <div class="fp">
+        <h4>${frame.granule || 'Unknown granule'}</h4>
+        <p><b>Satellite:</b> ${frame.satellite_name || frame.platform || '--'}</p>
+        <p><b>Time:</b> ${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</p>
+        <p><b>Product:</b> ${frame.product_type_norm || '--'}</p>
+        <p><b>Orbit:</b> ${frame.direction_norm}</p>
+        <p><b>Frame:</b> ${frame.frame_number_norm ?? '--'}</p>
+        <p><b>Path:</b> ${frame.path_number || '--'}</p>
+        <p><b>Mode:</b> ${frame.mode || '--'}</p>
+        <p><b>Source:</b> ${frame.source || '--'}</p>
+      </div>
+    `, { maxWidth:280 });
+
+    polygon.on('mouseover', function() { this.setStyle({ fillOpacity:.22, weight:2 }); });
+    polygon.on('mouseout', function() { this.setStyle({ fillOpacity:.08, weight:1.5 }); });
+    state.frameLayer.addLayer(polygon);
+  }
+}
+
+function updateStats(data = state.baseStats || {}) {
+  ensureAdvancedState();
+  document.getElementById('st-frames').textContent = state.filteredFrames.length;
+  document.getElementById('st-sats').textContent = new Set(state.filteredFrames.map(frame => frame.satellite_id)).size;
+
+  const start = new Date(data.query_start || Date.now() - 7 * 864e5);
+  const end = new Date(data.query_end || Date.now());
+  const fmt = value => `${value.getMonth()+1}/${value.getDate()}`;
+  document.getElementById('st-period').textContent = `${fmt(start)} - ${fmt(end)}`;
+
+  const asf = state.filteredFrames.filter(frame => frame.source === 'ASF').length;
+  const cop = state.filteredFrames.filter(frame => frame.source === 'Copernicus').length;
+  document.getElementById('dl-info').textContent = `${state.filteredFrames.length} frames | ASF ${asf} | Copernicus ${cop}`;
+  updateNextExpected();
+}
+
+function estimateNextExpected() {
+  const grouped = new Map();
+  for (const frame of state.filteredFrames) {
+    if (!frame.date) continue;
+    const timestamp = new Date(frame.date).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    const key = [
+      frame.satellite_id,
+      frame.direction_norm,
+      frame.path_number || 'NA',
+      frame.frame_number_norm ?? 'NA',
+    ].join('|');
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(timestamp);
+  }
+
+  const candidates = [];
+  for (const [key, values] of grouped.entries()) {
+    const uniq = [...new Set(values)].sort((a, b) => a - b);
+    if (uniq.length < 2) continue;
+    const intervals = [];
+    for (let i = 1; i < uniq.length; i++) {
+      intervals.push((uniq[i] - uniq[i - 1]) / 86400000);
+    }
+    const avg = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+    const last = uniq[uniq.length - 1];
+    const next = last + avg * 86400000;
+    candidates.push({ key, avg, last, next });
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => a.next - b.next);
+  return candidates[0];
+}
+
+function updateNextExpected() {
+  const el = document.getElementById('st-next');
+  if (!el) return;
+  const forecast = estimateNextExpected();
+  if (!forecast) {
+    el.textContent = 'Need history';
+    return;
+  }
+
+  const nextDate = new Date(forecast.next);
+  const days = Math.round((forecast.next - Date.now()) / 86400000);
+  const prefix = days <= 0 ? 'Watch now' : `${days}d`;
+  el.textContent = `${nextDate.getMonth() + 1}/${nextDate.getDate()} · ${prefix}`;
+}
+
+function updateFilterHints() {
+  ensureAdvancedState();
+  const values = getFrameBoundsPreview();
+  const note = document.getElementById('filter-note');
+  const frameMin = document.getElementById('filter-frame-min');
+  const frameMax = document.getElementById('filter-frame-max');
+  if (!note || !frameMin || !frameMax) return;
+
+  if (!values.length) {
+    frameMin.placeholder = 'Any';
+    frameMax.placeholder = 'Any';
+    note.textContent = 'SLC / GSLC / RSLC are selected by default.';
+    return;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  frameMin.placeholder = String(min);
+  frameMax.placeholder = String(max);
+  note.textContent = `Default formats: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max}`;
+}
+
+function openDrawer(sat, row, thisWeek) {
+  document.querySelectorAll('.sat-row').forEach(item => item.classList.remove('active'));
+  if (row) row.classList.add('active');
+
+  document.getElementById('d-name').textContent = sat.name;
+  document.getElementById('d-agency').textContent = sat.agency;
+  document.getElementById('d-week-wrap').innerHTML = thisWeek ? '<div class="d-week-badge">Frames available this week</div>' : '';
+
+  const statusMap = { op:'Operational', ret:'Retired', up:'Upcoming' };
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Status</div><div class="v">${statusMap[sat.status] || sat.status}</div></div>
+    <div class="d-item"><div class="k">Band</div><div class="v"><span class="badge b${sat.band}">${sat.band}-band</span></div></div>
+    <div class="d-item"><div class="k">Frequency</div><div class="v"><small>${sat.freq}</small></div></div>
+    <div class="d-item"><div class="k">Resolution</div><div class="v"><small>${sat.res}</small></div></div>
+    <div class="d-item"><div class="k">Swath</div><div class="v"><small>${sat.swath}</small></div></div>
+    <div class="d-item"><div class="k">Launch</div><div class="v"><small>${sat.launched}</small></div></div>
+    ${sat.retired ? `<div class="d-item"><div class="k">Retired</div><div class="v"><small>${sat.retired}</small></div></div>` : ''}
+  `;
+  document.getElementById('d-desc').textContent = sat.desc;
+  document.getElementById('drawer').classList.add('open');
+}
+
+function setFilter(band, el) {
+  state.band = band;
+  document.querySelectorAll('.chip').forEach(chip => chip.classList.remove('on'));
+  el.classList.add('on');
+  renderSatelliteSelect();
+  applyAdvancedFilters();
+}
+
+function setTab(tab, el) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(button => button.classList.remove('on'));
+  el.classList.add('on');
+  renderSatelliteSelect();
+  applyAdvancedFilters();
+}
+
+function escapeXml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function createMeta4(frames, source) {
+  const selected = frames.filter(frame => {
+    if (frame.source !== source) return false;
+    return source === 'ASF' ? !!frame.asf_url : !!frame.download_url;
+  });
+
+  const lines = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<metalink xmlns="urn:ietf:params:xml:ns:metalink">',
+    `  <!-- generated ${new Date().toISOString()} -->`,
+    `  <!-- ${selected.length} filtered items -->`,
+  ];
+
+  for (const frame of selected) {
+    const url = source === 'ASF' ? frame.asf_url : frame.download_url;
+    const name = source === 'Copernicus' ? `${frame.granule}.SAFE.zip` : frame.granule;
+    lines.push(`  <file name="${escapeXml(name)}">`);
+    if (frame.file_size_mb) lines.push(`    <size>${Math.round(Number(frame.file_size_mb) * 1000000)}</size>`);
+    lines.push(`    <url priority="1">${escapeXml(url)}</url>`);
+    lines.push('  </file>');
+  }
+  lines.push('</metalink>');
+  return { text: lines.join('\n'), count: selected.length };
+}
+
+function triggerDownload(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildDownloadName(prefix, ext) {
+  ensureAdvancedState();
+  const sat = state.filters.satellite === 'ALL' ? 'all' : state.filters.satellite.toLowerCase();
+  const dir = state.filters.direction === 'ALL' ? 'all' : state.filters.direction.toLowerCase();
+  return `${prefix}_${sat}_${dir}_${new Date().toISOString().slice(0,10)}.${ext}`;
+}
+
+function updateDownloadButtons() {
+  ensureAdvancedState();
+  const asfMeta4 = createMeta4(state.filteredFrames, 'ASF');
+  const copMeta4 = createMeta4(state.filteredFrames, 'Copernicus');
+  const asfBtn = document.getElementById('btn-asf');
+  const copBtn = document.getElementById('btn-cop');
+  if (!asfBtn || !copBtn) return;
+  asfBtn.textContent = `ASF .meta4 (${asfMeta4.count})`;
+  copBtn.textContent = `Copernicus .meta4 (${copMeta4.count})`;
+  asfBtn.style.pointerEvents = asfMeta4.count ? 'auto' : 'none';
+  copBtn.style.pointerEvents = copMeta4.count ? 'auto' : 'none';
+  asfBtn.style.opacity = asfMeta4.count ? '1' : '.35';
+  copBtn.style.opacity = copMeta4.count ? '1' : '.35';
+}
+
+function downloadMeta4(source) {
+  ensureAdvancedState();
+  const meta4 = createMeta4(state.filteredFrames, source);
+  if (!meta4.count) {
+    alert(`No ${source} scenes match the current filters.`);
+    return;
+  }
+  triggerDownload(buildDownloadName(source.toLowerCase(), 'meta4'), meta4.text, 'application/metalink4+xml;charset=utf-8');
+}
+
+function exportCSV() {
+  ensureAdvancedState();
+  if (!state.filteredFrames.length) {
+    alert('No frames match the current filters.');
+    return;
+  }
+
+  const columns = ['source', 'granule', 'satellite_name', 'product_type_norm', 'direction_norm', 'frame_number_norm', 'path_number', 'orbit', 'date', 'stop_time', 'mode', 'polarization', 'file_size_mb', 'asf_url', 'download_url'];
+  const csv = [
+    columns.join(','),
+    ...state.filteredFrames.map(frame => columns.map(column => {
+      const value = String(frame[column] ?? '');
+      return /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+    }).join(',')),
+  ].join('\n');
+
+  triggerDownload(buildDownloadName('taiwan_sar', 'csv'), '\uFEFF' + csv, 'text/csv;charset=utf-8');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  ensureAdvancedState();
+  setupReadableUI();
+  bindAdvancedControls();
 });
 </script>
 </body>
