@@ -1359,6 +1359,34 @@ function initMap() {
   });
 }
 
+function getFrameLatLngBounds(frame) {
+  const geom = frame?.footprint;
+  if (!geom || geom.type !== 'Polygon' || !Array.isArray(geom.coordinates)) return null;
+  const points = [];
+  for (const ring of geom.coordinates) {
+    for (const coord of ring || []) {
+      if (Array.isArray(coord) && coord.length >= 2) points.push([coord[1], coord[0]]);
+    }
+  }
+  return points.length ? L.latLngBounds(points) : null;
+}
+
+function focusMapOnFrames(frames, options = {}) {
+  if (!state.map || !Array.isArray(frames) || !frames.length) return;
+  const boundsList = frames.map(getFrameLatLngBounds).filter(Boolean);
+  if (!boundsList.length) return;
+
+  const combined = boundsList[0];
+  for (let i = 1; i < boundsList.length; i++) combined.extend(boundsList[i]);
+
+  state.map.fitBounds(combined.pad(options.pad ?? 0.18), {
+    maxZoom: options.maxZoom ?? 9,
+    animate: options.animate ?? true,
+    paddingTopLeft: options.paddingTopLeft ?? [16, 16],
+    paddingBottomRight: options.paddingBottomRight ?? [options.withDrawer ? 420 : 16, 110],
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1460,6 +1488,7 @@ function closeDrawer() {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   updateContextPanel();
   updateLegend();
+  focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1599,6 +1628,7 @@ function setupReadableUI() {
 
   const closeBtn = document.querySelector('.drawer-close');
   if (closeBtn) closeBtn.textContent = '×';
+  if (closeBtn) closeBtn.textContent = 'X';
   const section = document.querySelector('.d-section');
   if (section) section.textContent = 'Selected Files';
 }
@@ -2772,6 +2802,9 @@ function renderFrames() {
   }
 
   updateMapSelectionState();
+  if (!state.selectedFrameKey) {
+    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
+  }
 }
 
 async function liveFetchASF() {
@@ -3250,6 +3283,9 @@ function renderFrames() {
   }
 
   updateMapSelectionState();
+  if (!state.selectedFrameKey) {
+    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
+  }
 }
 
 function openFrameDrawer(clickedFrame) {
@@ -3348,6 +3384,7 @@ function openFrameDrawer(clickedFrame) {
 
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
   document.getElementById('drawer').classList.add('open');
+  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -3360,6 +3397,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindAdvancedControls();
   initMap();
   await loadData();
+
+  document.addEventListener('click', event => {
+    const panel = document.getElementById('export-panel');
+    const toggle = document.getElementById('btn-export-toggle');
+    if (!panel || !panel.classList.contains('open')) return;
+    if (panel.contains(event.target) || toggle?.contains(event.target)) return;
+    toggleExportPanel(false);
+  });
 
   setTimeout(() => {
     document.getElementById('loading').classList.add('gone');
