@@ -1916,6 +1916,11 @@ function updateDownloadButtons() {
     copyBtn.style.pointerEvents = totalUrls ? 'auto' : 'none';
     copyBtn.style.opacity = totalUrls ? '1' : '.35';
   }
+  const fileCount = new Set(state.filteredFrames.map(frame => normalizeGranuleKey(frame.granule))).size;
+  const dlInfo = document.getElementById('dl-info');
+  if (dlInfo) {
+    dlInfo.textContent = `${fileCount} files | ASF links ${asfMeta4.count} | CDSE links ${copMeta4.count}`;
+  }
 }
 
 window.copyFilteredUrls = function() {
@@ -2272,6 +2277,13 @@ function getHistoryEntryKey(frame) {
   ].join('|');
 }
 
+function normalizeGranuleKey(granule) {
+  return String(granule || '')
+    .replace(/\.SAFE$/i, '')
+    .trim()
+    .toUpperCase();
+}
+
 function updateNextExpected() {
   const el = document.getElementById('st-next');
   if (!el) return;
@@ -2297,7 +2309,8 @@ function openFrameDrawer(clickedFrame) {
 
   const mergedHistory = new Map();
   for (const frame of historyFrames) {
-    const key = getHistoryEntryKey(frame);
+    const granuleKey = normalizeGranuleKey(frame.granule);
+    const key = granuleKey || getHistoryEntryKey(frame);
     const current = mergedHistory.get(key);
     if (!current) {
       mergedHistory.set(key, { ...frame });
@@ -2307,12 +2320,13 @@ function openFrameDrawer(clickedFrame) {
     current.copernicus_url ||= frame.copernicus_url;
     current.download_url ||= frame.download_url;
     current.file_size_mb ||= frame.file_size_mb;
+    current.source = current.asf_url && (current.copernicus_url || current.download_url) ? 'ASF+Copernicus' : (current.source || frame.source);
   }
 
   const entries = [...mergedHistory.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const primary = entries[0] || clickedFrame;
 
-  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-name').textContent = `Frame series · ${primary.track_label || '--'} · ${getFramePathNumber(primary) ?? '--'} / ${primary.frame_number_norm ?? '--'}`;
   document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
@@ -2346,7 +2360,7 @@ function openFrameDrawer(clickedFrame) {
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'} · ${frame.asf_url ? 'ASF' : ''}${frame.asf_url && (frame.copernicus_url || frame.download_url) ? ' + ' : ''}${(frame.copernicus_url || frame.download_url) ? 'CDSE' : ''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}

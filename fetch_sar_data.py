@@ -238,6 +238,9 @@ def fetch_copernicus_frames(start: datetime, end: datetime) -> list[dict]:
 
 
 def scene_key(frame: dict) -> str:
+    granule = str(frame.get("granule", "")).replace(".SAFE", "").strip().upper()
+    if granule:
+        return granule
     return "|".join(
         [
             frame.get("platform", ""),
