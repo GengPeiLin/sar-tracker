@@ -1253,7 +1253,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.1';
+const APP_VERSION = 'v0.6.2';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -1558,7 +1558,7 @@ function bindAppearanceControls() {
 }
 
 function setupReadableUI() {
-  document.title = `SAR Tracker ${APP_VERSION}`;
+  document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
   if (logo) logo.innerHTML = `SAR <em>Tracker</em> <span style="font-size:11px;color:var(--muted);letter-spacing:1px;">${APP_VERSION}</span>`;
 
@@ -2714,6 +2714,7 @@ function openFrameDrawer(clickedFrame) {
   document.getElementById('drawer').classList.add('open');
 }
 
+// Active implementation: keep this render path as the canonical one until the file is refactored.
 function renderFrames() {
   ensureAdvancedState();
   state.frameLayer.clearLayers();
@@ -3250,6 +3251,7 @@ function renderFrames() {
   }
 }
 
+// Active implementation: this is the canonical drawer path used by frame clicks.
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;

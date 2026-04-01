@@ -81,6 +81,14 @@ DAYS_BACK=14 python fetch_sar_data.py
 
 For frontend-only changes, edit `index.html`, commit, and let GitHub Pages redeploy through the workflow.
 
+## Versioning
+
+- Bump `APP_VERSION` in [index.html](c:/Users/saris56/work/SAR_data_monitor/index.html) for every user-visible change
+- Keep the browser tab title version-free; the version should appear in the in-page header only
+- Treat `APP_VERSION` and `data/sar_status.json` `version` as different things:
+  - `APP_VERSION` is the frontend/app version
+  - `data.version` is the generated dataset version
+
 ## Progress Summary
 
 ### UI Progress
