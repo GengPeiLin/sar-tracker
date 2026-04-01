@@ -1290,8 +1290,8 @@ async function liveFetchASF() {
 
   const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
     intersectsWith: WKT,
-    platform: 'SA,SC,SD,A3,A4,R2,RCM',
-    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD',
+    platform: 'SA,SC,SD,A3,A4,R2,RCM,NISAR',
+    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC',
     start: fmt(wa),
     end: fmt(now),
     output: 'geojson',
@@ -1550,43 +1550,6 @@ function selectSatellite(sat, row) {
   if (select) select.value = sat.id;
   openDrawer(sat, row, state.rawFrames.some(frame => satMatchesFrame(sat, frame)));
   applyAdvancedFilters();
-}
-
-function renderFrames() {
-  ensureAdvancedState();
-  state.frameLayer.clearLayers();
-  for (const frame of state.filteredFrames) {
-    const geom = frame.footprint;
-    if (!geom || geom.type !== 'Polygon' || !Array.isArray(geom.coordinates)) continue;
-
-    const rings = geom.coordinates.map(ring => ring.map(coord => [coord[1], coord[0]]));
-    const color = platColor(frame.platform || frame.satellite_name);
-    const polygon = L.polygon(rings, {
-      color,
-      weight: 1.5,
-      fillColor: color,
-      fillOpacity: 0.08,
-      opacity: 0.75,
-    });
-
-    polygon.bindPopup(`
-      <div class="fp">
-        <h4>${frame.granule || 'Unknown granule'}</h4>
-        <p><b>Satellite:</b> ${frame.satellite_name || frame.platform || '--'}</p>
-        <p><b>Time:</b> ${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</p>
-        <p><b>Product:</b> ${frame.product_type_norm || '--'}</p>
-        <p><b>Orbit:</b> ${frame.direction_norm}</p>
-        <p><b>Frame:</b> ${frame.frame_number_norm ?? '--'}</p>
-        <p><b>Path:</b> ${frame.path_number || '--'}</p>
-        <p><b>Mode:</b> ${frame.mode || '--'}</p>
-        <p><b>Source:</b> ${frame.source || '--'}</p>
-      </div>
-    `, { maxWidth:280 });
-
-    polygon.on('mouseover', function() { this.setStyle({ fillOpacity:.22, weight:2 }); });
-    polygon.on('mouseout', function() { this.setStyle({ fillOpacity:.08, weight:1.5 }); });
-    state.frameLayer.addLayer(polygon);
-  }
 }
 
 function updateStats(data = state.baseStats || {}) {
@@ -1965,12 +1928,33 @@ function openFrameDrawer(frame) {
   `;
 
   const section = document.querySelector('.d-section');
-  if (section) section.textContent = 'Frame Links';
+  if (section) section.textContent = 'Download Links';
   
-  const url = frame.asf_url || frame.download_url;
-  document.getElementById('d-desc').innerHTML = url 
-    ? `<a href="${url}" target="_blank" style="color: var(--cyan); text-decoration: none; border-bottom: 1px solid var(--cyan-dim); padding-bottom: 2px;">View / Download from Source ↗</a>`
-    : '<span style="color: var(--muted)">No link available</span>';
+  let linksHtml = '';
+  
+  if (frame.asf_url) {
+    linksHtml += `<div style="margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">ASF DAAC (Default)</div>
+      <a href="${frame.asf_url}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download from ASF ↗</a>
+    </div>`;
+  }
+  
+  const copUrl = frame.copernicus_url || (frame.source === 'Copernicus' ? frame.download_url : null);
+  if (copUrl) {
+    linksHtml += `<div style="margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">Copernicus Data Space (CDSE)</div>
+      <a href="${copUrl}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download from CDSE ↗</a>
+    </div>`;
+  }
+
+  if (!frame.asf_url && !copUrl && frame.download_url) {
+    linksHtml += `<div style="margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">Source Link</div>
+      <a href="${frame.download_url}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download ↗</a>
+    </div>`;
+  }
+
+  document.getElementById('d-desc').innerHTML = linksHtml || '<span style="color: var(--muted)">No link available</span>';
 
   document.getElementById('drawer').classList.add('open');
 }
