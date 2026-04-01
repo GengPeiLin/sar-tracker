@@ -1099,8 +1099,8 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
-const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC'];
-const KNOWN_PRODUCT_TYPES = ['GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'RAW', 'SSC'];
+const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC', 'L1_RSLC', 'L1_GSLC'];
+const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'RAW', 'SSC'];
 
 function ensureAdvancedState() {
   state.rawFrames ||= [];
@@ -1313,11 +1313,11 @@ async function liveFetchASF() {
   const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
     intersectsWith: WKT,
     platform: 'SA,SC,SD,A3,A4,R2,RCM,NISAR',
-    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC',
+    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW',
     start: fmt(wa),
     end: fmt(now),
     output: 'geojson',
-    maxresults: 300,
+    maxresults: 1000,
   });
 
   try {

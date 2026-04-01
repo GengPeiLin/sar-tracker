@@ -24,7 +24,7 @@ from pathlib import Path
 
 # ── 設定 ──────────────────────────────────────────────────────────────────────
 DAYS_BACK   = int(os.environ.get("DAYS_BACK", 7))
-MAX_RESULTS = 500
+MAX_RESULTS = 1000
 
 # 台灣涵蓋範圍（含離島）
 TAIWAN_WKT  = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
@@ -37,7 +37,7 @@ TAIWAN_WKT  = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
 ASF_PLATFORMS = "SA,SC,SD,A3,A4,R2,RCM,NISAR"
 
 # ASF 處理等級（SLC 和 GRD 都抓）
-ASF_LEVELS = "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD,RSLC,GSLC"
+ASF_LEVELS = "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD,RSLC,GSLC,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW"
 
 OUTPUT_DIR  = Path(__file__).parent / "data"
 JSON_FILE   = OUTPUT_DIR / "sar_status.json"
@@ -67,9 +67,10 @@ def date_fmt_odata(d: datetime) -> str:
 
 def infer_product_type(*values: str) -> str:
     known = [
+        "L1_RSLC", "L1_GSLC", "L2_GCOV", "L2_GUNW",
         "GSLC", "RSLC", "SLC",
         "GRD_HD", "GRD_MS", "GRD_HS", "GRD_FD", "GRD",
-        "RAW", "SSC",
+        "GCOV", "GUNW", "RAW", "SSC",
     ]
     for raw in values:
         if not raw:
