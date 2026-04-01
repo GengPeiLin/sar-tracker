@@ -968,7 +968,7 @@ function initMap() {
   state.map.on('click', () => {
     if (state.selectedFrameKey) {
       state.selectedFrameKey = null;
-      if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
+      if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
       closeDrawer();
     }
   });
@@ -1071,7 +1071,7 @@ function closeDrawer() {
   document.getElementById('drawer').classList.remove('open');
   state.selectedSat = null;
   state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
-  if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
+  if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
 }
 
@@ -1645,7 +1645,7 @@ function openDrawer(sat, row, thisWeek) {
   if (row) row.classList.add('active');
 
   state.selectedFrameKey = null;
-  if (typeof refreshFrameContrast === 'function') refreshFrameContrast();
+  if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
 
   document.getElementById('d-name').textContent = sat.name;
   document.getElementById('d-agency').textContent = sat.agency;
@@ -1837,122 +1837,90 @@ function getFrameKey(frame) {
   ].join('|');
 }
 
-function styleFramePolygon(polygon, mode) {
-  const color = polygon.options.baseColor || polygon.options.color;
-  if (mode === 'selected') {
-    polygon.setStyle({
-      color: '#ffffff',
-      weight: 3.5,
-      fillColor: color,
-      fillOpacity: 0.4,
-      opacity: 1,
-      dashArray: '8 5',
-    });
-    polygon.bringToFront();
-    return;
-  }
-
-  if (mode === 'dimmed') {
-    polygon.setStyle({
-      color,
-      weight: 1,
-      fillColor: color,
-      fillOpacity: 0.03,
-      opacity: 0.2,
-      dashArray: null,
-    });
-    return;
-  }
-
-  if (mode === 'hover') {
-    polygon.setStyle({
-      color,
-      weight: 2.8,
-      fillColor: color,
-      fillOpacity: 0.24,
-      opacity: 1,
-      dashArray: null,
-    });
-    polygon.bringToFront();
-    return;
-  }
-
-  polygon.setStyle({
-    color,
-    weight: 1.6,
-    fillColor: color,
-    fillOpacity: 0.1,
-    opacity: 0.82,
-    dashArray: null,
-  });
-}
-
-function refreshFrameContrast(hoveredKey = null) {
+function updateMapSelectionState() {
   const hasSelection = !!state.selectedFrameKey;
   for (const item of state.framePolygons) {
+    const color = item.polygon.options.baseColor;
     if (item.key === state.selectedFrameKey) {
-      styleFramePolygon(item.polygon, 'selected');
-    } else if (item.key === hoveredKey) {
-      styleFramePolygon(item.polygon, 'hover');
+      item.polygon.setStyle({ color: '#ffffff', weight: 3.5, fillColor: color, fillOpacity: 0.4, opacity: 1, dashArray: '8 5' });
+      item.polygon.bringToFront();
     } else if (hasSelection) {
-      styleFramePolygon(item.polygon, 'dimmed');
+      item.polygon.setStyle({ color, weight: 1, fillColor: color, fillOpacity: 0.03, opacity: 0.2, dashArray: null });
     } else {
-      styleFramePolygon(item.polygon, 'base');
+      item.polygon.setStyle({ color, weight: 1.6, fillColor: color, fillOpacity: 0.1, opacity: 0.82, dashArray: null });
     }
   }
 }
 
 // 顯示 Frame 詳細資訊到右側抽屜
-function openFrameDrawer(frame) {
+function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;
 
-  document.getElementById('d-name').textContent = frame.granule || 'Unknown Granule';
-  document.getElementById('d-agency').textContent = frame.satellite_name || frame.platform || '--';
+  // 將相同任務與時間的影像群組在一起 (解決相同場景不同處理等級如 SLC 與 GRD 的完美重疊問題)
+  const baseTime = new Date(clickedFrame.date).getTime();
+  const matchingFrames = state.filteredFrames.filter(f => {
+    if (f.satellite_id !== clickedFrame.satellite_id) return false;
+    return Math.abs(new Date(f.date).getTime() - baseTime) < 10000; // 誤差 10 秒內視為同一次取像
+  });
+
+  const primary = matchingFrames.length ? matchingFrames[0] : clickedFrame;
+  const baseGranule = primary.granule?.split('_').slice(0, -1).join('_') || primary.granule || 'Unknown Granule';
+
+  document.getElementById('d-name').textContent = baseGranule;
+  document.getElementById('d-agency').textContent = primary.satellite_name || primary.platform || '--';
   document.getElementById('d-week-wrap').innerHTML = '';
 
-  const dateStr = frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--';
-  const sizeStr = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
-  const band = frame.satellite_band || 'X';
+  const dateStr = primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--';
+  const band = primary.satellite_band || 'X';
 
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">Date</div><div class="v"><small>${dateStr}</small></div></div>
-    <div class="d-item"><div class="k">Product</div><div class="v"><span class="badge b${band}">${frame.product_type_norm || '--'}</span></div></div>
-    <div class="d-item"><div class="k">Orbit</div><div class="v"><small>${frame.direction_norm || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${frame.frame_number_norm ?? '--'}</small></div></div>
-    <div class="d-item"><div class="k">Path</div><div class="v"><small>${frame.path_number || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${frame.mode || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Polarization</div><div class="v"><small>${frame.polarization || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Size</div><div class="v"><small>${sizeStr}</small></div></div>
-    <div class="d-item"><div class="k">Source</div><div class="v"><small>${frame.source || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Band</div><div class="v"><span class="badge b${band}">${band}-Band</span></div></div>
+    <div class="d-item"><div class="k">Orbit</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${primary.frame_number_norm ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Path</div><div class="v"><small>${primary.path_number || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Polarization</div><div class="v"><small>${primary.polarization || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Products</div><div class="v"><small>${matchingFrames.length} Files Available</small></div></div>
   `;
 
   const section = document.querySelector('.d-section');
-  if (section) section.textContent = 'Download Links';
+  if (section) section.textContent = 'Available Products & Downloads';
   
   let linksHtml = '';
   
-  if (frame.asf_url) {
-    linksHtml += `<div style="margin-bottom: 12px;">
-      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">ASF DAAC (Default)</div>
-      <a href="${frame.asf_url}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download from ASF ↗</a>
-    </div>`;
-  }
-  
-  const copUrl = frame.copernicus_url || (frame.source === 'Copernicus' ? frame.download_url : null);
-  if (copUrl) {
-    linksHtml += `<div style="margin-bottom: 12px;">
-      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">Copernicus Data Space (CDSE)</div>
-      <a href="${copUrl}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download from CDSE ↗</a>
-    </div>`;
-  }
+  // 將影像依照處理等級排序 (讓 SLC 排在前面)
+  matchingFrames.sort((a, b) => (b.product_type_norm || '').localeCompare(a.product_type_norm || ''));
 
-  if (!frame.asf_url && !copUrl && frame.download_url) {
-    linksHtml += `<div style="margin-bottom: 12px;">
-      <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px;">Source Link</div>
-      <a href="${frame.download_url}" target="_blank" style="display: inline-block; padding: 8px 14px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 11px; transition: all 0.2s;">⬇ Download ↗</a>
-    </div>`;
-  }
+  matchingFrames.forEach(f => {
+    const type = f.product_type_norm || 'UNKNOWN';
+    const size = f.file_size_mb ? `${f.file_size_mb} MB` : '--';
+
+    linksHtml += `<div style="margin-bottom: 14px; padding: 10px; background: rgba(0,0,0,0.15); border: 1px solid var(--border); border-radius: 6px;">`;
+    linksHtml += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-hi);">${type}</span>
+                    <span style="font-family: var(--mono); font-size: 11px; color: var(--muted);">${size}</span>
+                  </div>`;
+    linksHtml += `<div style="font-family: var(--mono); font-size: 9px; color: var(--muted); margin-bottom: 10px; word-break: break-all; line-height: 1.3;">${f.granule || 'Unknown Granule'}</div>`;
+
+    linksHtml += `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
+
+    if (f.asf_url) {
+      linksHtml += `<a href="${f.asf_url}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ ASF DAAC</a>`;
+    }
+
+    const copUrl = f.copernicus_url || (f.source === 'Copernicus' ? f.download_url : null);
+    if (copUrl) {
+      linksHtml += `<a href="${copUrl}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ Copernicus CDSE</a>`;
+    }
+
+    if (!f.asf_url && !copUrl && f.download_url) {
+      linksHtml += `<a href="${f.download_url}" target="_blank" style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">⬇ Direct Source</a>`;
+    }
+
+    linksHtml += `</div></div>`;
+  });
 
   document.getElementById('d-desc').innerHTML = linksHtml || '<span style="color: var(--muted)">No link available</span>';
 
@@ -1980,8 +1948,15 @@ function renderFrames() {
       opacity: 0.82,
     });
 
-    polygon.on('mouseover', () => refreshFrameContrast(key));
-    polygon.on('mouseout', () => refreshFrameContrast());
+    polygon.on('mouseover', function() {
+      if (state.selectedFrameKey === key) return; // 已選取不干擾
+      this.setStyle({ weight: 2.8, fillOpacity: 0.24, opacity: 1 });
+    });
+    polygon.on('mouseout', function() {
+      if (state.selectedFrameKey === key) return;
+      const hasSelection = !!state.selectedFrameKey;
+      this.setStyle({ weight: hasSelection ? 1 : 1.6, fillOpacity: hasSelection ? 0.03 : 0.1, opacity: hasSelection ? 0.2 : 0.82 });
+    });
     polygon.on('click', (e) => {
       L.DomEvent.stopPropagation(e); // 避免觸發 map click
       if (state.selectedFrameKey === key) {
@@ -1989,16 +1964,16 @@ function renderFrames() {
         closeDrawer();
       } else {
         state.selectedFrameKey = key;
-        openFrameDrawer(frame); // 使用抽屜顯示詳細資訊
+        openFrameDrawer(frame); // 開啟抽屜並顯示群組化資訊
       }
-      refreshFrameContrast();
+      updateMapSelectionState();
     });
 
     state.frameLayer.addLayer(polygon);
     state.framePolygons.push({ key, polygon });
   }
 
-  refreshFrameContrast();
+  updateMapSelectionState();
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
