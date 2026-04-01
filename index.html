@@ -968,78 +968,6 @@ function initMap() {
 // ═══════════════════════════════════════════════════════════════════════════
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════════════════
-async function loadData() {
-  ldmsg('讀取本地資料快取…');
-  try {
-    const r = await fetch('./data/sar_status.json?v=' + Date.now());
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const d = await r.json();
-    if (!d.taiwan_frames) throw new Error('格式錯誤');
-
-    document.getElementById('hdr-time').textContent = d.updated_at || '—';
-    state.frames = d.taiwan_frames;
-    renderFrames();
-    updateStats(d);
-
-    // 更新 ASF/Copernicus meta4 下載連結（已是靜態檔案，直接 href 即可）
-    return;
-  } catch(e) {
-    console.warn('本地 JSON 失敗，嘗試即時查詢 ASF…', e);
-  }
-
-  ldmsg('直接查詢 ASF DAAC API…');
-  await liveFetchASF();
-}
-
-async function liveFetchASF() {
-  const now  = new Date();
-  const wa   = new Date(now - 7*24*3600*1000);
-  const fmt  = d => d.toISOString().replace(/\.\d+Z$/,'UTC');
-  const WKT  = 'POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))';
-
-  const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
-    intersectsWith: WKT,
-    platform: 'SA,SC,SD,A3,A4,R2,RCM',
-    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD',
-    start: fmt(wa),
-    end:   fmt(now),
-    output: 'geojson',
-    maxresults: 300,
-  });
-
-  try {
-    const r = await fetch(url);
-    const gj = await r.json();
-    state.frames = (gj.features||[]).map(f => {
-      const p = f.properties||{};
-      return {
-        source:'ASF', granule:p.sceneName||'',
-        platform:p.platform||'', sensor:p.sensor||'',
-        date:p.startTime||'', stop_time:p.stopTime||'',
-        mode: p.beamModeType||p.beamMode||'',
-        polarization:p.polarization||'',
-        orbit:p.orbit||'', path_number:p.pathNumber||'',
-        direction:p.flightDirection||'',
-        footprint:f.geometry,
-        asf_url:p.url||'',
-        file_size_mb: +(p.sizeMB||0).toFixed(1),
-      };
-    });
-    document.getElementById('hdr-time').textContent = '即時查詢 · ' + new Date().toLocaleString('zh-TW');
-    renderFrames();
-    updateStats({
-      total_frames: state.frames.length,
-      query_start: wa.toISOString(),
-      query_end: now.toISOString(),
-      asf_count: state.frames.length,
-      copernicus_count: 0,
-    });
-  } catch(e) {
-    document.getElementById('hdr-time').textContent = '無法連線（離線模式）';
-    console.error('ASF API 失敗', e);
-  }
-}
-
 function ldmsg(t) {
   const el = document.getElementById('ld-msg');
   if (el) el.textContent = t;
@@ -1212,56 +1140,10 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 // FILTERS / TABS
 // ═══════════════════════════════════════════════════════════════════════════
-function setFilter(band, el) {
-  state.band = band;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-  el.classList.add('on');
-  renderSatList();
-}
-
-function setTab(tab, el) {
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  el.classList.add('on');
-  renderSatList();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CSV EXPORT
-// ═══════════════════════════════════════════════════════════════════════════
-function exportCSV() {
-  if (!state.frames.length) { alert('無資料可匯出'); return; }
-  const COLS = ['source','granule','platform','date','stop_time','mode','polarization','direction','path_number','orbit','file_size_mb','asf_url','download_url'];
-  const header = COLS.join(',');
-  const rows   = state.frames.map(f =>
-    COLS.map(c => {
-      const v = String(f[c]??'');
-      return v.includes(',') ? `"${v}"` : v;
-    }).join(',')
-  );
-  const csv  = [header, ...rows].join('\n');
-  const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8;' });
-  const a    = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `taiwan_SAR_${new Date().toISOString().slice(0,10)}.csv`,
-  });
-  a.click();
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async () => {
-  initMap();
-  renderSatList();
-  await loadData();
-  renderSatList(); // re-render with this-week badges
-
-  setTimeout(() => {
-    document.getElementById('loading').classList.add('gone');
-  }, 700);
-});
-
 const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC'];
 const KNOWN_PRODUCT_TYPES = ['GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'RAW', 'SSC'];
 
@@ -2166,13 +2048,19 @@ function renderFrames() {
   refreshFrameContrast();
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   applyAppearanceSettings();
   syncAppearanceControls();
   setupReadableUI();
   bindAppearanceControls();
   bindAdvancedControls();
+  initMap();
+  await loadData();
+
+  setTimeout(() => {
+    document.getElementById('loading').classList.add('gone');
+  }, 700);
 });
 </script>
 </body>
