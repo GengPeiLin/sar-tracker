@@ -1308,7 +1308,7 @@ async function liveFetchASF() {
   const now  = new Date();
   const wa   = new Date(now - 7 * 24 * 3600 * 1000);
   const fmt  = d => d.toISOString().replace(/\.\d+Z$/, 'UTC');
-  const WKT  = 'POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))';
+  const WKT  = 'POLYGON((121.6005 25.6251,121.0751 25.5135,120.3437 25.1689,119.087 23.7334,119.5505 21.8234,121.4975 21.3346,122.5585 24.8793,121.6005 25.6251))';
 
   const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
     intersectsWith: WKT,
@@ -1323,7 +1323,23 @@ async function liveFetchASF() {
   try {
     const response = await fetch(url);
     const gj = await response.json();
-    state.rawFrames = (gj.features || []).map(feature => {
+
+    const s1Platforms = ['SA', 'SC', 'SD']; // Sentinel-1 平台代碼
+
+    const filteredFeatures = (gj.features || []).filter(feature => {
+      const p = feature.properties || {};
+      const platform = (p.platform || '').toUpperCase();
+      if (s1Platforms.includes(platform)) {
+        const pathNumber = String(p.pathNumber);
+        const direction = (p.flightDirection || '').toUpperCase();
+        // 根據使用者需求過濾 Sentinel-1 軌道 (105 為升軌, 69 為降軌)
+        return (pathNumber === '105' && direction === 'ASCENDING') ||
+               (pathNumber === '69' && direction === 'DESCENDING');
+      }
+      return true; // 保留非 S1 的衛星
+    });
+
+    state.rawFrames = filteredFeatures.map(feature => {
       const p = feature.properties || {};
       return enhanceFrame({
         source: 'ASF',

@@ -27,7 +27,7 @@ DAYS_BACK   = int(os.environ.get("DAYS_BACK", 7))
 MAX_RESULTS = 1000
 
 # 台灣涵蓋範圍（含離島）
-TAIWAN_WKT  = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
+TAIWAN_WKT  = "POLYGON((121.6005 25.6251,121.0751 25.5135,120.3437 25.1689,119.087 23.7334,119.5505 21.8234,121.4975 21.3346,122.5585 24.8793,121.6005 25.6251))"
 
 # ASF 平台代碼
 #   SA=Sentinel-1A  SC=Sentinel-1C  SD=Sentinel-1D
@@ -106,8 +106,22 @@ def fetch_asf(start: datetime, end: datetime) -> list[dict]:
     log(f"  ASF：{len(features)} 筆")
 
     out = []
+    s1_platforms = {"SA", "SC", "SD"} # Sentinel-1 平台代碼
+
     for f in features:
         p    = f.get("properties", {})
+
+        # 根據使用者需求過濾 Sentinel-1 軌道
+        platform = p.get("platform", "").upper()
+        if platform in s1_platforms:
+            try:
+                path_number = int(p.get("pathNumber"))
+                direction = p.get("flightDirection", "").upper()
+                if not ((path_number == 105 and direction == 'ASCENDING') or (path_number == 69 and direction == 'DESCENDING')):
+                    continue # 忽略不符合的 S1 軌道
+            except (ValueError, TypeError):
+                continue # 如果沒有有效的 path number，也忽略
+
         geom = f.get("geometry")
         out.append({
             "source":          "ASF",
