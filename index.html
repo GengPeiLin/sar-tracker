@@ -189,22 +189,6 @@ header {
   text-transform: uppercase;
 }
 .sb-head .sub { font-size: calc(11px + var(--font-bump) - 1px); color: var(--muted); margin-top: 2px; }
-.sb-summary {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.summary-pill {
-  font-family: var(--mono);
-  font-size: calc(8px + var(--font-bump) - 2px);
-  letter-spacing: .7px;
-  color: var(--text);
-  padding: 4px 7px;
-  border: 1px solid var(--border2);
-  background: rgba(255,255,255,.03);
-}
-
 /* filter chips */
 .sb-filters {
   padding: 8px 16px;
@@ -992,9 +976,6 @@ header {
     <div class="sb-head">
       <h2>SAR 衛星艦隊</h2>
       <div class="sub" id="sb-count">載入中…</div>
-      <div class="sb-summary" id="filter-summary">
-        <span class="summary-pill">Loading view</span>
-      </div>
     </div>
     <div class="sb-filters">
       <button class="chip on"  data-b="ALL" onclick="setFilter('ALL',this)">ALL</button>
@@ -2371,7 +2352,6 @@ function updateFilterHints() {
     note.textContent = state.filters.showOtherSentinelTracks
       ? 'Showing Sentinel-1 Track 69 / 105 plus other Taiwan Sentinel-1 tracks and NISAR.'
       : 'Default focus is Sentinel-1 Track 69, Track 105, and NISAR.';
-    updateFilterSummary();
     return;
   }
 
@@ -2382,27 +2362,6 @@ function updateFilterHints() {
   const extra = state.filters.showOtherSentinelTracks ? 'with other Sentinel-1 Taiwan tracks visible' : 'priority tracks only';
   const satLabel = state.filters.satellite === 'ALL' ? 'Sentinel-1 + NISAR' : state.filters.satellite;
   note.textContent = `Formats for ${satLabel}: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max} | ${extra}`;
-  updateFilterSummary();
-}
-
-function updateFilterSummary() {
-  const wrap = document.getElementById('filter-summary');
-  if (!wrap) return;
-
-  const modeLabel = state.tab === 'op' ? 'Operational' : state.tab === 'tw' ? 'This Week' : 'All Satellites';
-  const dateLabel = state.filters.dateStart && state.filters.dateEnd
-    ? `${state.filters.dateStart.slice(5)} to ${state.filters.dateEnd.slice(5)}`
-    : 'Date open';
-  const directionLabel = state.filters.direction === 'ALL' ? 'Any direction' : state.filters.direction;
-  const trackLabel = state.filters.pathMin || state.filters.pathMax
-    ? `Track ${state.filters.pathMin || 'min'}-${state.filters.pathMax || 'max'}`
-    : 'All tracks';
-  wrap.innerHTML = [
-    modeLabel,
-    dateLabel,
-    directionLabel,
-    trackLabel,
-  ].map(text => `<span class="summary-pill">${text}</span>`).join('');
 }
 
 function openDrawer(sat, row, thisWeek) {
