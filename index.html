@@ -1143,14 +1143,14 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
-const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC', 'L1_RSLC', 'L1_GSLC'];
+const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC'];
 const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
-  ALL: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'RSLC', 'GSLC', 'L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GCOV', 'GUNW'],
-  NISAR: ['RSLC', 'GSLC', 'L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GCOV', 'GUNW'],
-  S1A: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
-  S1B: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
-  S1C: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
-  S1D: ['SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD'],
+  ALL: ['SLC', 'GSLC'],
+  NISAR: ['GSLC'],
+  S1A: ['SLC'],
+  S1B: ['SLC'],
+  S1C: ['SLC'],
+  S1D: ['SLC'],
 };
 const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'RAW', 'SSC', 'OCN'];
 
