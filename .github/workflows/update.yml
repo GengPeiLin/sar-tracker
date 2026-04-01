@@ -3,13 +3,17 @@ name: 每週更新 SAR 取像資料
 on:
   schedule:
     # 每週一 UTC 02:00（台灣時間週一 10:00）
-    - cron: '0 2 * * 1'
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       days_back:
         description: '查詢過去幾天（預設 7）'
         required: false
         default: '7'
+      full_rebuild:
+        description: 'Set true to rebuild the full metadata catalog'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -47,6 +51,7 @@ jobs:
       - name: 執行資料抓取
         env:
           DAYS_BACK: ${{ github.event.inputs.days_back || '7' }}
+          FORCE_FULL_REBUILD: ${{ github.event.inputs.full_rebuild || 'false' }}
         run: python fetch_sar_data.py
 
       - name: 印出摘要
