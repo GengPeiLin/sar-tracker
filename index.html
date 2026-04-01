@@ -1355,6 +1355,7 @@ async function loadData() {
     document.getElementById('hdr-time').textContent = `${data.updated_at || '--'}${data.version ? ` · data ${data.version}` : ''}`;
     state.baseStats = data;
     state.rawFrames = data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data);
+    applyTabDateWindow();
     bindAdvancedControls();
     renderSatelliteSelect();
     renderFormatOptions();
@@ -1452,7 +1453,7 @@ function matchesSidebarFilters(sat) {
   if (!isOpenDataSatelliteId(sat.id)) return false;
   if (state.band !== 'ALL' && sat.band !== state.band) return false;
   if (state.tab === 'op' && sat.status === 'ret') return false;
-  if (state.tab === 'tw') return state.rawFrames.some(frame => satMatchesFrame(sat, frame));
+  if (state.tab === 'tw') return state.filteredFrames.some(frame => satMatchesFrame(sat, frame));
   return true;
 }
 
@@ -1576,6 +1577,7 @@ function renderFormatOptions() {
 function resetAdvancedFilters(apply = true) {
   ensureAdvancedState();
   const allTypes = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))];
+  const window = getDefaultWeekWindow();
   state.filters.satellite = 'ALL';
   state.filters.direction = 'ALL';
   state.filters.showOtherSentinelTracks = false;
@@ -1583,8 +1585,8 @@ function resetAdvancedFilters(apply = true) {
   state.filters.pathMax = '';
   state.filters.frameMin = '';
   state.filters.frameMax = '';
-  state.filters.dateStart = '';
-  state.filters.dateEnd = '';
+  state.filters.dateStart = window.start;
+  state.filters.dateEnd = window.end;
   state.filters.formats = new Set(getDefaultFormatsForSatellite(allTypes));
   state.selectedSat = null;
 
@@ -1604,8 +1606,8 @@ function resetAdvancedFilters(apply = true) {
   if (pathMax) pathMax.value = '';
   if (frameMin) frameMin.value = '';
   if (frameMax) frameMax.value = '';
-  if (dateStart) dateStart.value = '';
-  if (dateEnd) dateEnd.value = '';
+  if (dateStart) dateStart.value = window.start;
+  if (dateEnd) dateEnd.value = window.end;
   renderFormatOptions();
   if (apply) applyAdvancedFilters();
 }
@@ -1843,6 +1845,7 @@ function setTab(tab, el) {
   state.tab = tab;
   document.querySelectorAll('.tab').forEach(button => button.classList.remove('on'));
   el.classList.add('on');
+  applyTabDateWindow();
   renderSatelliteSelect();
   applyAdvancedFilters();
 }
@@ -2243,6 +2246,7 @@ async function liveFetchASF() {
       copernicus_count: 0,
     };
     document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString('zh-TW');
+    applyTabDateWindow();
     renderSatelliteSelect();
     renderFormatOptions();
     resetAdvancedFilters(false);
@@ -2283,6 +2287,52 @@ function normalizeGranuleKey(granule) {
     .replace(/\.SAFE$/i, '')
     .trim()
     .toUpperCase();
+}
+
+function getQueryEndDate() {
+  const raw = state.baseStats?.query_end || state.baseStats?.last_successful_fetch;
+  const date = raw ? new Date(raw) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function formatDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultWeekWindow() {
+  const end = getQueryEndDate();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 6);
+  return {
+    start: formatDateInputValue(start),
+    end: formatDateInputValue(end),
+  };
+}
+
+function applyTabDateWindow() {
+  const dateStart = document.getElementById('filter-date-start');
+  const dateEnd = document.getElementById('filter-date-end');
+  if (!dateStart || !dateEnd) return;
+
+  if (state.tab === 'tw') {
+    const window = getDefaultWeekWindow();
+    state.filters.dateStart = window.start;
+    state.filters.dateEnd = window.end;
+    dateStart.value = window.start;
+    dateEnd.value = window.end;
+    return;
+  }
+
+  if (!state.filters.dateStart || !state.filters.dateEnd) {
+    const window = getDefaultWeekWindow();
+    state.filters.dateStart = window.start;
+    state.filters.dateEnd = window.end;
+    dateStart.value = window.start;
+    dateEnd.value = window.end;
+  }
 }
 
 function updateNextExpected() {
