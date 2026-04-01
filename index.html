@@ -499,13 +499,78 @@ header {
 .map-wrap {
   flex: 1;
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.mobile-feed {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 18px;
+  background: var(--surface);
+}
+.mobile-feed::-webkit-scrollbar { width: 3px; }
+.mobile-feed::-webkit-scrollbar-thumb { background: var(--border2); }
+.mobile-feed-summary {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.mobile-feed-title {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  letter-spacing: 1px;
+  color: var(--text-hi);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.mobile-feed-meta {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--muted);
+  line-height: 1.5;
+}
+.mobile-feed-group {
+  margin-bottom: 12px;
+}
+.mobile-feed-date {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  letter-spacing: 1px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.mobile-feed-card {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.mobile-feed-card-title {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  color: var(--text-hi);
+  line-height: 1.45;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+.mobile-feed-card-meta,
+.mobile-feed-card-sub {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 #map {
   flex: 1;
+  position: relative;
+  z-index: 1;
   background: #030810;
 }
 
@@ -513,7 +578,7 @@ header {
 .map-stats {
   position: absolute;
   top: 12px; left: 12px;
-  z-index: 400;
+  z-index: 1200;
   display: flex;
   gap: 8px;
   pointer-events: none;
@@ -546,7 +611,7 @@ header {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 400;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -626,7 +691,7 @@ header {
 .map-legend {
   position: absolute;
   bottom: 78px; left: 12px;
-  z-index: 400;
+  z-index: 1100;
   background: rgba(11,19,32,.9);
   border: 1px solid var(--border2);
   padding: 10px 14px;
@@ -688,7 +753,7 @@ header {
 .dl-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  z-index: 400;
+  z-index: 1100;
   background: rgba(11,19,32,.95);
   border-top: 1px solid var(--border2);
   padding: 12px 16px;
@@ -993,7 +1058,7 @@ header {
   }
   .map-wrap {
     order: 1;
-    min-height: 58vh;
+    min-height: auto;
   }
   .sidebar {
     order: 2;
@@ -1028,80 +1093,16 @@ header {
   .sat-row {
     padding: 8px 12px;
   }
+  #map,
+  .map-stats,
   .map-context,
-  .map-stats {
-    padding: 10px 10px 0;
-  }
-  .map-stats {
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .stat-card {
-    flex: 1 1 calc(50% - 3px);
-    min-width: 0;
-    padding: 8px 10px;
-  }
-  .stat-card .val {
-    font-size: calc(18px + var(--font-bump));
-  }
-  .stat-card .val.small {
-    font-size: calc(11px + var(--font-bump));
-  }
-  .map-context {
-    gap: 6px;
-  }
-  .context-card {
-    padding: 9px 10px;
-  }
-  .context-body {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-  .map-legend {
-    left: 10px;
-    right: 10px;
-    bottom: 74px;
-    padding: 10px 12px;
-  }
-  .legend-item {
-    gap: 8px;
-  }
-  .dl-bar {
-    padding: 10px;
-    gap: 8px;
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-  .dl-main {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .export-toggle {
-    margin-left: 0;
-    width: 100%;
-  }
-  .export-toggle .dl-btn {
-    width: 100%;
-    text-align: center;
-  }
-  .export-panel {
-    left: 10px;
-    right: 10px;
-    bottom: calc(100% + 8px);
-    width: auto;
-    padding: 10px;
-  }
+  .map-legend,
+  .dl-bar,
   .drawer {
-    width: 100vw;
-    max-width: 100vw;
-    padding: 16px 14px 22px;
+    display: none !important;
   }
-  .drawer-close {
-    top: 10px;
-    right: 10px;
-  }
-  .d-grid {
-    grid-template-columns: 1fr;
+  .mobile-feed {
+    display: block;
   }
   .sb-list {
     max-height: 34vh;
@@ -1241,6 +1242,7 @@ header {
 
   <!-- MAP -->
   <div class="map-wrap">
+    <div class="mobile-feed" id="mobile-feed"></div>
 
     <div class="map-stats">
       <div class="stat-card">
@@ -1438,7 +1440,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.6';
+const APP_VERSION = 'v0.6.8';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -2314,6 +2316,7 @@ function applyAdvancedFilters() {
   renderSatelliteSelect();
   renderSatList();
   renderFrames();
+  renderMobileFeed();
   updateStats();
   updateFilterHints();
   updateDownloadButtons();
@@ -2471,6 +2474,83 @@ function updateLegend() {
       </div>
     `);
   wrap.innerHTML = items.join('');
+}
+
+function renderMobileFeed() {
+  const wrap = document.getElementById('mobile-feed');
+  if (!wrap) return;
+
+  const frames = [...(state.filteredFrames || [])].sort((a, b) => (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0));
+  if (!frames.length) {
+    wrap.innerHTML = `
+      <div class="mobile-feed-summary">
+        <div class="mobile-feed-title">Update Monitor</div>
+        <div class="mobile-feed-meta">No visible imagery matches the current time window and filters.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const uniqueGranules = new Set(frames.map(frame => normalizeGranuleKey(frame.granule) || getFrameKey(frame))).size;
+  const grouped = new Map();
+  for (const frame of frames) {
+    const dayKey = (frame.date || '').slice(0, 10) || 'Unknown date';
+    const list = grouped.get(dayKey) || [];
+    list.push(frame);
+    grouped.set(dayKey, list);
+  }
+
+  const dateSummary = state.filters.dateStart && state.filters.dateEnd
+    ? `${state.filters.dateStart} → ${state.filters.dateEnd}`
+    : 'Open date range';
+
+  const body = [...grouped.entries()].map(([day, dayFrames]) => {
+    const dayLabel = day === 'Unknown date' ? day : new Date(`${day}T00:00:00`).toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short',
+    });
+
+    const cards = dayFrames.slice(0, 24).map(frame => {
+      const timeLabel = frame.date ? new Date(frame.date).toLocaleTimeString('zh-TW', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }) : '--';
+      const sourceLabel = frame.asf_url && (frame.copernicus_url || frame.download_url)
+        ? 'ASF + Copernicus'
+        : (frame.copernicus_url || frame.download_url)
+          ? 'Copernicus only'
+          : frame.asf_url
+            ? 'ASF only'
+            : 'No source';
+      return `
+        <div class="mobile-feed-card">
+          <div class="mobile-feed-card-title">${frame.granule || 'Unknown Granule'}</div>
+          <div class="mobile-feed-card-meta">${timeLabel} · ${frame.satellite_name || frame.platform || '--'} · ${frame.product_type_norm || '--'}</div>
+          <div class="mobile-feed-card-sub">track ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'} · ${frame.direction_norm || '--'} · ${sourceLabel}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <section class="mobile-feed-group">
+        <div class="mobile-feed-date">${dayLabel} · ${dayFrames.length} file${dayFrames.length === 1 ? '' : 's'}</div>
+        ${cards}
+      </section>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="mobile-feed-summary">
+      <div class="mobile-feed-title">Update Monitor</div>
+      <div class="mobile-feed-meta">${uniqueGranules} unique file(s) in current view</div>
+      <div class="mobile-feed-meta">${dateSummary}</div>
+    </div>
+    ${body}
+  `;
 }
 
 function estimateNextExpected() {
