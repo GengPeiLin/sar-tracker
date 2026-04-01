@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metalink xmlns="urn:ietf:params:xml:ns:metalink">
-  <!-- 生成時間: 2026-04-01T03:36:40Z -->
+  <!-- 生成時間: 2026-04-01T03:37:54Z -->
   <!-- 共 44 個場景 -->
   <!-- 下載前請先取得 Bearer Token：
        TOKEN=$(curl -s -X POST https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token \
