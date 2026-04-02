@@ -287,17 +287,15 @@ header {
 }
 .filter-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   gap: 10px;
   align-items: end;
-}
-.filter-head .filter-field {
-  gap: 4px;
 }
 .date-shortcuts {
   display: inline-flex;
   gap: 6px;
-  align-self: center;
+  align-self: start;
+  justify-content: flex-start;
 }
 .date-shortcut {
   font-family: var(--mono);
@@ -1363,14 +1361,6 @@ header {
     </div>
     <div class="filter-panel">
       <div class="filter-head">
-        <label class="filter-field">
-          <span class="filter-label">View Mode</span>
-          <select class="filter-select" id="filter-view-mode">
-            <option value="all">All satellites</option>
-            <option value="op">Operational</option>
-            <option value="tw">This week</option>
-          </select>
-        </label>
         <div class="date-shortcuts">
           <button class="date-shortcut" id="preset-week" type="button" onclick="applyPresetDateWindow(7, this)">This Week</button>
           <button class="date-shortcut" id="preset-month" type="button" onclick="applyPresetDateWindow(30, this)">This Month</button>
@@ -1612,6 +1602,13 @@ const PLATFORM_COLORS = {
   '_default':'#ff7043',
 };
 
+const NISAR_TRACK_COLORS = {
+  'ASCENDING|39': '#00e676',
+  'ASCENDING|111': '#67f7b2',
+  'DESCENDING|61': '#00c2d1',
+  'DESCENDING|133': '#58d8e3',
+};
+
 function platColor(platform) {
   const p = (platform||'').toUpperCase();
   for (const k of Object.keys(PLATFORM_COLORS)) {
@@ -1644,6 +1641,33 @@ function getTrackLabelForFrame(frame) {
     return 'OTHER_S1';
   }
   return 'OTHER';
+}
+
+function getFrameVisualInfo(frame) {
+  const satelliteId = String(frame?.satellite_id || frame?.platform || '').toUpperCase();
+  const direction = normalizeDirection(frame?.direction_norm || frame?.direction);
+  const pathNumber = getFramePathNumber(frame);
+
+  if (satelliteId.includes('NISAR')) {
+    const key = `${direction}|${pathNumber ?? ''}`;
+    const shortDir = direction === 'ASCENDING' ? 'A' : direction === 'DESCENDING' ? 'D' : 'N';
+    return {
+      label: `NISAR ${shortDir}${pathNumber ?? '--'}`,
+      color: NISAR_TRACK_COLORS[key] || '#00e676',
+    };
+  }
+
+  const rawLabel = frame?.track_label || frame?.satellite_name || frame?.platform || frame?.satellite_id || 'Other';
+  const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
+  const color = rawLabel === 'A69'
+    ? '#00e5ff'
+    : rawLabel === 'D105'
+      ? '#ff7043'
+      : rawLabel === 'NISAR'
+        ? '#00e676'
+        : platColor(frame?.platform || frame?.satellite_name);
+
+  return { label, color };
 }
 
 // ── 台灣輪廓（簡化）────────────────────────────────────────────────────────
@@ -1812,11 +1836,10 @@ function updateStats(d) {
 function closeDrawer() {
   document.getElementById('drawer').classList.remove('open');
   state.selectedSat = null;
-  state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
+  state.selectedFrameKey = null;
   if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   updateLegend();
-  focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1955,7 +1978,7 @@ function setupReadableUI() {
   if (statsWrap && !document.getElementById('st-next')) {
     const card = document.createElement('div');
     card.className = 'stat-card';
-    card.innerHTML = '<div class="lbl">Latest A69 / D105</div><div class="val small" id="st-next">Need history</div>';
+    card.innerHTML = '<div class="lbl" id="st-next-label">Latest Tracks</div><div class="val small" id="st-next">Need history</div>';
     statsWrap.appendChild(card);
   }
 
@@ -2289,10 +2312,6 @@ function bindAdvancedControls() {
   if (bindAdvancedControls.done) return;
   bindAdvancedControls.done = true;
 
-  document.getElementById('filter-view-mode')?.addEventListener('change', event => {
-    setTab(event.target.value);
-  });
-
   document.getElementById('filter-satellite')?.addEventListener('change', event => {
     state.filters.satellite = event.target.value;
     state.selectedSat = SATS.find(s => s.id === state.filters.satellite) || null;
@@ -2592,15 +2611,7 @@ function updateLegend() {
 
   const groups = new Map();
   for (const frame of frames) {
-    const rawLabel = frame.track_label || frame.satellite_name || frame.platform || frame.satellite_id || 'Other';
-    const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
-    const color = rawLabel === 'A69'
-      ? '#00e5ff'
-      : rawLabel === 'D105'
-        ? '#ff7043'
-        : rawLabel === 'NISAR'
-          ? '#00e676'
-          : platColor(frame.platform || frame.satellite_name);
+    const { label, color } = getFrameVisualInfo(frame);
     const current = groups.get(label) || { label, color, count: 0 };
     current.count += 1;
     groups.set(label, current);
@@ -3392,8 +3403,7 @@ function getPresetWindow(days) {
 }
 
 function syncViewModeControl() {
-  const select = document.getElementById('filter-view-mode');
-  if (select) select.value = state.tab || 'all';
+  // View mode select was removed; tabs remain the canonical state.
 }
 
 function updateDateShortcutState() {
@@ -3450,16 +3460,49 @@ function applyTabDateWindow() {
 
 function updateNextExpected() {
   const el = document.getElementById('st-next');
+  const labelEl = document.getElementById('st-next-label');
   if (!el) return;
-  const latestFor = (direction, path) => {
-    const match = state.rawFrames
-      .filter(frame => frame.direction_norm === direction && getFramePathNumber(frame) === path)
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
-    if (!match || !match.date) return `${direction === 'ASCENDING' ? 'A69' : 'D105'} --`;
-    const date = new Date(match.date);
-    return `${direction === 'ASCENDING' ? 'A69' : 'D105'} ${date.getMonth() + 1}/${date.getDate()}`;
-  };
-  el.textContent = `${latestFor('ASCENDING', 69)} | ${latestFor('DESCENDING', 105)}`;
+  const latestFrames = [...(state.filteredFrames || [])].filter(frame => frame?.date);
+  const groups = new Map();
+
+  for (const frame of latestFrames) {
+    const visual = getFrameVisualInfo(frame);
+    const current = groups.get(visual.label);
+    if (!current || String(frame.date || '') > String(current.date || '')) {
+      groups.set(visual.label, frame);
+    }
+  }
+
+  const preferredOrder = [
+    'A69',
+    'D105',
+    'NISAR A39',
+    'NISAR A111',
+    'NISAR D61',
+    'NISAR D133',
+  ];
+
+  const lines = [...groups.entries()]
+    .sort((a, b) => {
+      const aIndex = preferredOrder.indexOf(a[0]);
+      const bIndex = preferredOrder.indexOf(b[0]);
+      if (aIndex !== -1 || bIndex !== -1) {
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      }
+      return a[0].localeCompare(b[0]);
+    })
+    .slice(0, 6)
+    .map(([label, frame]) => {
+      const date = new Date(frame.date);
+      return `${label} ${date.getMonth() + 1}/${date.getDate()}`;
+    });
+
+  if (labelEl) {
+    labelEl.textContent = lines.some(line => line.startsWith('NISAR'))
+      ? 'Latest Visible Tracks'
+      : 'Latest A69 / D105';
+  }
+  el.textContent = lines.length ? lines.join(' | ') : 'Need history';
 }
 
 function openFrameDrawer(clickedFrame) {
@@ -3702,13 +3745,7 @@ function renderFrames() {
     seenKeys.add(key);
 
     const rings = geom.coordinates.map(ring => ring.map(coord => [coord[1], coord[0]]));
-    const color = frame.track_label === 'A69'
-      ? '#00e5ff'
-      : frame.track_label === 'D105'
-        ? '#ff7043'
-        : frame.track_label === 'NISAR'
-          ? '#00e676'
-          : platColor(frame.platform || frame.satellite_name);
+    const color = getFrameVisualInfo(frame).color;
 
     const polygon = L.polygon(rings, {
       color,
@@ -3867,7 +3904,6 @@ function openFrameDrawer(clickedFrame) {
 
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
   document.getElementById('drawer').classList.add('open');
-  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
 function escapeHtml(value) {
@@ -4027,7 +4063,6 @@ function openFrameDrawer(clickedFrame) {
   }).join('');
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches this track.</span>';
   document.getElementById('drawer').classList.add('open');
-  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
