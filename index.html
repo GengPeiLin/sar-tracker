@@ -26,6 +26,15 @@
   --text:    #b0bec5;
   --text-hi: #e0e8f0;
   --muted:   #455a6a;
+  --drawer-bg: rgba(9, 16, 27, 0.94);
+  --drawer-shadow: rgba(0, 0, 0, 0.28);
+  --drawer-close-bg: rgba(255, 255, 255, 0.03);
+  --drawer-card-bg: rgba(255, 255, 255, 0.035);
+  --drawer-card-border: rgba(36, 56, 80, 0.9);
+  --drawer-meta-bg: rgba(255, 255, 255, 0.02);
+  --drawer-divider: rgba(36, 56, 80, 0.8);
+  --drawer-asf-bg: rgba(0, 229, 255, 0.1);
+  --drawer-cdse-bg: rgba(255, 112, 67, 0.1);
   --sidebar: 400px;
   --hdr:     52px;
   --mono: 'IBM Plex Mono', monospace;
@@ -48,6 +57,15 @@
   --text:    #b0bec5;
   --text-hi: #e0e8f0;
   --muted:   #455a6a;
+  --drawer-bg: rgba(9, 16, 27, 0.94);
+  --drawer-shadow: rgba(0, 0, 0, 0.28);
+  --drawer-close-bg: rgba(255, 255, 255, 0.03);
+  --drawer-card-bg: rgba(255, 255, 255, 0.035);
+  --drawer-card-border: rgba(36, 56, 80, 0.9);
+  --drawer-meta-bg: rgba(255, 255, 255, 0.02);
+  --drawer-divider: rgba(36, 56, 80, 0.8);
+  --drawer-asf-bg: rgba(0, 229, 255, 0.1);
+  --drawer-cdse-bg: rgba(255, 112, 67, 0.1);
 }
 
 :root[data-theme="paper-radar"] {
@@ -65,6 +83,15 @@
   --text:    #50483b;
   --text-hi: #241f17;
   --muted:   #8f806c;
+  --drawer-bg: rgba(251, 247, 237, 0.97);
+  --drawer-shadow: rgba(84, 60, 35, 0.14);
+  --drawer-close-bg: rgba(255, 255, 255, 0.42);
+  --drawer-card-bg: rgba(255, 252, 245, 0.92);
+  --drawer-card-border: rgba(190, 168, 132, 0.9);
+  --drawer-meta-bg: rgba(239, 228, 208, 0.88);
+  --drawer-divider: rgba(214, 196, 166, 0.95);
+  --drawer-asf-bg: rgba(31, 111, 120, 0.12);
+  --drawer-cdse-bg: rgba(182, 93, 49, 0.12);
 }
 
 :root[data-theme="field-survey"] {
@@ -82,6 +109,15 @@
   --text:    #c8d5cb;
   --text-hi: #eef5ef;
   --muted:   #7b9383;
+  --drawer-bg: rgba(13, 22, 17, 0.95);
+  --drawer-shadow: rgba(0, 0, 0, 0.24);
+  --drawer-close-bg: rgba(255, 255, 255, 0.035);
+  --drawer-card-bg: rgba(255, 255, 255, 0.04);
+  --drawer-card-border: rgba(56, 86, 69, 0.92);
+  --drawer-meta-bg: rgba(255, 255, 255, 0.025);
+  --drawer-divider: rgba(56, 86, 69, 0.82);
+  --drawer-asf-bg: rgba(134, 240, 182, 0.11);
+  --drawer-cdse-bg: rgba(255, 155, 84, 0.11);
 }
 
 :root[data-theme="soft-slate"] {
@@ -97,8 +133,17 @@
   --amber:   #8c7a4f;
   --purple:  #7f7a94;
   --text:    #4d554f;
-  --text-hi: #9e9e9e;
+  --text-hi: #273129;
   --muted:   #7d877d;
+  --drawer-bg: rgba(244, 246, 242, 0.97);
+  --drawer-shadow: rgba(71, 82, 71, 0.14);
+  --drawer-close-bg: rgba(255, 255, 255, 0.52);
+  --drawer-card-bg: rgba(255, 255, 255, 0.84);
+  --drawer-card-border: rgba(188, 197, 188, 0.96);
+  --drawer-meta-bg: rgba(237, 240, 234, 0.94);
+  --drawer-divider: rgba(207, 213, 205, 0.96);
+  --drawer-asf-bg: rgba(70, 101, 106, 0.11);
+  --drawer-cdse-bg: rgba(139, 107, 88, 0.11);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -857,9 +902,9 @@ header {
   top: 0; right: 0; bottom: 0;
   width: 392px;
   z-index: 500;
-  background: rgba(88, 103, 126, 0.97);
+  background: var(--drawer-bg);
   border-left: 1px solid var(--border2);
-  box-shadow: -20px 0 48px rgba(0,0,0,.22);
+  box-shadow: -20px 0 48px var(--drawer-shadow);
   backdrop-filter: blur(12px);
   transform: translateX(100%);
   transition: transform .22s ease;
@@ -876,7 +921,7 @@ header {
   height: 32px;
   font-family: var(--mono); font-size: calc(11px + var(--font-bump) - 1px);
   color: var(--muted);
-  background: rgba(94, 92, 92, 0.03);
+  background: var(--drawer-close-bg);
   border: 1px solid var(--border);
   cursor: pointer;
 }
@@ -892,6 +937,109 @@ header {
 
 .d-section { font-family: var(--mono); font-size: calc(8px + var(--font-bump) - 2px); letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
 .d-desc { font-size: calc(11px + var(--font-bump) - 1px); color: var(--text); line-height: 1.7; }
+.d-group {
+  margin-bottom: 14px;
+}
+.d-group-head {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  letter-spacing: 1px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+.d-link-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--drawer-card-bg);
+  border: 1px solid var(--drawer-card-border);
+  border-radius: 8px;
+}
+.d-link-title {
+  font-family: var(--mono);
+  font-size: calc(11px + var(--font-bump) - 1px);
+  font-weight: 600;
+  color: var(--text-hi);
+  margin-bottom: 8px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.d-link-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.d-link-top span,
+.d-link-submeta,
+.d-link-empty {
+  font-family: var(--mono);
+}
+.d-link-top span,
+.d-link-submeta {
+  font-size: calc(9px + var(--font-bump) - 1px);
+  color: var(--muted);
+}
+.d-link-submeta {
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.d-link-meta {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  line-height: 1.55;
+  border-top: 1px solid var(--drawer-divider);
+  margin-bottom: 10px;
+  background: var(--drawer-meta-bg);
+  border-radius: 6px;
+  padding: 8px 9px 0;
+}
+.d-link-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.d-link-meta-row strong {
+  color: var(--text-hi);
+  text-align: right;
+  word-break: break-all;
+  font-weight: 500;
+}
+.d-link-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.d-link-empty {
+  font-size: calc(10px + var(--font-bump) - 1px);
+  color: var(--muted);
+}
+.d-copy-btn {
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 2px);
+  border: 1px solid;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.d-copy-btn.asf {
+  background: var(--drawer-asf-bg);
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+.d-copy-btn.cdse {
+  background: var(--drawer-cdse-bg);
+  color: var(--orange);
+  border-color: var(--orange);
+}
+.d-copy-btn:hover {
+  filter: brightness(1.03);
+}
 
 .d-week-badge {
   display: inline-block;
@@ -1410,7 +1558,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.10';
+const APP_VERSION = 'v0.6.11';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -3679,6 +3827,19 @@ function openFrameDrawer(clickedFrame) {
   focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function createDrawerCopyButton(label, url, variant) {
+  return `<button type="button" class="d-copy-btn ${variant}" onclick="copyDrawerLink(this, '${escapeHtml(url)}')">${label}</button>`;
+}
+
 // Final override: group drawer content by the clicked acquisition date, not by the whole track history.
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
@@ -3778,43 +3939,42 @@ function openFrameDrawer(clickedFrame) {
       const cdseUrl = frame.copernicus_url || frame.download_url || '';
       const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
       const granuleMeta = parseGranuleMetadata(frame.granule)
-        .map(item => `<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:var(--muted);">${item.label}</span><span style="color:var(--text-hi);text-align:right;word-break:break-all;">${item.value}</span></div>`)
+        .map(item => `<div class="d-link-meta-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`)
         .join('');
       const actions = [
-        asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
-        cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+        asfUrl ? createDrawerCopyButton('Copy ASF', asfUrl, 'asf') : '',
+        cdseUrl ? createDrawerCopyButton('Copy CDSE', cdseUrl, 'cdse') : '',
       ].filter(Boolean).join('');
 
       return `
-        <div style="margin-bottom:12px;padding:10px;background:rgba(0,0,0,0.12);border:1px solid var(--border);border-radius:6px;">
-          <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
-            ${frame.granule || 'Unknown Granule'}
+        <div class="d-link-card">
+          <div class="d-link-title">
+            ${escapeHtml(frame.granule || 'Unknown Granule')}
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-            <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
-            <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+          <div class="d-link-top">
+            <span>${escapeHtml(frame.product_type_norm || 'OCN')} / ${escapeHtml(size)}</span>
+            <span>${escapeHtml(frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--')}</span>
           </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-            ${getSourceState(frame)} · path ${getFramePathNumber(frame) ?? '--'} · frame ${getFrameStatus(frame)}
+          <div class="d-link-submeta">
+            ${escapeHtml(getSourceState(frame))} / path ${escapeHtml(getFramePathNumber(frame) ?? '--')} / frame ${escapeHtml(getFrameStatus(frame))}
           </div>
-          <div style="font-family:var(--mono);font-size:9px;line-height:1.55;border-top:1px solid var(--border);padding-top:8px;margin-bottom:10px;">
+          <div class="d-link-meta">
             ${granuleMeta}
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+          <div class="d-link-actions">
+            ${actions || '<span class="d-link-empty">No download URL available.</span>'}
           </div>
         </div>
       `;
     }).join('');
 
     return `
-      <div style="margin-bottom:14px;">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan);margin-bottom:8px;">${heading}</div>
+      <div class="d-group">
+        <div class="d-group-head">${escapeHtml(heading)}</div>
         ${body}
       </div>
     `;
   }).join('');
-
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the selected acquisition date.</span>';
   document.getElementById('drawer').classList.add('open');
   focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
