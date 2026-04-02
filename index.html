@@ -1425,6 +1425,10 @@ header {
       </details>
       <div class="filter-actions">
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()">Reset Filters</button>
+        <label class="filter-toggle" for="filter-show-same-track-drawer">
+          <input id="filter-show-same-track-drawer" type="checkbox">
+          Show same track in drawer
+        </label>
         <label class="filter-toggle" for="filter-show-other-tracks">
           <input id="filter-show-other-tracks" type="checkbox">
           Show other Taiwan Sentinel-1 tracks
@@ -1700,6 +1704,32 @@ function getFrameLatLngBounds(frame) {
   return points.length ? L.latLngBounds(points) : null;
 }
 
+function getFrameSpatialSignature(frame) {
+  const bounds = getFrameLatLngBounds(frame);
+  if (!bounds) return '';
+  const southWest = bounds.getSouthWest();
+  const northEast = bounds.getNorthEast();
+  const center = bounds.getCenter();
+  return [
+    southWest.lat.toFixed(3),
+    southWest.lng.toFixed(3),
+    northEast.lat.toFixed(3),
+    northEast.lng.toFixed(3),
+    center.lat.toFixed(3),
+    center.lng.toFixed(3),
+  ].join('|');
+}
+
+function getDrawerFrameScopeKey(frame) {
+  return [
+    frame.satellite_id || '',
+    frame.direction_norm || '',
+    getFramePathNumber(frame) ?? '',
+    normalizeFrameNumber(frame.frame_number_norm) ?? '',
+    getFrameSpatialSignature(frame),
+  ].join('|');
+}
+
 function focusMapOnFrames(frames, options = {}) {
   if (!state.map || !Array.isArray(frames) || !frames.length) return;
   const boundsList = frames.map(getFrameLatLngBounds).filter(Boolean);
@@ -1854,6 +1884,7 @@ function ensureAdvancedState() {
   state.filters ||= {
     satellite: 'ALL',
     direction: 'ALL',
+    showSameTrackInDrawer: false,
     showOtherSentinelTracks: false,
     pathMin: '',
     pathMax: '',
@@ -2309,6 +2340,12 @@ function bindAdvancedControls() {
     state.filters.showOtherSentinelTracks = !!event.target.checked;
     applyAdvancedFilters();
   });
+  document.getElementById('filter-show-same-track-drawer')?.addEventListener('change', event => {
+    state.filters.showSameTrackInDrawer = !!event.target.checked;
+    if (!state.selectedFrameKey) return;
+    const selectedFrame = state.filteredFrames.find(frame => getFrameKey(frame) === state.selectedFrameKey);
+    if (selectedFrame) openFrameDrawer(selectedFrame);
+  });
 
   for (const id of ['filter-frame-min', 'filter-frame-max', 'filter-path-min', 'filter-path-max', 'filter-date-start', 'filter-date-end']) {
     document.getElementById(id)?.addEventListener('input', event => {
@@ -2414,6 +2451,7 @@ function resetAdvancedFilters(apply = true) {
   const window = getDefaultWeekWindow();
   state.filters.satellite = 'ALL';
   state.filters.direction = 'ALL';
+  state.filters.showSameTrackInDrawer = false;
   state.filters.showOtherSentinelTracks = false;
   state.filters.pathMin = '';
   state.filters.pathMax = '';
@@ -2432,9 +2470,11 @@ function resetAdvancedFilters(apply = true) {
   const frameMax = document.getElementById('filter-frame-max');
   const dateStart = document.getElementById('filter-date-start');
   const dateEnd = document.getElementById('filter-date-end');
+  const showSameTrackDrawer = document.getElementById('filter-show-same-track-drawer');
   const showOtherTracks = document.getElementById('filter-show-other-tracks');
   if (satSel) satSel.value = 'ALL';
   if (dirSel) dirSel.value = 'ALL';
+  if (showSameTrackDrawer) showSameTrackDrawer.checked = false;
   if (showOtherTracks) showOtherTracks.checked = false;
   if (pathMin) pathMin.value = '';
   if (pathMax) pathMax.value = '';
@@ -3883,13 +3923,14 @@ function createDrawerCopyButton(label, url, variant) {
   return `<button type="button" class="d-copy-btn ${variant}" onclick="copyDrawerLink(this, '${escapeHtml(url)}')">${label}</button>`;
 }
 
-// Final override: group drawer content by the clicked acquisition date, not by the whole track history.
+// Final override: default the drawer to the clicked frame across dates, with an optional same-track expansion.
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;
 
   const clickedPath = getFramePathNumber(clickedFrame);
   const clickedAcquisition = getFrameAcquisitionInfo(clickedFrame);
+  const clickedScopeKey = getDrawerFrameScopeKey(clickedFrame);
   const trackFrames = state.filteredFrames
     .filter(frame => {
       if ((frame.satellite_id || '') !== (clickedFrame.satellite_id || '')) return false;
@@ -3899,7 +3940,11 @@ function openFrameDrawer(clickedFrame) {
     })
     .sort((a, b) => (getFrameTimestamp(b) ?? 0) - (getFrameTimestamp(a) ?? 0));
 
-  const selectedFrames = trackFrames.filter(frame => getFrameAcquisitionInfo(frame).key === clickedAcquisition.key);
+  const drawerScopeFrames = state.filters.showSameTrackInDrawer
+    ? trackFrames
+    : trackFrames.filter(frame => getDrawerFrameScopeKey(frame) === clickedScopeKey);
+  const scopedFrames = drawerScopeFrames.length ? drawerScopeFrames : [clickedFrame];
+  const selectedFrames = scopedFrames.filter(frame => getFrameAcquisitionInfo(frame).key === clickedAcquisition.key);
 
   const mergeFramesForDrawer = frames => {
     const mergedEntries = new Map();
@@ -3932,7 +3977,7 @@ function openFrameDrawer(clickedFrame) {
   const entries = mergeFramesForDrawer(selectedFrames.length ? selectedFrames : [clickedFrame]);
   const primary = entries[0] || clickedFrame;
   const acquisition = getFrameAcquisitionInfo(primary);
-  const acquisitionCount = new Set(trackFrames.map(frame => getFrameAcquisitionInfo(frame).key)).size;
+  const acquisitionCount = new Set(scopedFrames.map(frame => getFrameAcquisitionInfo(frame).key)).size;
   const getSourceState = frame => {
     const hasAsf = !!frame.asf_url;
     const hasCdse = !!(frame.copernicus_url || frame.download_url);
@@ -3969,7 +4014,7 @@ function openFrameDrawer(clickedFrame) {
   if (section) section.textContent = `Acquisition Files Under Track ${getFramePathNumber(primary) ?? '--'} / Frame ${frameCenterLabel}`;
 
   const groups = new Map();
-  for (const frame of trackFrames) {
+  for (const frame of scopedFrames) {
     const info = getFrameAcquisitionInfo(frame);
     const list = groups.get(info.key) || [];
     list.push(frame);
@@ -4025,7 +4070,7 @@ function openFrameDrawer(clickedFrame) {
       </details>
     `;
   }).join('');
-  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches this track.</span>';
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches this frame scope.</span>';
   document.getElementById('drawer').classList.add('open');
   focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
