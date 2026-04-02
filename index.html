@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAR Monitor · 台灣衛星取像儀表板</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>🛰</text></svg>">
+<title>SAR Monitor 繚 ?啁銵????銵冽</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>?</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -150,7 +150,7 @@
 html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--sans); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
 
-/* ═══ HEADER ═══════════════════════════════════════════════════════════════ */
+/* ????HEADER ????????????????????????????????????????????????????????????????*/
 header {
   height: var(--hdr);
   background: var(--surface);
@@ -224,10 +224,10 @@ header {
 }
 
 
-/* ═══ BODY LAYOUT ══════════════════════════════════════════════════════════ */
+/* ????BODY LAYOUT ?????????????????????????????????????????????????????????? */
 .layout { flex: 1; display: flex; overflow: hidden; }
 
-/* ═══ SIDEBAR ══════════════════════════════════════════════════════════════ */
+/* ????SIDEBAR ?????????????????????????????????????????????????????????????? */
 .sidebar {
   width: var(--sidebar);
   flex-shrink: 0;
@@ -287,17 +287,15 @@ header {
 }
 .filter-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   gap: 10px;
   align-items: end;
-}
-.filter-head .filter-field {
-  gap: 4px;
 }
 .date-shortcuts {
   display: inline-flex;
   gap: 6px;
-  align-self: center;
+  align-self: start;
+  justify-content: flex-start;
 }
 .date-shortcut {
   font-family: var(--mono);
@@ -540,7 +538,7 @@ header {
   opacity: .8;
 }
 
-/* ═══ MAP SECTION ═══════════════════════════════════════════════════════════ */
+/* ????MAP SECTION ????????????????????????????????????????????????????????????*/
 .map-wrap {
   flex: 1;
   position: relative;
@@ -794,7 +792,7 @@ header {
   line-height: 1.5;
 }
 
-/* ═══ DOWNLOAD BAR ══════════════════════════════════════════════════════════ */
+/* ????DOWNLOAD BAR ?????????????????????????????????????????????????????????? */
 .dl-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -896,7 +894,7 @@ header {
   white-space: nowrap;
 }
 
-/* ═══ DETAIL DRAWER ═════════════════════════════════════════════════════════ */
+/* ????DETAIL DRAWER ??????????????????????????????????????????????????????????*/
 .drawer {
   position: absolute;
   top: 0; right: 0; bottom: 0;
@@ -1094,7 +1092,7 @@ header {
   margin-bottom: 14px;
 }
 
-/* ═══ LEAFLET OVERRIDES ═════════════════════════════════════════════════════ */
+/* ????LEAFLET OVERRIDES ??????????????????????????????????????????????????????*/
 .leaflet-popup-content-wrapper {
   background: rgba(11,19,32,.97) !important;
   border: 1px solid var(--border2) !important;
@@ -1122,7 +1120,7 @@ header {
 .fp p  { font-size: calc(9px + var(--font-bump) - 1px); color: var(--muted); margin: 2px 0; }
 .fp b  { color: var(--text-hi); }
 
-/* ═══ LOADING ═══════════════════════════════════════════════════════════════ */
+/* ????LOADING ????????????????????????????????????????????????????????????????*/
 #loading {
   position: fixed; inset: 0;
   background: var(--bg);
@@ -1304,18 +1302,18 @@ header {
 <body>
 
 <div id="loading">
-  <div class="ld-txt">SAR · MONITOR</div>
+  <div class="ld-txt">SAR 繚 MONITOR</div>
   <div class="ld-bar"></div>
-  <div class="ld-sub" id="ld-msg">連接資料來源…</div>
+  <div class="ld-sub" id="ld-msg">??鞈?靘???/div>
 </div>
 
-<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<!-- ????HEADER ????????????????????????????????????????????????????????????????-->
 <header>
-  <div class="hdr-logo">SAR <em>·</em> Monitor</div>
+  <div class="hdr-logo">SAR <em>繚</em> Monitor</div>
   <div class="hdr-sep"></div>
   <div class="hdr-status">
-    更新：<b id="hdr-time">—</b>
-    &nbsp;｜&nbsp;
+    ?湔嚗?b id="hdr-time">??/b>
+    &nbsp;嚚?nbsp;
     ASF DAAC &amp; Copernicus CDSE
   </div>
   <div class="hdr-controls">
@@ -1339,20 +1337,20 @@ header {
     </div>
   </div>
   <div class="hdr-tabs">
-    <button class="tab on"  onclick="setTab('all',this)">全部衛星</button>
-    <button class="tab"     onclick="setTab('op',this)">運作中</button>
-    <button class="tab"     onclick="setTab('tw',this)">本週取像</button>
+    <button class="tab on"  onclick="setTab('all',this)">?券銵?</button>
+    <button class="tab"     onclick="setTab('op',this)">??銝?/button>
+    <button class="tab"     onclick="setTab('tw',this)">?祇勗???/button>
   </div>
 </header>
 
-<!-- ═══ LAYOUT ═══════════════════════════════════════════════════════════════ -->
+<!-- ????LAYOUT ????????????????????????????????????????????????????????????????-->
 <div class="layout">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-head">
-      <h2>SAR 衛星艦隊</h2>
-      <div class="sub" id="sb-count">載入中…</div>
+      <h2>SAR 銵??阡?</h2>
+      <div class="sub" id="sb-count">頛銝凌?/div>
     </div>
     <div class="sb-filters">
       <button class="chip on"  data-b="ALL" onclick="setFilter('ALL',this)">ALL</button>
@@ -1363,14 +1361,6 @@ header {
     </div>
     <div class="filter-panel">
       <div class="filter-head">
-        <label class="filter-field">
-          <span class="filter-label">View Mode</span>
-          <select class="filter-select" id="filter-view-mode">
-            <option value="all">All satellites</option>
-            <option value="op">Operational</option>
-            <option value="tw">This week</option>
-          </select>
-        </label>
         <div class="date-shortcuts">
           <button class="date-shortcut" id="preset-week" type="button" onclick="applyPresetDateWindow(7, this)">This Week</button>
           <button class="date-shortcut" id="preset-month" type="button" onclick="applyPresetDateWindow(30, this)">This Month</button>
@@ -1445,16 +1435,16 @@ header {
 
     <div class="map-stats">
       <div class="stat-card">
-        <div class="lbl">本週取像幀數</div>
-        <div class="val" id="st-frames">—</div>
+        <div class="lbl">?祇勗?????/div>
+        <div class="val" id="st-frames">??/div>
       </div>
       <div class="stat-card">
-        <div class="lbl">過境衛星種類</div>
-        <div class="val orange" id="st-sats">—</div>
+        <div class="lbl">??銵?蝔桅?</div>
+        <div class="val orange" id="st-sats">??/div>
       </div>
       <div class="stat-card">
-        <div class="lbl">查詢時段</div>
-        <div class="val small" id="st-period">—</div>
+        <div class="lbl">?亥岷?挾</div>
+        <div class="val small" id="st-period">??/div>
       </div>
     </div>
 
@@ -1462,31 +1452,31 @@ header {
 
     <!-- legend -->
     <div class="map-legend">
-      <div class="legend-title">衛星 / 顏色</div>
+      <div class="legend-title">銵? / 憿</div>
       <div class="legend-item"><div class="legend-swatch" style="background:#00e5ff"></div><span>Sentinel-1</span></div>
       <div class="legend-item"><div class="legend-swatch" style="background:#ce93d8"></div><span>ALOS-2 / ALOS-4</span></div>
       <div class="legend-item"><div class="legend-swatch" style="background:#ffc107"></div><span>RADARSAT</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ff7043"></div><span>其他</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ff7043"></div><span>?嗡?</span></div>
     </div>
 
     <!-- download bar -->
     <div class="dl-bar">
-      <span class="dl-label">下載清單</span>
-      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 複製所有下載連結</button>
+      <span class="dl-label">銝?皜</span>
+      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">?? 銴ˊ???頛??</button>
       <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
       <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
-      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV 匯出</button>
-      <span class="dl-count" id="dl-info">— 幀</span>
+      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV ?臬</button>
+      <span class="dl-count" id="dl-info">??撟</span>
     </div>
 
     <!-- detail drawer -->
     <div class="drawer" id="drawer">
-      <button class="drawer-close" onclick="closeDrawer()">✕ 關閉</button>
+      <button class="drawer-close" onclick="closeDrawer()">????</button>
       <div class="d-name"   id="d-name"></div>
       <div class="d-agency" id="d-agency"></div>
       <div id="d-week-wrap"></div>
       <div class="d-grid"   id="d-grid"></div>
-      <div class="d-section">任務說明</div>
+      <div class="d-section">隞餃?隤芣?</div>
       <div class="d-desc"   id="d-desc"></div>
     </div>
 
@@ -1494,112 +1484,110 @@ header {
 </div><!-- .layout -->
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════════
-// SAR SATELLITE DATABASE
-// ═══════════════════════════════════════════════════════════════════════════
-const SATS = [
-  // ── ESA Sentinel-1 (C) ──────────────────────────────────────────────────
-  { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2014-04-03', status:'op',
+// ????????????????????????????????????????????????????????????????????????????// SAR SATELLITE DATABASE
+// ????????????????????????????????????????????????????????????????????????????const SATS = [
+  // ?? ESA Sentinel-1 (C) ??????????????????????????????????????????????????
+  { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5??0 m',   swath:'80??00 km', launched:'2014-04-03', status:'op',
     asf_prefix:['S1A','SENTINEL-1A'],
-    desc:'ESA 旗艦 C 波段 SAR。IW 模式 250 km 掃幅，全球資料免費開放。與 Sentinel-1C 組成雙星座，台灣每 6 天重訪一次。' },
-  { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2024-12-05', status:'op',
+    desc:'ESA ? C 瘜Ｘ挾 SAR?W 璅∪? 250 km ??嚗????鞎駁??整? Sentinel-1C 蝯???摨改??啁瘥?6 憭拚?閮芯?甈～? },
+  { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5??0 m',   swath:'80??00 km', launched:'2024-12-05', status:'op',
     asf_prefix:['S1C','SENTINEL-1C'],
-    desc:'2024 年 12 月接替 Sentinel-1B 發射。與 Sentinel-1A 恢復 6 天重訪週期，資料由 Copernicus CDSE 免費提供。' },
-  { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2025-11-04', status:'op',
+    desc:'2024 撟?12 ???Sentinel-1B ?澆??? Sentinel-1A ?Ｗ儔 6 憭拚?閮芷望?嚗?? Copernicus CDSE ?祥???? },
+  { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5??0 m',   swath:'80??00 km', launched:'2025-11-04', status:'op',
     asf_prefix:['S1D','SENTINEL-1D'],
-    desc:'2025 年 11 月加入星座，進一步縮短重訪週期，可達 3 天一次全球覆蓋。' },
+    desc:'2025 撟?11 ???交?摨改??脖?甇亦葬?剝?閮芷望?嚗??3 憭拐?甈∪???? },
 
-  // ── JAXA (L) ────────────────────────────────────────────────────────────
-  { id:'ALOS2',  name:'ALOS-2 (PALSAR-2)',  agency:'JAXA',        band:'L', freq:'1.236 GHz', res:'1–100 m',  swath:'25–490 km', launched:'2014-05-24', status:'op',
+  // ?? JAXA (L) ????????????????????????????????????????????????????????????
+  { id:'ALOS2',  name:'ALOS-2 (PALSAR-2)',  agency:'JAXA',        band:'L', freq:'1.236 GHz', res:'1??00 m',  swath:'25??90 km', launched:'2014-05-24', status:'op',
     asf_prefix:['ALOS2','ALOS-2'],
-    desc:'L 波段穿透力強，適合森林碳匯、地表形變（InSAR）及災害應變。14 天重訪週期，台灣通常由升/降軌各約 7 天一次。' },
-  { id:'ALOS4',  name:'ALOS-4',              agency:'JAXA',        band:'L', freq:'1.258 GHz', res:'3–100 m',  swath:'50–2000 km', launched:'2024-07-01', status:'op',
+    desc:'L 瘜Ｘ挾蝛輸?撘瘀??拙?璉格?蝣喳?銵典耦霈?InSAR嚗??賢拿????4 憭拚?閮芷望?嚗??虜?勗?/???? 7 憭拐?甈～? },
+  { id:'ALOS4',  name:'ALOS-4',              agency:'JAXA',        band:'L', freq:'1.258 GHz', res:'3??00 m',  swath:'50??000 km', launched:'2024-07-01', status:'op',
     asf_prefix:['ALOS4','ALOS-4'],
-    desc:'超寬刈幅模式達 2000 km，全球覆蓋頻率大幅提升。ScanSAR 模式 14 天可覆蓋台灣多次。' },
+    desc:'頞祝??璅∪???2000 km嚗????之撟??canSAR 璅∪? 14 憭拙閬??啁憭活?? },
 
-  // ── NASA/ISRO NISAR (L+S) ────────────────────────────────────────────────
-  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
+  // ?? NASA/ISRO NISAR (L+S) ????????????????????????????????????????????????
+  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', freq:'1.257 GHz', res:'3??5 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
     asf_prefix:['NISAR'],
-    desc:'NASA 與 ISRO 聯合任務，同時搭載 L 波段（JPL）與 S 波段（ISRO）SAR。12 天全球覆蓋，所有資料完全開放。' },
+    desc:'NASA ??ISRO ?臬?隞餃?嚗??頛?L 瘜Ｘ挾嚗PL嚗? S 瘜Ｘ挾嚗SRO嚗AR??2 憭拙??????????券??整? },
 
-  // ── DLR/Airbus (X) ──────────────────────────────────────────────────────
-  { id:'TSX',  name:'TerraSAR-X',            agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2007-06-15', status:'op',
+  // ?? DLR/Airbus (X) ??????????????????????????????????????????????????????
+  { id:'TSX',  name:'TerraSAR-X',            agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25??8 m', swath:'5??50 km',  launched:'2007-06-15', status:'op',
     asf_prefix:['TSX','TERRASAR'],
-    desc:'商業高解析度 X 波段 SAR。聚焦模式 0.25 m，適合城市、橋樑、海港精細監測。資料需購買或申請研究授權。' },
-  { id:'TDX',  name:'TanDEM-X',              agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2010-06-21', status:'op',
+    desc:'?平擃圾?漲 X 瘜Ｘ挾 SAR???行芋撘?0.25 m嚗??撣?璅絲皜舐移蝝啁皜研???鞈潸眺?隢?蝛嗆?甈? },
+  { id:'TDX',  name:'TanDEM-X',              agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25??8 m', swath:'5??50 km',  launched:'2010-06-21', status:'op',
     asf_prefix:['TDX','TANDEM'],
-    desc:'與 TerraSAR-X 雙星編隊飛行，用於生成全球 TanDEM-X 12 m/90 m DEM，也可獨立執行高解析任務。' },
+    desc:'??TerraSAR-X ??蝺券?憌?嚗?潛????TanDEM-X 12 m/90 m DEM嚗??舐蝡銵?閫??隞餃??? },
 
-  // ── ASI COSMO-SkyMed Second Generation (X) ──────────────────────────────
-  { id:'CSG1', name:'COSMO-SkyMed SG-1',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2019-12-18', status:'op',
+  // ?? ASI COSMO-SkyMed Second Generation (X) ??????????????????????????????
+  { id:'CSG1', name:'COSMO-SkyMed SG-1',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35??00 m', swath:'10??00 km', launched:'2019-12-18', status:'op',
     asf_prefix:['CSG1','COSMO'],
-    desc:'義大利第二代 COSMO-SkyMed（Second Generation），軍民兩用。Spotlight 模式 0.35 m，可在數小時內重新對台灣取像。' },
-  { id:'CSG2', name:'COSMO-SkyMed SG-2',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2022-03-31', status:'op',
+    desc:'蝢拙之?拍洵鈭誨 COSMO-SkyMed嚗econd Generation嚗?頠??拍?potlight 璅∪? 0.35 m嚗?冽撠??折??啣??啁???? },
+  { id:'CSG2', name:'COSMO-SkyMed SG-2',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35??00 m', swath:'10??00 km', launched:'2022-03-31', status:'op',
     asf_prefix:['CSG2'],
-    desc:'COSMO-SkyMed 第二代第二顆，完成 4 星（含舊版）協調運作，重訪週期縮短至數小時級別。' },
+    desc:'COSMO-SkyMed 蝚砌?隞?洵鈭?嚗???4 ???怨????矽??嚗?閮芷望?蝮桃?單撠?蝝?? },
 
-  // ── CSA RADARSAT Constellation (C) ──────────────────────────────────────
-  { id:'RCM1', name:'RADARSAT-C 1 (RCM-1)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
+  // ?? CSA RADARSAT Constellation (C) ??????????????????????????????????????
+  { id:'RCM1', name:'RADARSAT-C 1 (RCM-1)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1??00 m',  swath:'20??00 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM1','RCM-1'],
-    desc:'加拿大 RADARSAT 星座任務第一顆。3 顆等間距分布，每 4 天可覆蓋全球一次，支援海事監控與災害應變。' },
-  { id:'RCM2', name:'RADARSAT-C 2 (RCM-2)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
+    desc:'?憭?RADARSAT ?漣隞餃?蝚砌?憿? 憿?????嚗? 4 憭拙閬??函?銝甈∴??舀瘚瑚????摰單?霈? },
+  { id:'RCM2', name:'RADARSAT-C 2 (RCM-2)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1??00 m',  swath:'20??00 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM2','RCM-2'],
-    desc:'RCM 星座第二顆，與 RCM-1/3 間距各 120°。提供全極化（HH+HV+VH+VV）及緊湊極化模式。' },
-  { id:'RCM3', name:'RADARSAT-C 3 (RCM-3)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
+    desc:'RCM ?漣蝚砌?憿???RCM-1/3 ????120簞??靘璆萄?嚗H+HV+VH+VV嚗?蝺?璆萄?璅∪??? },
+  { id:'RCM3', name:'RADARSAT-C 3 (RCM-3)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1??00 m',  swath:'20??00 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM3','RCM-3'],
-    desc:'RCM 星座第三顆，完成三星佈局。政府優先任務包括加拿大北部冰況監測、海洋排放溢油偵測等。' },
-  { id:'RS2',  name:'RADARSAT-2',             agency:'CSA/MDA',     band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2007-12-14', status:'op',
+    desc:'RCM ?漣蝚砌?憿?摰?銝?雿??摨?遙???砍??踹之??唳???葫?絲瘣??暹滯瘝孵皜祉??? },
+  { id:'RS2',  name:'RADARSAT-2',             agency:'CSA/MDA',     band:'C', freq:'5.405 GHz', res:'1??00 m',  swath:'20??00 km', launched:'2007-12-14', status:'op',
     asf_prefix:['RS2','RADARSAT-2','R2'],
-    desc:'商業 C 波段 SAR，全極化能力，超精細模式 1 m。資料需向 MDA 商購，但部分災害情況提供免費存取。' },
+    desc:'?平 C 瘜Ｘ挾 SAR嚗璆萄??賢?嚗?蝎曄敦璅∪? 1 m??????MDA ?頃嚗??典??賢拿?????祥摮??? },
 
-  // ── CONAE SAOCOM (L) ────────────────────────────────────────────────────
-  { id:'SAO1A', name:'SAOCOM-1A',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2018-10-08', status:'op',
+  // ?? CONAE SAOCOM (L) ????????????????????????????????????????????????????
+  { id:'SAO1A', name:'SAOCOM-1A',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10??00 m', swath:'30??00 km', launched:'2018-10-08', status:'op',
     asf_prefix:['SAOCOM1A','SAOCOM-1A','UAM'],
-    desc:'阿根廷 L 波段 SAR，主力應用為土壤溼度監測與洪水繪圖。全極化資料可申請研究用途。' },
-  { id:'SAO1B', name:'SAOCOM-1B',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2020-08-30', status:'op',
+    desc:'?踵撱?L 瘜Ｘ挾 SAR嚗蜓???函?ㄓ皞澆漲??葫?揪瘞渡鼓?璆萄?鞈??舐隢?蝛嗥?? },
+  { id:'SAO1B', name:'SAOCOM-1B',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10??00 m', swath:'30??00 km', launched:'2020-08-30', status:'op',
     asf_prefix:['SAOCOM1B','SAOCOM-1B','UAM'],
-    desc:'SAOCOM-1A 雙星，兩星協調使台灣重訪週期縮短。也與意大利 COSMO-SkyMed 交換資料（SIASGE 協議）。' },
+    desc:'SAOCOM-1A ??嚗??隤蹂蝙?啁?赤?望?蝮桃????憭批 COSMO-SkyMed 鈭斗?鞈?嚗IASGE ?降嚗? },
 
-  // ── ISRO (X) ────────────────────────────────────────────────────────────
-  { id:'RISAT2B', name:'RISAT-2BR1',          agency:'ISRO',        band:'X', freq:'9.35 GHz',  res:'0.5–50 m', swath:'5–300 km', launched:'2019-12-11', status:'op',
+  // ?? ISRO (X) ????????????????????????????????????????????????????????????
+  { id:'RISAT2B', name:'RISAT-2BR1',          agency:'ISRO',        band:'X', freq:'9.35 GHz',  res:'0.5??0 m', swath:'5??00 km', launched:'2019-12-11', status:'op',
     asf_prefix:['RISAT2BR1','RISAT'],
-    desc:'印度 X 波段 SAR 小衛星，以色列 ELTA ELM-2022S 雷達。Spotlight 模式 0.5 m，用於農業普查與安全監測。' },
+    desc:'?啣漲 X 瘜Ｘ挾 SAR 撠???隞亥??ELTA ELM-2022S ?琿??potlight 璅∪? 0.5 m嚗?潸噙璆剜?亥?摰??葫?? },
 
-  // ── NovaSAR (S) ─────────────────────────────────────────────────────────
-  { id:'NOVASAR', name:'NovaSAR-1',           agency:'SSTL/UKSA',   band:'S', freq:'3.2 GHz',   res:'6–30 m',   swath:'20–150 km', launched:'2018-09-16', status:'op',
+  // ?? NovaSAR (S) ?????????????????????????????????????????????????????????
+  { id:'NOVASAR', name:'NovaSAR-1',           agency:'SSTL/UKSA',   band:'S', freq:'3.2 GHz',   res:'6??0 m',   swath:'20??50 km', launched:'2018-09-16', status:'op',
     asf_prefix:['NOVASAR'],
-    desc:'英國 SSTL 開發的 S 波段小型 SAR。S 波段特性介於 C 與 L 之間，對植被穿透力較 C 強。資料可向 SSTL 申請。' },
+    desc:'?勗? SSTL ???S 瘜Ｘ挾撠? SAR? 瘜Ｘ挾?寞找???C ??L 銋?嚗?璊◤蝛輸?頛?C 撘瑯????SSTL ?唾??? },
 
-  // ── Commercial Constellations ────────────────────────────────────────────
-  { id:'ICEYE',   name:'ICEYE 星座（20+ 顆）',  agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25–15 m', swath:'5–200 km', launched:'2018~', status:'op',
+  // ?? Commercial Constellations ????????????????????????????????????????????
+  { id:'ICEYE',   name:'ICEYE ?漣嚗?0+ 憿?',  agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25??5 m', swath:'5??00 km', launched:'2018~', status:'op',
     asf_prefix:['ICEYE'],
-    desc:'芬蘭商業 SAR 小衛星星座，已超過 20 顆在軌。Spot Fine 模式達 25 cm，可在 3 小時內重訪台灣。支援 on-demand 任務。' },
-  { id:'CAPELLA', name:'Capella 星座（7+ 顆）', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35–5 m', swath:'5–50 km', launched:'2020~', status:'op',
+    desc:'?祈?平 SAR 撠???摨改?撌脰???20 憿頠pot Fine 璅∪???25 cm嚗??3 撠??折?閮芸????on-demand 隞餃??? },
+  { id:'CAPELLA', name:'Capella ?漣嚗?+ 憿?', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35?? m', swath:'5??0 km', launched:'2020~', status:'op',
     asf_prefix:['CAPELLA'],
-    desc:'美國商業 SAR，最高 0.35 m Spotlight 影像。提供 Open Data Program，部分地區可免費申請取像。' },
-  { id:'UMBRA',   name:'Umbra 星座（5+ 顆）',   agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16–5 m', swath:'5–35 km', launched:'2021~', status:'op',
+    desc:'蝢??平 SAR嚗?擃?0.35 m Spotlight 敶勗???靘?Open Data Program嚗???臬?鞎餌隢??? },
+  { id:'UMBRA',   name:'Umbra ?漣嚗?+ 憿?',   agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16?? m', swath:'5??5 km', launched:'2021~', status:'op',
     asf_prefix:['UMBRA'],
-    desc:'目前民用最高解析度 SAR（16 cm）。Open Data Program 提供部分影像免費下載，包含台灣歷史存檔。' },
-  { id:'SYNSPECTIVE', name:'Synspective 星座',  agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1–3 m',   swath:'30 km',  launched:'2020~', status:'op',
+    desc:'?桀?瘞?擃圾?漲 SAR嚗?6 cm嚗pen Data Program ???典?敶勗??祥銝?嚗??怠??風?脣?瑼? },
+  { id:'SYNSPECTIVE', name:'Synspective ?漣',  agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1?? m',   swath:'30 km',  launched:'2020~', status:'op',
     asf_prefix:['SYNSPECTIVE'],
-    desc:'日本商業 SAR 小衛星，專注亞洲市場。與台灣科研機構有合作協議，可提供快速災害應變影像。' },
+    desc:'?交?平 SAR 撠???撠釣鈭散撣???啁蝘?璈???雿?霅堆??舀?靘翰?摰單?霈蔣?? },
 
-  // ── Retired ─────────────────────────────────────────────────────────────
-  { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5–20 m',  swath:'80–400 km', launched:'2016-04-25', status:'ret', retired:'2022-08-23',
+  // ?? Retired ?????????????????????????????????????????????????????????????
+  { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5??0 m',  swath:'80??00 km', launched:'2016-04-25', status:'ret', retired:'2022-08-23',
     asf_prefix:['S1B','SENTINEL-1B'],
-    desc:'2021 年 12 月電力系統異常，SAR 傳感器失效；2022 年 8 月正式退役。由 Sentinel-1C 接替其軌道。' },
-  { id:'ALOS1', name:'ALOS (PALSAR)',           agency:'JAXA',        band:'L', freq:'1.27 GHz',  res:'7–100 m', swath:'40–350 km', launched:'2006-01-24', status:'ret', retired:'2011-04-22',
+    desc:'2021 撟?12 ??頂蝯梁撣賂?SAR ?單??典仃??2022 撟?8 ?迤撘敶嫘 Sentinel-1C ?交?嗉??? },
+  { id:'ALOS1', name:'ALOS (PALSAR)',           agency:'JAXA',        band:'L', freq:'1.27 GHz',  res:'7??00 m', swath:'40??50 km', launched:'2006-01-24', status:'ret', retired:'2011-04-22',
     asf_prefix:['ALOS','ALOS1'],
-    desc:'ALOS-2 的前身，第一個提供免費全球 L 波段資料的任務。存檔資料仍可透過 ASF 免費下載。' },
+    desc:'ALOS-2 ??頨恬?蝚砌???靘?鞎餃??L 瘜Ｘ挾鞈??遙??瑼????舫? ASF ?祥銝??? },
   { id:'ERS1', name:'ERS-1',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1991-07-17', status:'ret', retired:'2000-03-10',
     asf_prefix:['ERS1','ERS-1'],
-    desc:'ESA 第一代 SAR 衛星，奠定 InSAR 應用基礎。大量存檔資料仍有科研價值，可由 ASF 存取。' },
+    desc:'ESA 蝚砌?隞?SAR 銵?嚗?摰?InSAR ??箇??之??瑼???????潘??舐 ASF 摮??? },
   { id:'ERS2', name:'ERS-2',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1995-04-21', status:'ret', retired:'2011-09-05',
     asf_prefix:['ERS2','ERS-2'],
-    desc:'ERS-1 接替星，與其組成 Tandem 任務。2024 年 2 月完成大氣再入，ASF 存有完整存檔。' },
+    desc:'ERS-1 ?交???蝯? Tandem 隞餃???024 撟?2 ???之瘞???伐?ASF 摮?摰摮??? },
 ];
 
-// ── 顏色映射 ──────────────────────────────────────────────────────────────
+// ?? 憿?? ??????????????????????????????????????????????????????????????
 const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'S1B', 'NISAR']);
 const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
@@ -1650,7 +1638,41 @@ function getTrackLabelForFrame(frame) {
   return 'OTHER';
 }
 
-// ── 台灣輪廓（簡化）────────────────────────────────────────────────────────
+const NISAR_TRACK_COLORS = {
+  'ASCENDING|39': '#00e676',
+  'ASCENDING|111': '#67f7b2',
+  'DESCENDING|61': '#00c2d1',
+  'DESCENDING|133': '#58d8e3',
+};
+
+function getFrameVisualInfo(frame) {
+  const satelliteId = String(frame?.satellite_id || frame?.platform || '').toUpperCase();
+  const direction = normalizeDirection(frame?.direction_norm || frame?.direction);
+  const pathNumber = getFramePathNumber(frame);
+
+  if (satelliteId.includes('NISAR')) {
+    const key = `${direction}|${pathNumber ?? ''}`;
+    const shortDir = direction === 'ASCENDING' ? 'A' : direction === 'DESCENDING' ? 'D' : 'N';
+    return {
+      label: `NISAR ${shortDir}${pathNumber ?? '--'}`,
+      color: NISAR_TRACK_COLORS[key] || '#00e676',
+    };
+  }
+
+  const rawLabel = frame?.track_label || frame?.satellite_name || frame?.platform || frame?.satellite_id || 'Other';
+  const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
+  const color = rawLabel === 'A69'
+    ? '#00e5ff'
+    : rawLabel === 'D105'
+      ? '#ff7043'
+      : rawLabel === 'NISAR'
+        ? '#00e676'
+        : platColor(frame?.platform || frame?.satellite_name);
+
+  return { label, color };
+}
+
+// ?? ?啁頛芸?嚗陛??????????????????????????????????????????????????????????
 const TW_OUTLINE = [
   [25.30,121.50],[25.08,121.88],[24.60,121.78],[23.98,121.60],
   [23.42,121.49],[22.80,121.18],[22.00,120.87],[21.90,120.73],
@@ -1658,7 +1680,7 @@ const TW_OUTLINE = [
   [24.00,120.05],[24.80,121.00],[25.30,121.50]
 ];
 
-// ── APP STATE ─────────────────────────────────────────────────────────────
+// ?? APP STATE ?????????????????????????????????????????????????????????????
 let state = {
   frames: [],
   tab:    'all',
@@ -1670,10 +1692,8 @@ let state = {
   framePolygons: [],
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAP INIT
-// ═══════════════════════════════════════════════════════════════════════════
-function initMap() {
+// ????????????????????????????????????????????????????????????????????????????// MAP INIT
+// ????????????????????????????????????????????????????????????????????????????function initMap() {
   state.map = L.map('map', { center:[23.5,121], zoom:6, zoomControl:true, attributionControl:false });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(state.map);
 
@@ -1682,8 +1702,7 @@ function initMap() {
 
   state.frameLayer = L.layerGroup().addTo(state.map);
 
-  // 點擊地圖背景時取消選取
-  state.map.on('click', () => {
+  // 暺??啣????瘨??  state.map.on('click', () => {
     if (state.selectedFrameKey) {
       state.selectedFrameKey = null;
       if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
@@ -1746,18 +1765,14 @@ function focusMapOnFrames(frames, options = {}) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// DATA LOADING
-// ═══════════════════════════════════════════════════════════════════════════
-function ldmsg(t) {
+// ????????????????????????????????????????????????????????????????????????????// DATA LOADING
+// ????????????????????????????????????????????????????????????????????????????function ldmsg(t) {
   const el = document.getElementById('ld-msg');
   if (el) el.textContent = t;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RENDER SATELLITE LIST
-// ═══════════════════════════════════════════════════════════════════════════
-function renderSatList() {
+// ????????????????????????????????????????????????????????????????????????????// RENDER SATELLITE LIST
+// ????????????????????????????????????????????????????????????????????????????function renderSatList() {
   const list = document.getElementById('sat-list');
   list.innerHTML = '';
 
@@ -1775,8 +1790,8 @@ function renderSatList() {
   });
 
   const groups = [
-    { key:'op',  label:'● 現役衛星' },
-    { key:'ret', label:'○ 歷史任務' },
+    { key:'op',  label:'???曉蝴銵?' },
+    { key:'ret', label:'??甇瑕隞餃?' },
   ];
 
   let total = 0;
@@ -1799,17 +1814,17 @@ function renderSatList() {
         <div class="dot ${sat.status}"></div>
         <div class="sat-info">
           <div class="sat-name">${sat.name}</div>
-          <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired?' – '+sat.retired.slice(0,4):''} · ${sat.res}</div>
+          <div class="sat-meta">${sat.agency} 繚 ${sat.launched.slice(0,4)}${sat.retired?' ??'+sat.retired.slice(0,4):''} 繚 ${sat.res}</div>
         </div>
         <div class="badges">
-          ${thisWeek ? '<span class="this-week">本週</span>' : ''}
+          ${thisWeek ? '<span class="this-week">?祇?/span>' : ''}
           <span class="badge b${sat.band}">${sat.band}</span>
         </div>`;
       list.appendChild(row);
     }
   }
 
-  document.getElementById('sb-count').textContent = `顯示 ${total} 顆衛星`;
+  document.getElementById('sb-count').textContent = `憿舐內 ${total} 憿??;
 }
 
 function hasThisWeek(sat, activePlatforms) {
@@ -1819,11 +1834,8 @@ function hasThisWeek(sat, activePlatforms) {
   return false;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// STATS
-// ═══════════════════════════════════════════════════════════════════════════
-function updateStats(d) {
+// ????????????????????????????????????????????????????????????????????????????// ????????????????????????????????????????????????????????????????????????????// STATS
+// ????????????????????????????????????????????????????????????????????????????function updateStats(d) {
   document.getElementById('st-frames').textContent = d.total_frames ?? state.frames.length;
   const sats = new Set(state.frames.map(f => f.platform));
   document.getElementById('st-sats').textContent   = sats.size;
@@ -1831,32 +1843,26 @@ function updateStats(d) {
   const s = new Date(d.query_start||Date.now()-7*864e5);
   const e = new Date(d.query_end  ||Date.now());
   const f = d => `${d.getMonth()+1}/${d.getDate()}`;
-  document.getElementById('st-period').textContent = `${f(s)} – ${f(e)}`;
+  document.getElementById('st-period').textContent = `${f(s)} ??${f(e)}`;
 
   const asf = (d.asf_count ?? state.frames.filter(x=>x.source==='ASF').length);
   const cop = (d.copernicus_count ?? state.frames.filter(x=>x.source==='Copernicus').length);
-  document.getElementById('dl-info').textContent = `ASF ${asf} · Copernicus ${cop} 幀`;
+  document.getElementById('dl-info').textContent = `ASF ${asf} 繚 Copernicus ${cop} 撟`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 function closeDrawer() {
   document.getElementById('drawer').classList.remove('open');
   state.selectedSat = null;
-  state.selectedFrameKey = null; // 關閉抽屜時清除 Frame 選取狀態
+  state.selectedFrameKey = null;
   if (typeof updateMapSelectionState === 'function') updateMapSelectionState();
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   updateLegend();
-  focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FILTERS / TABS
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════════════════════════════
-const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC'];
+// ????????????????????????????????????????????????????????????????????????????// FILTERS / TABS
+// ????????????????????????????????????????????????????????????????????????????
+// ????????????????????????????????????????????????????????????????????????????// BOOT
+// ????????????????????????????????????????????????????????????????????????????const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC'];
 const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
   ALL: ['SLC', 'GSLC'],
   NISAR: ['GSLC'],
@@ -1986,7 +1992,7 @@ function setupReadableUI() {
   if (statsWrap && !document.getElementById('st-next')) {
     const card = document.createElement('div');
     card.className = 'stat-card';
-    card.innerHTML = '<div class="lbl">Latest A69 / D105</div><div class="val small" id="st-next">Need history</div>';
+    card.innerHTML = '<div class="lbl" id="st-next-label">Latest Tracks</div><div class="val small" id="st-next">Need history</div>';
     statsWrap.appendChild(card);
   }
 
@@ -1997,7 +2003,7 @@ function setupReadableUI() {
   if (dlBar) {
     dlBar.innerHTML = `
       <span class="dl-label">Filtered Downloads</span>
-      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 Copy All Links</button>
+      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">?? Copy All Links</button>
       <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
       <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
       <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV Export</button>
@@ -2006,7 +2012,7 @@ function setupReadableUI() {
   }
 
   const closeBtn = document.querySelector('.drawer-close');
-  if (closeBtn) closeBtn.textContent = '×';
+  if (closeBtn) closeBtn.textContent = '?';
   if (closeBtn) closeBtn.textContent = 'X';
   const section = document.querySelector('.d-section');
   if (section) section.textContent = 'Selected Files';
@@ -2205,7 +2211,7 @@ async function loadData() {
     const data = await response.json();
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
 
-    document.getElementById('hdr-time').textContent = `${data.updated_at || '--'}${data.version ? ` · data ${data.version}` : ''}`;
+    document.getElementById('hdr-time').textContent = `${data.updated_at || '--'}${data.version ? ` 繚 data ${data.version}` : ''}`;
     state.baseStats = data;
     state.rawFrames = reconcileFrameMetadata(
       data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
@@ -2247,7 +2253,7 @@ async function liveFetchASF() {
     const response = await fetch(url);
     const gj = await response.json();
 
-    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 平台代碼
+    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 撟喳隞?Ⅳ
 
     const filteredFeatures = (gj.features || []).filter(feature => {
       const p = feature.properties || {};
@@ -2255,12 +2261,11 @@ async function liveFetchASF() {
       if (s1Platforms.includes(platform)) {
         const pathNumber = String(p.pathNumber);
         const direction = (p.flightDirection || '').toUpperCase();
-        // 根據使用者需求過濾 Sentinel-1 軌道 (105 為降軌, 69 為升軌)
+        // ?寞?雿輻??瘙?瞈?Sentinel-1 頠? (105 ?粹?頠? 69 ?箏?頠?
         return (pathNumber === '105' && direction === 'DESCENDING') ||
                (pathNumber === '69' && direction === 'ASCENDING');
       }
-      return true; // 保留非 S1 的衛星
-    });
+      return true; // 靽???S1 ????    });
 
     state.rawFrames = reconcileFrameMetadata(
       filteredFeatures.map(feature => {
@@ -2442,7 +2447,7 @@ function renderFormatOptions() {
     };
     wrap.appendChild(button);
   }
-  if (summary) summary.textContent = `${state.filters.formats.size} selected · ${types.length} visible`;
+  if (summary) summary.textContent = `${state.filters.formats.size} selected 繚 ${types.length} visible`;
 }
 
 function resetAdvancedFilters(apply = true) {
@@ -2571,7 +2576,7 @@ function renderSatList() {
         <div class="dot ${sat.status}"></div>
         <div class="sat-info">
           <div class="sat-name">${sat.name}</div>
-          <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
+          <div class="sat-meta">${sat.agency} 繚 ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} 繚 ${count} frames</div>
         </div>
         <div class="badges">
           ${state.rawFrames.some(frame => satMatchesFrame(sat, frame)) ? '<span class="this-week">THIS WEEK</span>' : ''}
@@ -2632,15 +2637,7 @@ function updateLegend() {
 
   const groups = new Map();
   for (const frame of frames) {
-    const rawLabel = frame.track_label || frame.satellite_name || frame.platform || frame.satellite_id || 'Other';
-    const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
-    const color = rawLabel === 'A69'
-      ? '#00e5ff'
-      : rawLabel === 'D105'
-        ? '#ff7043'
-        : rawLabel === 'NISAR'
-          ? '#00e676'
-          : platColor(frame.platform || frame.satellite_name);
+    const { label, color } = getFrameVisualInfo(frame);
     const current = groups.get(label) || { label, color, count: 0 };
     current.count += 1;
     groups.set(label, current);
@@ -2686,7 +2683,7 @@ function renderMobileFeed() {
   }
 
   const dateSummary = state.filters.dateStart && state.filters.dateEnd
-    ? `${state.filters.dateStart} → ${state.filters.dateEnd}`
+    ? `${state.filters.dateStart} ??${state.filters.dateEnd}`
     : 'Open date range';
 
   const body = [...grouped.entries()].map(([day, dayFrames]) => {
@@ -2714,15 +2711,15 @@ function renderMobileFeed() {
       return `
         <div class="mobile-feed-card">
           <div class="mobile-feed-card-title">${frame.granule || 'Unknown Granule'}</div>
-          <div class="mobile-feed-card-meta">${timeLabel} · ${frame.satellite_name || frame.platform || '--'} · ${frame.product_type_norm || '--'}</div>
-          <div class="mobile-feed-card-sub">track ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'} · ${frame.direction_norm || '--'} · ${sourceLabel}</div>
+          <div class="mobile-feed-card-meta">${timeLabel} 繚 ${frame.satellite_name || frame.platform || '--'} 繚 ${frame.product_type_norm || '--'}</div>
+          <div class="mobile-feed-card-sub">track ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? '--'} 繚 ${frame.direction_norm || '--'} 繚 ${sourceLabel}</div>
         </div>
       `;
     }).join('');
 
     return `
       <section class="mobile-feed-group">
-        <div class="mobile-feed-date">${dayLabel} · ${dayFrames.length} file${dayFrames.length === 1 ? '' : 's'}</div>
+        <div class="mobile-feed-date">${dayLabel} 繚 ${dayFrames.length} file${dayFrames.length === 1 ? '' : 's'}</div>
         ${cards}
       </section>
     `;
@@ -2785,7 +2782,7 @@ function updateNextExpected() {
   const nextDate = new Date(forecast.next);
   const days = Math.round((forecast.next - Date.now()) / 86400000);
   const prefix = days <= 0 ? 'Watch now' : `${days}d`;
-  el.textContent = `${nextDate.getMonth() + 1}/${nextDate.getDate()} · ${prefix}`;
+  el.textContent = `${nextDate.getMonth() + 1}/${nextDate.getDate()} 繚 ${prefix}`;
 }
 
 function updateFilterHints() {
@@ -2937,7 +2934,7 @@ function updateDownloadButtons() {
   const fileCount = new Set(state.filteredFrames.map(frame => normalizeGranuleKey(frame.granule))).size;
   const dlInfo = document.getElementById('dl-info');
   if (dlInfo) {
-    dlInfo.textContent = `${fileCount} files · ASF ${asfMeta4.count} · CDSE ${copMeta4.count}`;
+    dlInfo.textContent = `${fileCount} files 繚 ASF ${asfMeta4.count} 繚 CDSE ${copMeta4.count}`;
   }
 }
 
@@ -2952,7 +2949,7 @@ window.copyFilteredUrls = function() {
     const btn = document.getElementById('btn-copy-urls');
     if (btn) {
       const orig = btn.innerHTML;
-      btn.innerHTML = `📋 Copied ${urls.length} Links!`;
+      btn.innerHTML = `?? Copied ${urls.length} Links!`;
       btn.style.background = 'var(--green)';
       btn.style.color = '#fff';
       btn.style.borderColor = 'var(--green)';
@@ -3040,7 +3037,7 @@ function appendSatelliteRow(container, sat) {
     <div class="dot ${sat.status}"></div>
     <div class="sat-info">
       <div class="sat-name">${sat.name}</div>
-      <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
+      <div class="sat-meta">${sat.agency} 繚 ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} 繚 ${count} frames</div>
     </div>
     <div class="badges">
       ${satellitesWithFrames.has(sat.id) ? '<span class="this-week">THIS WEEK</span>' : ''}
@@ -3079,7 +3076,7 @@ function updateMapSelectionState() {
 window.copyDrawerLink = function(btn, url) {
   navigator.clipboard.writeText(url).then(() => {
     const originalText = btn.innerHTML;
-    btn.innerHTML = '📋 Copied!';
+    btn.innerHTML = '?? Copied!';
     btn.style.background = 'var(--green)';
     btn.style.color = '#fff';
     setTimeout(() => {
@@ -3090,17 +3087,15 @@ window.copyDrawerLink = function(btn, url) {
   });
 };
 
-// 顯示 Frame 詳細資訊到右側抽屜
-function openFrameDrawer(clickedFrame) {
+// 憿舐內 Frame 閰喟敦鞈??啣?湔撅?function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
   state.selectedSat = null;
 
-  // 將相同任務與時間的影像群組在一起 (解決相同場景不同處理等級如 SLC 與 GRD 的完美重疊問題)
+  // 撠?遙?????蔣?黎蝯銝韏?(閫?捱?詨??湔銝???蝑?憒?SLC ??GRD ??蝢???憿?
   const baseTime = new Date(clickedFrame.date).getTime();
   const matchingFrames = state.filteredFrames.filter(f => {
     if (f.satellite_id !== clickedFrame.satellite_id) return false;
-    return Math.abs(new Date(f.date).getTime() - baseTime) < 10000; // 誤差 10 秒內視為同一次取像
-  });
+    return Math.abs(new Date(f.date).getTime() - baseTime) < 10000; // 隤文榆 10 蝘閬??甈∪???  });
 
   const primary = matchingFrames.length ? matchingFrames[0] : clickedFrame;
   const baseGranule = primary.granule?.split('_').slice(0, -1).join('_') || primary.granule || 'Unknown Granule';
@@ -3128,7 +3123,7 @@ function openFrameDrawer(clickedFrame) {
   
   let linksHtml = '';
   
-  // 將影像依照處理等級排序 (讓 SLC 排在前面)
+  // 撠蔣???扯???蝝?摨?(霈?SLC ??)
   matchingFrames.sort((a, b) => (b.product_type_norm || '').localeCompare(a.product_type_norm || ''));
 
   matchingFrames.forEach(f => {
@@ -3145,16 +3140,16 @@ function openFrameDrawer(clickedFrame) {
     linksHtml += `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
 
     if (f.asf_url) {
-      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.asf_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy ASF</button>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.asf_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(0,229,255,0.1); color: var(--cyan); text-decoration: none; border: 1px solid var(--cyan); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">?? Copy ASF</button>`;
     }
 
     const copUrl = f.copernicus_url || (f.source === 'Copernicus' ? f.download_url : null);
     if (copUrl) {
-      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${copUrl}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy CDSE</button>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${copUrl}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,112,67,0.1); color: var(--orange); text-decoration: none; border: 1px solid var(--orange); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">?? Copy CDSE</button>`;
     }
 
     if (!f.asf_url && !copUrl && f.download_url) {
-      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.download_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">📋 Copy URL</button>`;
+      linksHtml += `<button type="button" onclick="copyDrawerLink(this, '${f.download_url}')" style="cursor: pointer; flex: 1; text-align: center; padding: 6px 10px; background: rgba(255,255,255,0.1); color: var(--text-hi); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 10px; transition: all 0.2s;">?? Copy URL</button>`;
     }
 
     linksHtml += `</div></div>`;
@@ -3188,7 +3183,7 @@ function renderFrames() {
     });
 
     polygon.on('mouseover', function() {
-      if (state.selectedFrameKey === key) return; // 已選取不干擾
+      if (state.selectedFrameKey === key) return; // 撌脤??撟脫
       this.setStyle({ weight: 2.8, fillOpacity: 0.24, opacity: 1 });
     });
     polygon.on('mouseout', function() {
@@ -3197,13 +3192,12 @@ function renderFrames() {
       this.setStyle({ weight: hasSelection ? 1 : 1.6, fillOpacity: hasSelection ? 0.03 : 0.1, opacity: hasSelection ? 0.2 : 0.82 });
     });
     polygon.on('click', (e) => {
-      L.DomEvent.stopPropagation(e); // 避免觸發 map click
+      L.DomEvent.stopPropagation(e); // ?踹?閫貊 map click
       if (state.selectedFrameKey === key) {
-        state.selectedFrameKey = null; // 點擊第二次取消選取
-        closeDrawer();
+        state.selectedFrameKey = null; // 暺?蝚砌?甈∪?瘨??        closeDrawer();
       } else {
         state.selectedFrameKey = key;
-        openFrameDrawer(frame); // 開啟抽屜並顯示群組化資訊
+        openFrameDrawer(frame); // ???賢?銝阡＊蝷箇黎蝯?鞈?
       }
       updateMapSelectionState();
     });
@@ -3490,16 +3484,49 @@ function applyTabDateWindow() {
 
 function updateNextExpected() {
   const el = document.getElementById('st-next');
+  const labelEl = document.getElementById('st-next-label');
   if (!el) return;
-  const latestFor = (direction, path) => {
-    const match = state.rawFrames
-      .filter(frame => frame.direction_norm === direction && getFramePathNumber(frame) === path)
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0];
-    if (!match || !match.date) return `${direction === 'ASCENDING' ? 'A69' : 'D105'} --`;
-    const date = new Date(match.date);
-    return `${direction === 'ASCENDING' ? 'A69' : 'D105'} ${date.getMonth() + 1}/${date.getDate()}`;
-  };
-  el.textContent = `${latestFor('ASCENDING', 69)} | ${latestFor('DESCENDING', 105)}`;
+  const latestFrames = [...(state.filteredFrames || [])].filter(frame => frame?.date);
+  const groups = new Map();
+
+  for (const frame of latestFrames) {
+    const visual = getFrameVisualInfo(frame);
+    const current = groups.get(visual.label);
+    if (!current || String(frame.date || '') > String(current.date || '')) {
+      groups.set(visual.label, frame);
+    }
+  }
+
+  const preferredOrder = [
+    'A69',
+    'D105',
+    'NISAR A39',
+    'NISAR A111',
+    'NISAR D61',
+    'NISAR D133',
+  ];
+
+  const lines = [...groups.entries()]
+    .sort((a, b) => {
+      const aIndex = preferredOrder.indexOf(a[0]);
+      const bIndex = preferredOrder.indexOf(b[0]);
+      if (aIndex !== -1 || bIndex !== -1) {
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      }
+      return a[0].localeCompare(b[0]);
+    })
+    .slice(0, 6)
+    .map(([label, frame]) => {
+      const date = new Date(frame.date);
+      return `${label} ${date.getMonth() + 1}/${date.getDate()}`;
+    });
+
+  if (labelEl) {
+    labelEl.textContent = lines.some(line => line.startsWith('NISAR'))
+      ? 'Latest Visible Tracks'
+      : 'Latest A69 / D105';
+  }
+  el.textContent = lines.length ? lines.join(' | ') : 'Need history';
 }
 
 function openFrameDrawer(clickedFrame) {
@@ -3530,8 +3557,8 @@ function openFrameDrawer(clickedFrame) {
   const entries = [...mergedHistory.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const primary = entries[0] || clickedFrame;
 
-  document.getElementById('d-name').textContent = `Frame series · ${primary.track_label || '--'} · ${getFramePathNumber(primary) ?? '--'} / ${primary.frame_number_norm ?? '--'}`;
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-name').textContent = `Frame series 繚 ${primary.track_label || '--'} 繚 ${getFramePathNumber(primary) ?? '--'} / ${primary.frame_number_norm ?? '--'}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
@@ -3560,14 +3587,14 @@ function openFrameDrawer(clickedFrame) {
           ${frame.granule || 'Unknown Granule'}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} 繚 ${size}</span>
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'} · ${frame.asf_url ? 'ASF' : ''}${frame.asf_url && (frame.copernicus_url || frame.download_url) ? ' + ' : ''}${(frame.copernicus_url || frame.download_url) ? 'CDSE' : ''}
+          ${frame.direction_norm || '--'} 繚 path ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? '--'} 繚 ${frame.asf_url ? 'ASF' : ''}${frame.asf_url && (frame.copernicus_url || frame.download_url) ? ' + ' : ''}${(frame.copernicus_url || frame.download_url) ? 'CDSE' : ''}
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          ${getSourceState(frame)} · frame status: ${getFrameStatus(frame)}
+          ${getSourceState(frame)} 繚 frame status: ${getFrameStatus(frame)}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
@@ -3608,7 +3635,7 @@ function openFrameDrawer(clickedFrame) {
   const baseGranule = primary.granule?.split('_').slice(0, -1).join('_') || primary.granule || 'Unknown Granule';
 
   document.getElementById('d-name').textContent = baseGranule;
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'}`;
   document.getElementById('d-week-wrap').innerHTML = '';
 
   document.getElementById('d-grid').innerHTML = `
@@ -3636,11 +3663,11 @@ function openFrameDrawer(clickedFrame) {
       <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text-hi);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'UNKNOWN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'UNKNOWN'} 繚 ${size}</span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;word-break:break-all;line-height:1.4;">
           ${frame.granule || 'Unknown Granule'}<br>
-          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+          ${frame.direction_norm || '--'} 繚 path ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? '--'}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${buttons || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
@@ -3680,7 +3707,7 @@ function openFrameDrawer(clickedFrame) {
   const primary = entries[0] || clickedFrame;
 
   document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
@@ -3709,11 +3736,11 @@ function openFrameDrawer(clickedFrame) {
           ${frame.granule || 'Unknown Granule'}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} 繚 ${size}</span>
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? '--'}
+          ${frame.direction_norm || '--'} 繚 path ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? '--'}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
@@ -3742,13 +3769,7 @@ function renderFrames() {
     seenKeys.add(key);
 
     const rings = geom.coordinates.map(ring => ring.map(coord => [coord[1], coord[0]]));
-    const color = frame.track_label === 'A69'
-      ? '#00e5ff'
-      : frame.track_label === 'D105'
-        ? '#ff7043'
-        : frame.track_label === 'NISAR'
-          ? '#00e676'
-          : platColor(frame.platform || frame.satellite_name);
+    const color = getFrameVisualInfo(frame).color;
 
     const polygon = L.polygon(rings, {
       color,
@@ -3859,7 +3880,7 @@ function openFrameDrawer(clickedFrame) {
   const frameLabel = getFrameStatus(primary);
 
   document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
@@ -3869,7 +3890,7 @@ function openFrameDrawer(clickedFrame) {
     <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
     <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
   `;
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'} 繚 ${getSourceState(primary)}`;
   document.getElementById('d-grid').innerHTML += `
     <div class="d-item"><div class="k">Source</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
   `;
@@ -3892,11 +3913,11 @@ function openFrameDrawer(clickedFrame) {
           ${frame.granule || 'Unknown Granule'}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} · ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} 繚 ${size}</span>
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
-          ${frame.direction_norm || '--'} · path ${getFramePathNumber(frame) ?? '--'} · frame ${frame.frame_number_norm ?? 'Unavailable'}
+          ${frame.direction_norm || '--'} 繚 path ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? 'Unavailable'}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
@@ -3907,7 +3928,6 @@ function openFrameDrawer(clickedFrame) {
 
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
   document.getElementById('drawer').classList.add('open');
-  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
 function escapeHtml(value) {
@@ -3997,8 +4017,8 @@ function openFrameDrawer(clickedFrame) {
   };
   const frameCenterLabel = getFrameStatus(primary);
 
-  document.getElementById('d-name').textContent = `Track ${getFramePathNumber(primary) ?? '--'} · Frame ${frameCenterLabel}`;
-  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
+  document.getElementById('d-name').textContent = `Track ${getFramePathNumber(primary) ?? '--'} 繚 Frame ${frameCenterLabel}`;
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'} 繚 ${getSourceState(primary)}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
@@ -4073,7 +4093,6 @@ function openFrameDrawer(clickedFrame) {
   }).join('');
   document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches this frame scope.</span>';
   document.getElementById('drawer').classList.add('open');
-  focusMapOnFrames([clickedFrame], { withDrawer: true, maxZoom: 9, pad: 0.32 });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
