@@ -3978,6 +3978,7 @@ function openFrameDrawer(clickedFrame) {
   const primary = entries[0] || clickedFrame;
   const acquisition = getFrameAcquisitionInfo(primary);
   const acquisitionCount = new Set(scopedFrames.map(frame => getFrameAcquisitionInfo(frame).key)).size;
+  const totalScopedFiles = mergeFramesForDrawer(scopedFrames).length;
   const getSourceState = frame => {
     const hasAsf = !!frame.asf_url;
     const hasCdse = !!(frame.copernicus_url || frame.download_url);
@@ -4004,7 +4005,7 @@ function openFrameDrawer(clickedFrame) {
     <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
     <div class="d-item"><div class="k">Frame</div><div class="v"><small>${frameCenterLabel}</small></div></div>
     <div class="d-item"><div class="k">Acquisitions</div><div class="v"><small>${acquisitionCount} acquisition dates</small></div></div>
-    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} file on selected date</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${totalScopedFiles} file${totalScopedFiles === 1 ? '' : 's'} in drawer</small></div></div>
     <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
     <div class="d-item"><div class="k">Source</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
     <div class="d-item"><div class="k">Selected Date</div><div class="v"><small>${acquisition.label}</small></div></div>
