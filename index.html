@@ -1410,7 +1410,7 @@ const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
-const APP_VERSION = 'v0.6.9';
+const APP_VERSION = 'v0.6.10';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
@@ -1652,6 +1652,10 @@ function ensureAdvancedState() {
   state.baseStats ||= null;
   state.framePolygons ||= [];
   state.selectedFrameKey ||= null;
+  state.cache ||= {
+    satelliteCounts: new Map(),
+    satellitesWithFrames: new Set(),
+  };
   state.ui ||= {
     theme: 'soft-slate',
     fontSize: '4',
@@ -1671,6 +1675,22 @@ function ensureAdvancedState() {
   if (!(state.filters.formats instanceof Set)) {
     state.filters.formats = new Set(state.filters.formats || []);
   }
+}
+
+function rebuildFrameCaches() {
+  ensureAdvancedState();
+  const satelliteCounts = new Map();
+  const satellitesWithFrames = new Set();
+
+  for (const frame of state.rawFrames) {
+    const id = frame.satellite_id || '';
+    if (!id) continue;
+    satelliteCounts.set(id, (satelliteCounts.get(id) || 0) + 1);
+    satellitesWithFrames.add(id);
+  }
+
+  state.cache.satelliteCounts = satelliteCounts;
+  state.cache.satellitesWithFrames = satellitesWithFrames;
 }
 
 function isFeaturedSatellite(sat) {
@@ -1958,7 +1978,7 @@ async function loadData() {
   ensureAdvancedState();
   ldmsg('Loading cached frame inventory...');
   try {
-    const response = await fetch('./data/sar_status.json?v=' + Date.now());
+    const response = await fetch('./data/sar_status.json', { cache: 'default' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
@@ -1968,6 +1988,7 @@ async function loadData() {
     state.rawFrames = reconcileFrameMetadata(
       data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
     );
+    rebuildFrameCaches();
     applyTabDateWindow();
     bindAdvancedControls();
     renderSatelliteSelect();
@@ -2043,6 +2064,7 @@ async function liveFetchASF() {
         });
       }).filter(frame => frame.is_open_data)
     );
+    rebuildFrameCaches();
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
@@ -2124,9 +2146,7 @@ function renderSatelliteSelect() {
   ensureAdvancedState();
   const select = document.getElementById('filter-satellite');
   if (!select) return;
-
-  const counts = new Map();
-  for (const frame of state.rawFrames) counts.set(frame.satellite_id, (counts.get(frame.satellite_id) || 0) + 1);
+  const counts = state.cache?.satelliteCounts || new Map();
 
   const visibleSats = SATS.filter(matchesSidebarFilters).filter(sat => (counts.get(sat.id) || 0) > 0);
   const orderedSats = [
@@ -2778,7 +2798,9 @@ function renderSatList() {
 }
 
 function appendSatelliteRow(container, sat) {
-  const count = state.rawFrames.filter(frame => frame.satellite_id === sat.id).length;
+  const counts = state.cache?.satelliteCounts || new Map();
+  const satellitesWithFrames = state.cache?.satellitesWithFrames || new Set();
+  const count = counts.get(sat.id) || 0;
   if (!count) return 0;
   const row = document.createElement('div');
   row.className = 'sat-row' + (state.filters.satellite === sat.id ? ' active' : '');
@@ -2790,7 +2812,7 @@ function appendSatelliteRow(container, sat) {
       <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
     </div>
     <div class="badges">
-      ${state.rawFrames.some(frame => satMatchesFrame(sat, frame)) ? '<span class="this-week">THIS WEEK</span>' : ''}
+      ${satellitesWithFrames.has(sat.id) ? '<span class="this-week">THIS WEEK</span>' : ''}
       <span class="badge b${sat.band}">${sat.band}</span>
     </div>`;
   container.appendChild(row);
@@ -3005,6 +3027,7 @@ async function liveFetchASF() {
         file_size_mb: +(p.sizeMB || 0).toFixed(1),
       });
     }).filter(frame => frame.is_open_data);
+    rebuildFrameCaches();
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
