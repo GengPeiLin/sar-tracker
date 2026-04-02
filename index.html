@@ -3366,7 +3366,7 @@ function parseGranuleMetadata(granule) {
   if (!text) return [];
 
   if (/^S1[ABCD]_/.test(text)) {
-    const parts = text.split('_');
+    const parts = text.split('_').filter(Boolean);
     const start = parts[4] || '';
     const stop = parts[5] || '';
     return [
