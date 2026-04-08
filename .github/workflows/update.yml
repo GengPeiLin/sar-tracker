@@ -9,7 +9,11 @@ on:
       days_back:
         description: '查詢過去幾天（預設 7）'
         required: false
-        default: '7'
+        default: '3'
+      overlap_days:
+        description: 'Incremental overlap days to recheck around the last successful fetch'
+        required: false
+        default: '2'
       full_rebuild:
         description: 'Set true to rebuild the full metadata catalog'
         required: false
@@ -50,7 +54,8 @@ jobs:
 
       - name: 執行資料抓取
         env:
-          DAYS_BACK: ${{ github.event.inputs.days_back || '7' }}
+          DAYS_BACK: ${{ github.event.inputs.days_back || '3' }}
+          INCREMENTAL_OVERLAP_DAYS: ${{ github.event.inputs.overlap_days || '2' }}
           FORCE_FULL_REBUILD: ${{ github.event.inputs.full_rebuild || 'false' }}
         run: python fetch_sar_data.py
 
