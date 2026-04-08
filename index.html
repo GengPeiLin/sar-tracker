@@ -1394,22 +1394,12 @@ header {
 
     <!-- legend -->
     <div class="map-legend">
-      <div class="legend-title">衛星 / 顏色</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#00e5ff"></div><span>Sentinel-1</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ce93d8"></div><span>ALOS-2 / ALOS-4</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ffc107"></div><span>RADARSAT</span></div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ff7043"></div><span>其他</span></div>
+      <div class="legend-title">Visible Data</div>
+      <div id="legend-items"></div>
     </div>
 
     <!-- download bar -->
-    <div class="dl-bar">
-      <span class="dl-label">下載清單</span>
-      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 複製所有下載連結</button>
-      <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
-      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
-      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV 匯出</button>
-      <span class="dl-count" id="dl-info">— 幀</span>
-    </div>
+    <div class="dl-bar"></div>
 
     <!-- detail drawer -->
     <div class="drawer" id="drawer">
@@ -1932,21 +1922,8 @@ function setupReadableUI() {
   const legend = document.querySelector('.map-legend');
   if (legend) legend.innerHTML = '<div class="legend-title">Visible Data</div><div id="legend-items"></div>';
 
-  const dlBar = document.querySelector('.dl-bar');
-  if (dlBar) {
-    dlBar.innerHTML = `
-      <span class="dl-label">Filtered Downloads</span>
-      <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">📋 Copy All Links</button>
-      <button class="dl-btn asf" id="btn-asf" type="button" onclick="downloadMeta4('ASF')">ASF .meta4</button>
-      <button class="dl-btn cop" id="btn-cop" type="button" onclick="downloadMeta4('Copernicus')">CDSE .meta4</button>
-      <button class="dl-btn csv" type="button" onclick="exportCSV()">CSV Export</button>
-      <span class="dl-count" id="dl-info">0 frames</span>
-    `;
-  }
 
   const closeBtn = document.querySelector('.drawer-close');
-  if (closeBtn) closeBtn.textContent = '×';
-  if (closeBtn) closeBtn.textContent = 'X';
   const section = document.querySelector('.d-section');
   if (section) section.textContent = 'Selected Files';
 }
