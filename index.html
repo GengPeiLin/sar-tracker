@@ -3511,6 +3511,82 @@ function openFrameDrawer(clickedFrame) {
   renderContextPanel();
 }
 
+function openFrameDrawer(clickedFrame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  state.selectedSat = null;
+
+  const clickedGranuleKey = normalizeGranuleKey(clickedFrame.granule);
+  const relatedFrames = state.filteredFrames
+    .filter(frame => normalizeGranuleKey(frame.granule) === clickedGranuleKey)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  const mergedEntries = new Map();
+  for (const frame of (relatedFrames.length ? relatedFrames : [clickedFrame])) {
+    const key = normalizeGranuleKey(frame.granule) || getHistoryEntryKey(frame);
+    const current = mergedEntries.get(key);
+    if (!current) {
+      mergedEntries.set(key, { ...frame });
+      continue;
+    }
+    current.asf_url ||= frame.asf_url;
+    current.copernicus_url ||= frame.copernicus_url;
+    current.download_url ||= frame.download_url;
+    current.file_size_mb ||= frame.file_size_mb;
+    current.frame_number_norm ??= frame.frame_number_norm;
+  }
+
+  const entries = [...mergedEntries.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const primary = entries[0] || clickedFrame;
+  const frameLabel = primary.frame_number_norm ?? 'Unavailable in source metadata';
+
+  document.getElementById('d-name').textContent = primary.granule || 'Unknown Granule';
+  document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} 繚 ${primary.track_label || '--'}`;
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML = `
+    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Track</div><div class="v"><small>${getFramePathNumber(primary) ?? '--'}</small></div></div>
+    <div class="d-item"><div class="k">Frame</div><div class="v"><small>${frameLabel}</small></div></div>
+    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} matching file</small></div></div>
+    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">Latest Time</div><div class="v"><small>${primary.date ? new Date(primary.date).toLocaleString('zh-TW') : '--'}</small></div></div>
+  `;
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = 'File Links';
+
+  const cards = entries.map(frame => {
+    const asfUrl = frame.asf_url || '';
+    const cdseUrl = frame.copernicus_url || frame.download_url || '';
+    const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+    const actions = [
+      asfUrl ? `<button type="button" onclick="copyDrawerLink(this, '${asfUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy ASF</button>` : '',
+      cdseUrl ? `<button type="button" onclick="copyDrawerLink(this, '${cdseUrl}')" style="cursor:pointer;flex:1;padding:6px 10px;background:rgba(255,112,67,0.1);color:var(--orange);border:1px solid var(--orange);border-radius:4px;font-family:var(--mono);font-size:10px;">Copy CDSE</button>` : '',
+    ].filter(Boolean).join('');
+
+    return `
+      <div style="margin-bottom:14px;padding:10px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-hi);margin-bottom:8px;word-break:break-all;line-height:1.45;">
+          ${frame.granule || 'Unknown Granule'}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.product_type_norm || 'OCN'} 繚 ${size}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--'}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          ${frame.direction_norm || '--'} 繚 path ${getFramePathNumber(frame) ?? '--'} 繚 frame ${frame.frame_number_norm ?? 'Unavailable'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${actions || '<span style="color: var(--muted); font-size: 11px;">No download URL available.</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches the current selection.</span>';
+  document.getElementById('drawer').classList.add('open');
+  renderContextPanel();
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   applyAppearanceSettings();
