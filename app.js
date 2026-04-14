@@ -859,9 +859,14 @@ async function loadData() {
   ensureAdvancedState();
   ldmsg('Loading cached frame inventory...');
   try {
-    const response = await fetch('./data/sar_status.json', { cache: 'default' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    let data;
+    if (window.__SAR_DATA && Array.isArray(window.__SAR_DATA.taiwan_frames)) {
+      data = window.__SAR_DATA;
+    } else {
+      const response = await fetch('./data/sar_status.json', { cache: 'default' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      data = await response.json();
+    }
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
 
     document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;

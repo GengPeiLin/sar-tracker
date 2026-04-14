@@ -36,6 +36,7 @@ NISAR_LAUNCH = datetime(2024, 3, 1, tzinfo=timezone.utc)
 OUTPUT_DIR = Path(__file__).parent / "data"
 CATALOG_FILE = OUTPUT_DIR / "catalog_db.json"
 JSON_FILE = OUTPUT_DIR / "sar_status.json"
+JS_FILE  = OUTPUT_DIR / "sar_status.js"
 ASF_META4 = OUTPUT_DIR / "asf_taiwan.meta4"
 COP_META4 = OUTPUT_DIR / "copernicus_taiwan.meta4"
 S1_EARLIEST = datetime(2014, 4, 3, tzinfo=timezone.utc)
@@ -519,10 +520,13 @@ def main() -> int:
         "taiwan_frames": all_frames,
     }
 
-    JSON_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    json_text = json.dumps(payload, ensure_ascii=False, indent=2)
+    JSON_FILE.write_text(json_text, encoding="utf-8")
+    compact = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    JS_FILE.write_text(f"window.__SAR_DATA={compact};\n", encoding="utf-8")
     write_meta4(all_frames, ASF_META4, "ASF")
     write_meta4(all_frames, COP_META4, "Copernicus")
-    log(f"Wrote {JSON_FILE.name} with {len(all_frames)} scenes")
+    log(f"Wrote {JSON_FILE.name} and {JS_FILE.name} with {len(all_frames)} scenes")
     return 0
 
 
