@@ -1547,6 +1547,7 @@ function appendSatelliteRow(container, sat) {
   if (!count) return 0;
   const row = document.createElement('div');
   row.className = 'sat-row' + (state.filters.satellite === sat.id ? ' active' : '');
+  row.dataset.satId = sat.id;
   row.onclick = () => selectSatellite(sat, row);
   row.innerHTML = `
     <div class="dot ${sat.status}"></div>
@@ -1981,6 +1982,8 @@ function createDrawerCopyButton(label, url, variant) {
 // Final override: group drawer content by the clicked acquisition date, not by the whole track history.
 function openFrameDrawer(clickedFrame) {
   document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  const satRow = document.querySelector(`.sat-row[data-sat-id="${clickedFrame.satellite_id}"]`);
+  if (satRow) satRow.classList.add('active');
   state.selectedSat = null;
 
   const showSameTrackInDrawer = !!state.filters?.showSameTrackInDrawer;
