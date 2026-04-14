@@ -579,11 +579,11 @@ function bindAppearanceControls() {
 function setupReadableUI() {
   document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
-  if (logo) logo.innerHTML = `SAR <em>·</em> Tracker`;
+  if (logo) logo.innerHTML = `SAR <em>·</em> Tracker <span class="hdr-version">${APP_VERSION}</span>`;
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
-    hdrStatus.innerHTML = `${APP_VERSION}&nbsp;·&nbsp;<b id="hdr-time">database: --</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
+    hdrStatus.innerHTML = `<b id="hdr-time">database: --</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
   }
 
   syncViewModeControl();
