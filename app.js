@@ -515,7 +515,7 @@ function rebuildFrameCaches() {
   const satelliteCounts = new Map();
   const satellitesWithFrames = new Set();
 
-  for (const frame of state.rawFrames) {
+  for (const frame of state.filteredFrames) {
     const id = frame.satellite_id || '';
     if (!id) continue;
     satelliteCounts.set(id, (satelliteCounts.get(id) || 0) + 1);
@@ -819,7 +819,6 @@ async function loadData() {
     state.rawFrames = reconcileFrameMetadata(
       data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
     );
-    rebuildFrameCaches();
     applyTabDateWindow();
     bindAdvancedControls();
     renderSatelliteSelect();
@@ -895,7 +894,6 @@ async function liveFetchASF() {
         });
       }).filter(frame => frame.is_open_data)
     );
-    rebuildFrameCaches();
 
     state.baseStats = {
       total_frames: state.rawFrames.length,
@@ -1140,6 +1138,7 @@ function applyAdvancedFilters() {
     state.selectedFrameKey = null;
   }
   state.frames = state.filteredFrames;
+  rebuildFrameCaches();
   renderSatelliteSelect();
   renderSatList();
   renderFrames();
