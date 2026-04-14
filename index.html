@@ -1,12 +1,12 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAR Tracker · 台灣衛星取像儀表板</title>
+<title>SAR Tracker · Taiwan SAR Satellite Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>🛰</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,7 +16,7 @@
 <div id="loading">
   <div class="ld-txt">SAR · TRACKER</div>
   <div class="ld-bar"></div>
-  <div class="ld-sub" id="ld-msg">連接資料來源…</div>
+  <div class="ld-sub" id="ld-msg">Connecting to data sources…</div>
 </div>
 
 <!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
@@ -24,8 +24,8 @@
   <div class="hdr-logo">SAR <em>·</em> Tracker</div>
   <div class="hdr-sep"></div>
   <div class="hdr-status">
-    更新：<b id="hdr-time">—</b>
-    &nbsp;｜&nbsp;
+    Updated: <b id="hdr-time">—</b>
+    &nbsp;|&nbsp;
     ASF DAAC &amp; Copernicus CDSE
   </div>
   <div class="hdr-controls">
@@ -49,9 +49,9 @@
     </div>
   </div>
   <div class="hdr-tabs">
-    <button class="tab on"  onclick="setTab('all',this)">全部衛星</button>
-    <button class="tab"     onclick="setTab('op',this)">運作中</button>
-    <button class="tab"     onclick="setTab('tw',this)">本週取像</button>
+    <button class="tab on"  onclick="setTab('all',this)">All Satellites</button>
+    <button class="tab"     onclick="setTab('op',this)">Active</button>
+    <button class="tab"     onclick="setTab('tw',this)">This Week</button>
   </div>
 </header>
 
@@ -61,8 +61,8 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-head">
-      <h2>SAR 衛星艦隊</h2>
-      <div class="sub" id="sb-count">載入中…</div>
+      <h2>SAR Satellite Fleet</h2>
+      <div class="sub" id="sb-count">Loading…</div>
     </div>
     <div class="sb-filters">
       <button class="chip on"  data-b="ALL" onclick="setFilter('ALL',this)">ALL</button>
@@ -149,15 +149,15 @@
 
     <div class="map-stats">
       <div class="stat-card">
-        <div class="lbl">本週取像幀數</div>
+        <div class="lbl">Frames This Week</div>
         <div class="val" id="st-frames">—</div>
       </div>
       <div class="stat-card">
-        <div class="lbl">過境衛星種類</div>
+        <div class="lbl">Satellite Types</div>
         <div class="val orange" id="st-sats">—</div>
       </div>
       <div class="stat-card">
-        <div class="lbl">查詢時段</div>
+        <div class="lbl">Query Period</div>
         <div class="val small" id="st-period">—</div>
       </div>
     </div>
@@ -180,7 +180,7 @@
       <div class="d-agency" id="d-agency"></div>
       <div id="d-week-wrap"></div>
       <div class="d-grid"   id="d-grid"></div>
-      <div class="d-section">任務說明</div>
+      <div class="d-section">Mission Details</div>
       <div class="d-desc"   id="d-desc"></div>
     </div>
 

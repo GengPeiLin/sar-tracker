@@ -5,105 +5,105 @@ const SATS = [
   // ── ESA Sentinel-1 (C) ──────────────────────────────────────────────────
   { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2014-04-03', status:'op',
     asf_prefix:['S1A','SENTINEL-1A'],
-    desc:'ESA 旗艦 C 波段 SAR。IW 模式 250 km 掃幅，全球資料免費開放。與 Sentinel-1C 組成雙星座，台灣每 6 天重訪一次。' },
+    desc:'ESA flagship C-band SAR. IW mode 250 km swath, global data freely available. Forms a two-satellite constellation with Sentinel-1C; 6-day revisit over Taiwan.' },
   { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2024-12-05', status:'op',
     asf_prefix:['S1C','SENTINEL-1C'],
-    desc:'2024 年 12 月接替 Sentinel-1B 發射。與 Sentinel-1A 恢復 6 天重訪週期，資料由 Copernicus CDSE 免費提供。' },
+    desc:'Launched December 2024 as successor to Sentinel-1B. Restores the 6-day revisit cycle with Sentinel-1A; data freely provided via Copernicus CDSE.' },
   { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2025-11-04', status:'op',
     asf_prefix:['S1D','SENTINEL-1D'],
-    desc:'2025 年 11 月加入星座，進一步縮短重訪週期，可達 3 天一次全球覆蓋。' },
+    desc:'Joined the constellation in November 2025, further reducing revisit time to approximately 3 days for global coverage.' },
 
   // ── JAXA (L) ────────────────────────────────────────────────────────────
   { id:'ALOS2',  name:'ALOS-2 (PALSAR-2)',  agency:'JAXA',        band:'L', freq:'1.236 GHz', res:'1–100 m',  swath:'25–490 km', launched:'2014-05-24', status:'op',
     asf_prefix:['ALOS2','ALOS-2'],
-    desc:'L 波段穿透力強，適合森林碳匯、地表形變（InSAR）及災害應變。14 天重訪週期，台灣通常由升/降軌各約 7 天一次。' },
+    desc:'Strong L-band penetration, ideal for forest biomass, surface deformation (InSAR), and disaster response. 14-day revisit; Taiwan typically covered every ~7 days from ascending and descending passes.' },
   { id:'ALOS4',  name:'ALOS-4',              agency:'JAXA',        band:'L', freq:'1.258 GHz', res:'3–100 m',  swath:'50–2000 km', launched:'2024-07-01', status:'op',
     asf_prefix:['ALOS4','ALOS-4'],
-    desc:'超寬刈幅模式達 2000 km，全球覆蓋頻率大幅提升。ScanSAR 模式 14 天可覆蓋台灣多次。' },
+    desc:'Ultra-wide ScanSAR mode up to 2000 km swath, greatly increasing global coverage frequency. Can cover Taiwan multiple times within a 14-day cycle.' },
 
   // ── NASA/ISRO NISAR (L+S) ────────────────────────────────────────────────
   { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
     asf_prefix:['NISAR'],
-    desc:'NASA 與 ISRO 聯合任務，同時搭載 L 波段（JPL）與 S 波段（ISRO）SAR。12 天全球覆蓋，所有資料完全開放。' },
+    desc:'Joint NASA/ISRO mission carrying both L-band (JPL) and S-band (ISRO) SAR. 12-day global coverage; all data fully open access.' },
 
   // ── DLR/Airbus (X) ──────────────────────────────────────────────────────
   { id:'TSX',  name:'TerraSAR-X',            agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2007-06-15', status:'op',
     asf_prefix:['TSX','TERRASAR'],
-    desc:'商業高解析度 X 波段 SAR。聚焦模式 0.25 m，適合城市、橋樑、海港精細監測。資料需購買或申請研究授權。' },
+    desc:'Commercial high-resolution X-band SAR. Spotlight mode at 0.25 m, suited for urban, bridge, and harbour monitoring. Data requires purchase or research license.' },
   { id:'TDX',  name:'TanDEM-X',              agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2010-06-21', status:'op',
     asf_prefix:['TDX','TANDEM'],
-    desc:'與 TerraSAR-X 雙星編隊飛行，用於生成全球 TanDEM-X 12 m/90 m DEM，也可獨立執行高解析任務。' },
+    desc:'Flies in tandem formation with TerraSAR-X to generate the global TanDEM-X 12 m/90 m DEM; also capable of independent high-resolution imaging.' },
 
   // ── ASI COSMO-SkyMed Second Generation (X) ──────────────────────────────
   { id:'CSG1', name:'COSMO-SkyMed SG-1',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2019-12-18', status:'op',
     asf_prefix:['CSG1','COSMO'],
-    desc:'義大利第二代 COSMO-SkyMed（Second Generation），軍民兩用。Spotlight 模式 0.35 m，可在數小時內重新對台灣取像。' },
+    desc:'Italian second-generation COSMO-SkyMed (Second Generation), dual civil/military use. Spotlight mode at 0.35 m; can revisit Taiwan within a few hours.' },
   { id:'CSG2', name:'COSMO-SkyMed SG-2',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2022-03-31', status:'op',
     asf_prefix:['CSG2'],
-    desc:'COSMO-SkyMed 第二代第二顆，完成 4 星（含舊版）協調運作，重訪週期縮短至數小時級別。' },
+    desc:'Second satellite of the COSMO-SkyMed Second Generation; completes a 4-satellite coordinated constellation (including legacy units) with revisit intervals in the hours range.' },
 
   // ── CSA RADARSAT Constellation (C) ──────────────────────────────────────
   { id:'RCM1', name:'RADARSAT-C 1 (RCM-1)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM1','RCM-1'],
-    desc:'加拿大 RADARSAT 星座任務第一顆。3 顆等間距分布，每 4 天可覆蓋全球一次，支援海事監控與災害應變。' },
+    desc:'First satellite of the Canadian RADARSAT Constellation Mission. Three equally spaced satellites provide global coverage every 4 days, supporting maritime monitoring and disaster response.' },
   { id:'RCM2', name:'RADARSAT-C 2 (RCM-2)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM2','RCM-2'],
-    desc:'RCM 星座第二顆，與 RCM-1/3 間距各 120°。提供全極化（HH+HV+VH+VV）及緊湊極化模式。' },
+    desc:'Second RCM satellite, spaced 120° from RCM-1 and RCM-3. Supports full polarimetry (HH+HV+VH+VV) and compact polarimetry modes.' },
   { id:'RCM3', name:'RADARSAT-C 3 (RCM-3)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM3','RCM-3'],
-    desc:'RCM 星座第三顆，完成三星佈局。政府優先任務包括加拿大北部冰況監測、海洋排放溢油偵測等。' },
+    desc:'Third RCM satellite, completing the three-satellite layout. Government priority applications include Arctic ice monitoring and marine oil-spill detection.' },
   { id:'RS2',  name:'RADARSAT-2',             agency:'CSA/MDA',     band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2007-12-14', status:'op',
     asf_prefix:['RS2','RADARSAT-2','R2'],
-    desc:'商業 C 波段 SAR，全極化能力，超精細模式 1 m。資料需向 MDA 商購，但部分災害情況提供免費存取。' },
+    desc:'Commercial C-band SAR with full polarimetry; Ultra-Fine mode at 1 m resolution. Data must be purchased from MDA, though emergency access is available for disaster response.' },
 
   // ── CONAE SAOCOM (L) ────────────────────────────────────────────────────
   { id:'SAO1A', name:'SAOCOM-1A',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2018-10-08', status:'op',
     asf_prefix:['SAOCOM1A','SAOCOM-1A','UAM'],
-    desc:'阿根廷 L 波段 SAR，主力應用為土壤溼度監測與洪水繪圖。全極化資料可申請研究用途。' },
+    desc:'Argentine L-band SAR, primarily used for soil moisture monitoring and flood mapping. Full-polarimetry data available upon research request.' },
   { id:'SAO1B', name:'SAOCOM-1B',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2020-08-30', status:'op',
     asf_prefix:['SAOCOM1B','SAOCOM-1B','UAM'],
-    desc:'SAOCOM-1A 雙星，兩星協調使台灣重訪週期縮短。也與意大利 COSMO-SkyMed 交換資料（SIASGE 協議）。' },
+    desc:'Twin of SAOCOM-1A; coordinated operations reduce revisit time over Taiwan. Also participates in data exchange with COSMO-SkyMed under the SIASGE agreement.' },
 
   // ── ISRO (X) ────────────────────────────────────────────────────────────
   { id:'RISAT2B', name:'RISAT-2BR1',          agency:'ISRO',        band:'X', freq:'9.35 GHz',  res:'0.5–50 m', swath:'5–300 km', launched:'2019-12-11', status:'op',
     asf_prefix:['RISAT2BR1','RISAT'],
-    desc:'印度 X 波段 SAR 小衛星，以色列 ELTA ELM-2022S 雷達。Spotlight 模式 0.5 m，用於農業普查與安全監測。' },
+    desc:'Indian X-band SAR smallsat using the Israeli ELTA ELM-2022S radar. Spotlight mode at 0.5 m; used for agricultural surveys and security monitoring.' },
 
   // ── NovaSAR (S) ─────────────────────────────────────────────────────────
   { id:'NOVASAR', name:'NovaSAR-1',           agency:'SSTL/UKSA',   band:'S', freq:'3.2 GHz',   res:'6–30 m',   swath:'20–150 km', launched:'2018-09-16', status:'op',
     asf_prefix:['NOVASAR'],
-    desc:'英國 SSTL 開發的 S 波段小型 SAR。S 波段特性介於 C 與 L 之間，對植被穿透力較 C 強。資料可向 SSTL 申請。' },
+    desc:'S-band compact SAR developed by UK SSTL. S-band properties fall between C and L, offering better vegetation penetration than C-band. Data available upon request from SSTL.' },
 
   // ── Commercial Constellations ────────────────────────────────────────────
-  { id:'ICEYE',   name:'ICEYE 星座（20+ 顆）',  agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25–15 m', swath:'5–200 km', launched:'2018~', status:'op',
+  { id:'ICEYE',   name:'ICEYE Constellation (20+ sats)',  agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25–15 m', swath:'5–200 km', launched:'2018~', status:'op',
     asf_prefix:['ICEYE'],
-    desc:'芬蘭商業 SAR 小衛星星座，已超過 20 顆在軌。Spot Fine 模式達 25 cm，可在 3 小時內重訪台灣。支援 on-demand 任務。' },
-  { id:'CAPELLA', name:'Capella 星座（7+ 顆）', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35–5 m', swath:'5–50 km', launched:'2020~', status:'op',
+    desc:'Finnish commercial SAR smallsat constellation with 20+ satellites in orbit. Spot Fine mode at 25 cm; can revisit Taiwan within 3 hours. Supports on-demand tasking.' },
+  { id:'CAPELLA', name:'Capella Constellation (7+ sats)', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35–5 m', swath:'5–50 km', launched:'2020~', status:'op',
     asf_prefix:['CAPELLA'],
-    desc:'美國商業 SAR，最高 0.35 m Spotlight 影像。提供 Open Data Program，部分地區可免費申請取像。' },
-  { id:'UMBRA',   name:'Umbra 星座（5+ 顆）',   agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16–5 m', swath:'5–35 km', launched:'2021~', status:'op',
+    desc:'US commercial SAR with up to 0.35 m Spotlight imagery. Offers an Open Data Program — free tasking requests available for select areas.' },
+  { id:'UMBRA',   name:'Umbra Constellation (5+ sats)',   agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16–5 m', swath:'5–35 km', launched:'2021~', status:'op',
     asf_prefix:['UMBRA'],
-    desc:'目前民用最高解析度 SAR（16 cm）。Open Data Program 提供部分影像免費下載，包含台灣歷史存檔。' },
-  { id:'SYNSPECTIVE', name:'Synspective 星座',  agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1–3 m',   swath:'30 km',  launched:'2020~', status:'op',
+    desc:'Currently the highest-resolution commercial SAR (16 cm). Open Data Program provides free image downloads including historical Taiwan coverage.' },
+  { id:'SYNSPECTIVE', name:'Synspective Constellation',  agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1–3 m',   swath:'30 km',  launched:'2020~', status:'op',
     asf_prefix:['SYNSPECTIVE'],
-    desc:'日本商業 SAR 小衛星，專注亞洲市場。與台灣科研機構有合作協議，可提供快速災害應變影像。' },
+    desc:'Japanese commercial SAR smallsat focused on the Asian market. Has cooperation agreements with Taiwanese research institutions for rapid disaster response imagery.' },
 
   // ── Retired ─────────────────────────────────────────────────────────────
   { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5–20 m',  swath:'80–400 km', launched:'2016-04-25', status:'ret', retired:'2022-08-23',
     asf_prefix:['S1B','SENTINEL-1B'],
-    desc:'2021 年 12 月電力系統異常，SAR 傳感器失效；2022 年 8 月正式退役。由 Sentinel-1C 接替其軌道。' },
+    desc:'Power system anomaly in December 2021 caused SAR instrument failure; officially retired August 2022. Its orbit slot was taken over by Sentinel-1C.' },
   { id:'ALOS1', name:'ALOS (PALSAR)',           agency:'JAXA',        band:'L', freq:'1.27 GHz',  res:'7–100 m', swath:'40–350 km', launched:'2006-01-24', status:'ret', retired:'2011-04-22',
     asf_prefix:['ALOS','ALOS1'],
-    desc:'ALOS-2 的前身，第一個提供免費全球 L 波段資料的任務。存檔資料仍可透過 ASF 免費下載。' },
+    desc:'Predecessor to ALOS-2 and the first mission to provide free global L-band data. Archive data still freely available via ASF.' },
   { id:'ERS1', name:'ERS-1',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1991-07-17', status:'ret', retired:'2000-03-10',
     asf_prefix:['ERS1','ERS-1'],
-    desc:'ESA 第一代 SAR 衛星，奠定 InSAR 應用基礎。大量存檔資料仍有科研價值，可由 ASF 存取。' },
+    desc:"ESA's first-generation SAR satellite that established the foundations of InSAR applications. Extensive archive data remains scientifically valuable and accessible via ASF." },
   { id:'ERS2', name:'ERS-2',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1995-04-21', status:'ret', retired:'2011-09-05',
     asf_prefix:['ERS2','ERS-2'],
-    desc:'ERS-1 接替星，與其組成 Tandem 任務。2024 年 2 月完成大氣再入，ASF 存有完整存檔。' },
+    desc:'Follow-on to ERS-1; together they formed the ERS Tandem mission. Re-entered the atmosphere in February 2024; complete archive available on ASF.' },
 ];
 
-// ── 顏色映射 ──────────────────────────────────────────────────────────────
+// ── Color mapping ─────────────────────────────────────────────────────────
 const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'NISAR']);
 const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
@@ -188,7 +188,7 @@ function getFrameVisualInfo(frame) {
   return { label, color };
 }
 
-// ── 台灣輪廓（簡化）────────────────────────────────────────────────────────
+// ── Taiwan outline (simplified) ───────────────────────────────────────────
 const TW_OUTLINE = [
   [25.30,121.50],[25.08,121.88],[24.60,121.78],[23.98,121.60],
   [23.42,121.49],[22.80,121.18],[22.00,120.87],[21.90,120.73],
@@ -220,7 +220,7 @@ function initMap() {
 
   state.frameLayer = L.layerGroup().addTo(state.map);
 
-  // 點擊地圖背景時取消選取
+  // Deselect when clicking map background
   state.map.on('click', () => {
     if (state.selectedFrameKey) {
       state.selectedFrameKey = null;
@@ -662,7 +662,7 @@ async function liveFetchASF() {
     const response = await fetch(url);
     const gj = await response.json();
 
-    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 平台代碼
+    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 platform codes
 
     const filteredFeatures = (gj.features || []).filter(feature => {
       const p = feature.properties || {};
@@ -670,11 +670,11 @@ async function liveFetchASF() {
       if (s1Platforms.includes(platform)) {
         const pathNumber = String(p.pathNumber);
         const direction = (p.flightDirection || '').toUpperCase();
-        // 根據使用者需求過濾 Sentinel-1 軌道 (105 為降軌, 69 為升軌)
+        // Filter Sentinel-1 tracks per requirements (105 = descending, 69 = ascending)
         return (pathNumber === '105' && direction === 'DESCENDING') ||
                (pathNumber === '69' && direction === 'ASCENDING');
       }
-      return true; // 保留非 S1 的衛星
+      return true; // Keep non-S1 satellites
     });
 
     state.rawFrames = reconcileFrameMetadata(
@@ -1394,7 +1394,7 @@ window.copyDrawerLink = function(btn, url) {
   });
 };
 
-// 顯示 Frame 詳細資訊到右側抽屜
+// Display frame details in right-side drawer
 async function liveFetchASF() {
   ensureAdvancedState();
   const now = new Date();
