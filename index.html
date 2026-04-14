@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="root">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,7 +16,7 @@
 <div id="loading">
   <div class="ld-txt">SAR · TRACKER</div>
   <div class="ld-bar"></div>
-  <div class="ld-sub" id="ld-msg">Connecting to data sources…</div>
+  <div class="ld-sub" id="ld-msg" data-i18n="loading">Connecting to data sources…</div>
 </div>
 
 <!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
@@ -24,11 +24,12 @@
   <div class="hdr-logo">SAR <em>·</em> Tracker</div>
   <div class="hdr-sep"></div>
   <div class="hdr-status">
-    Updated: <b id="hdr-time">—</b>
+    <span data-i18n="updated">Updated:</span> <b id="hdr-time">—</b>
     &nbsp;|&nbsp;
     ASF DAAC &amp; Copernicus CDSE
   </div>
   <div class="hdr-controls">
+    <button id="lang-toggle" class="lang-btn" onclick="toggleLang()">中文</button>
     <div class="control-field">
       <label for="theme-select">Theme</label>
       <select id="theme-select">
@@ -49,9 +50,9 @@
     </div>
   </div>
   <div class="hdr-tabs">
-    <button class="tab on"  onclick="setTab('all',this)">All Satellites</button>
-    <button class="tab"     onclick="setTab('op',this)">Active</button>
-    <button class="tab"     onclick="setTab('tw',this)">This Week</button>
+    <button class="tab on"  onclick="setTab('all',this)" data-i18n="tab-all">All Satellites</button>
+    <button class="tab"     onclick="setTab('op',this)"  data-i18n="tab-op">Active</button>
+    <button class="tab"     onclick="setTab('tw',this)"  data-i18n="tab-tw">This Week</button>
   </div>
 </header>
 
@@ -61,8 +62,8 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-head">
-      <h2>SAR Satellite Fleet</h2>
-      <div class="sub" id="sb-count">Loading…</div>
+      <h2 data-i18n="sat-fleet">SAR Satellite Fleet</h2>
+      <div class="sub" id="sb-count" data-i18n="loading-ellipsis">Loading…</div>
     </div>
     <div class="sb-filters">
       <button class="chip on"  data-b="ALL" onclick="setFilter('ALL',this)">ALL</button>
@@ -74,53 +75,53 @@
     <div class="filter-panel">
       <div class="filter-head">
         <div class="date-shortcuts">
-          <button class="date-shortcut" id="preset-week" type="button" onclick="applyPresetDateWindow(7, this)">This Week</button>
-          <button class="date-shortcut" id="preset-month" type="button" onclick="applyPresetDateWindow(30, this)">This Month</button>
-          <button class="date-shortcut" id="preset-6months" type="button" onclick="applyPresetDateWindow(183, this)">6 Months</button>
-          <button class="date-shortcut" id="preset-year" type="button" onclick="applyPresetDateWindow(365, this)">1 Year</button>
+          <button class="date-shortcut" id="preset-week"    type="button" onclick="applyPresetDateWindow(7, this)"   data-i18n="this-week">This Week</button>
+          <button class="date-shortcut" id="preset-month"   type="button" onclick="applyPresetDateWindow(30, this)"  data-i18n="this-month">This Month</button>
+          <button class="date-shortcut" id="preset-6months" type="button" onclick="applyPresetDateWindow(183, this)" data-i18n="6-months">6 Months</button>
+          <button class="date-shortcut" id="preset-year"    type="button" onclick="applyPresetDateWindow(365, this)" data-i18n="1-year">1 Year</button>
         </div>
       </div>
       <div class="filter-grid">
         <label class="filter-field span-2">
-          <span class="filter-label">Satellite</span>
+          <span class="filter-label" data-i18n="satellite-label">Satellite</span>
           <select class="filter-select" id="filter-satellite"></select>
         </label>
         <label class="filter-field span-2">
-          <span class="filter-label">Orbit Direction</span>
+          <span class="filter-label" data-i18n="orbit-direction">Orbit Direction</span>
           <select class="filter-select" id="filter-direction">
-            <option value="ALL">All</option>
-            <option value="ASCENDING">Ascending</option>
-            <option value="DESCENDING">Descending</option>
+            <option value="ALL"        data-i18n="dir-all">All</option>
+            <option value="ASCENDING"  data-i18n="dir-asc">Ascending</option>
+            <option value="DESCENDING" data-i18n="dir-desc">Descending</option>
           </select>
         </label>
         <label class="filter-field span-2">
-          <span class="filter-label">Date Start</span>
+          <span class="filter-label" data-i18n="date-start">Date Start</span>
           <input class="filter-input" id="filter-date-start" type="date">
         </label>
         <label class="filter-field span-2">
-          <span class="filter-label">Date End</span>
+          <span class="filter-label" data-i18n="date-end">Date End</span>
           <input class="filter-input" id="filter-date-end" type="date">
         </label>
         <label class="filter-field">
-          <span class="filter-label">Track Min</span>
+          <span class="filter-label" data-i18n="track-min">Track Min</span>
           <input class="filter-input" id="filter-path-min" type="number" inputmode="numeric" placeholder="Any">
         </label>
         <label class="filter-field">
-          <span class="filter-label">Track Max</span>
+          <span class="filter-label" data-i18n="track-max">Track Max</span>
           <input class="filter-input" id="filter-path-max" type="number" inputmode="numeric" placeholder="Any">
         </label>
         <label class="filter-field">
-          <span class="filter-label">Frame Min</span>
+          <span class="filter-label" data-i18n="frame-min">Frame Min</span>
           <input class="filter-input" id="filter-frame-min" type="number" inputmode="numeric" placeholder="Any">
         </label>
         <label class="filter-field">
-          <span class="filter-label">Frame Max</span>
+          <span class="filter-label" data-i18n="frame-max">Frame Max</span>
           <input class="filter-input" id="filter-frame-max" type="number" inputmode="numeric" placeholder="Any">
         </label>
       </div>
       <details class="filter-section" id="product-section" open>
         <summary>
-          <span>Product Types</span>
+          <span data-i18n="product-types">Product Types</span>
           <span class="filter-section-meta" id="product-summary">Loading...</span>
         </summary>
         <div class="filter-section-body">
@@ -128,16 +129,16 @@
         </div>
       </details>
       <div class="filter-actions">
-        <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()">Reset Filters</button>
+        <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()" data-i18n="reset-filters">Reset Filters</button>
         <label class="filter-toggle" for="filter-show-same-track">
           <input id="filter-show-same-track" type="checkbox">
-          Show same track in drawer
+          <span data-i18n="show-same-track">Show same track in drawer</span>
         </label>
         <label class="filter-toggle" for="filter-show-other-tracks">
           <input id="filter-show-other-tracks" type="checkbox">
-          Show other Taiwan Sentinel-1 tracks
+          <span data-i18n="show-other-tracks">Show other Taiwan Sentinel-1 tracks</span>
         </label>
-        <span class="filter-note" id="filter-note">SLC / GSLC / RSLC are selected by default.</span>
+        <span class="filter-note" id="filter-note" data-i18n="slc-default">SLC / GSLC / RSLC are selected by default.</span>
       </div>
     </div>
     <div class="sb-list" id="sat-list"></div>
@@ -149,15 +150,15 @@
 
     <div class="map-stats">
       <div class="stat-card">
-        <div class="lbl">Frames This Week</div>
+        <div class="lbl" data-i18n="filtered-frames">Filtered Frames</div>
         <div class="val" id="st-frames">—</div>
       </div>
       <div class="stat-card">
-        <div class="lbl">Satellite Types</div>
+        <div class="lbl" data-i18n="active-satellites">Active Satellites</div>
         <div class="val orange" id="st-sats">—</div>
       </div>
       <div class="stat-card">
-        <div class="lbl">Query Period</div>
+        <div class="lbl" data-i18n="query-window">Query Window</div>
         <div class="val small" id="st-period">—</div>
       </div>
     </div>

@@ -5,103 +5,280 @@ const SATS = [
   // ── ESA Sentinel-1 (C) ──────────────────────────────────────────────────
   { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2014-04-03', status:'op',
     asf_prefix:['S1A','SENTINEL-1A'],
-    desc:'ESA flagship C-band SAR. IW mode 250 km swath, global data freely available. Forms a two-satellite constellation with Sentinel-1C; 6-day revisit over Taiwan.' },
+    desc:'ESA flagship C-band SAR. IW mode 250 km swath, global data freely available. Forms a two-satellite constellation with Sentinel-1C; 6-day revisit over Taiwan.',
+    desc_zh:'ESA 旗艦 C 波段 SAR。IW 模式 250 km 掃幅，全球資料免費開放。與 Sentinel-1C 組成雙星座，台灣每 6 天重訪一次。' },
   { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2024-12-05', status:'op',
     asf_prefix:['S1C','SENTINEL-1C'],
-    desc:'Launched December 2024 as successor to Sentinel-1B. Restores the 6-day revisit cycle with Sentinel-1A; data freely provided via Copernicus CDSE.' },
+    desc:'Launched December 2024 as successor to Sentinel-1B. Restores the 6-day revisit cycle with Sentinel-1A; data freely provided via Copernicus CDSE.',
+    desc_zh:'2024 年 12 月接替 Sentinel-1B 發射。與 Sentinel-1A 恢復 6 天重訪週期，資料由 Copernicus CDSE 免費提供。' },
   { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2025-11-04', status:'op',
     asf_prefix:['S1D','SENTINEL-1D'],
-    desc:'Joined the constellation in November 2025, further reducing revisit time to approximately 3 days for global coverage.' },
+    desc:'Joined the constellation in November 2025, further reducing revisit time to approximately 3 days for global coverage.',
+    desc_zh:'2025 年 11 月加入星座，進一步縮短重訪週期，可達 3 天一次全球覆蓋。' },
 
   // ── JAXA (L) ────────────────────────────────────────────────────────────
   { id:'ALOS2',  name:'ALOS-2 (PALSAR-2)',  agency:'JAXA',        band:'L', freq:'1.236 GHz', res:'1–100 m',  swath:'25–490 km', launched:'2014-05-24', status:'op',
     asf_prefix:['ALOS2','ALOS-2'],
-    desc:'Strong L-band penetration, ideal for forest biomass, surface deformation (InSAR), and disaster response. 14-day revisit; Taiwan typically covered every ~7 days from ascending and descending passes.' },
+    desc:'Strong L-band penetration, ideal for forest biomass, surface deformation (InSAR), and disaster response. 14-day revisit; Taiwan typically covered every ~7 days from ascending and descending passes.',
+    desc_zh:'L 波段穿透力強，適合森林碳匯、地表形變（InSAR）及災害應變。14 天重訪週期，台灣通常由升/降軌各約 7 天一次。' },
   { id:'ALOS4',  name:'ALOS-4',              agency:'JAXA',        band:'L', freq:'1.258 GHz', res:'3–100 m',  swath:'50–2000 km', launched:'2024-07-01', status:'op',
     asf_prefix:['ALOS4','ALOS-4'],
-    desc:'Ultra-wide ScanSAR mode up to 2000 km swath, greatly increasing global coverage frequency. Can cover Taiwan multiple times within a 14-day cycle.' },
+    desc:'Ultra-wide ScanSAR mode up to 2000 km swath, greatly increasing global coverage frequency. Can cover Taiwan multiple times within a 14-day cycle.',
+    desc_zh:'超寬刈幅模式達 2000 km，全球覆蓋頻率大幅提升。ScanSAR 模式 14 天可覆蓋台灣多次。' },
 
   // ── NASA/ISRO NISAR (L+S) ────────────────────────────────────────────────
   { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
     asf_prefix:['NISAR'],
-    desc:'Joint NASA/ISRO mission carrying both L-band (JPL) and S-band (ISRO) SAR. 12-day global coverage; all data fully open access.' },
+    desc:'Joint NASA/ISRO mission carrying both L-band (JPL) and S-band (ISRO) SAR. 12-day global coverage; all data fully open access.',
+    desc_zh:'NASA 與 ISRO 聯合任務，同時搭載 L 波段（JPL）與 S 波段（ISRO）SAR。12 天全球覆蓋，所有資料完全開放。' },
 
   // ── DLR/Airbus (X) ──────────────────────────────────────────────────────
   { id:'TSX',  name:'TerraSAR-X',            agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2007-06-15', status:'op',
     asf_prefix:['TSX','TERRASAR'],
-    desc:'Commercial high-resolution X-band SAR. Spotlight mode at 0.25 m, suited for urban, bridge, and harbour monitoring. Data requires purchase or research license.' },
+    desc:'Commercial high-resolution X-band SAR. Spotlight mode at 0.25 m, suited for urban, bridge, and harbour monitoring. Data requires purchase or research license.',
+    desc_zh:'商業高解析度 X 波段 SAR。聚焦模式 0.25 m，適合城市、橋樑、海港精細監測。資料需購買或申請研究授權。' },
   { id:'TDX',  name:'TanDEM-X',              agency:'DLR/Airbus',  band:'X', freq:'9.65 GHz',  res:'0.25–18 m', swath:'5–150 km',  launched:'2010-06-21', status:'op',
     asf_prefix:['TDX','TANDEM'],
-    desc:'Flies in tandem formation with TerraSAR-X to generate the global TanDEM-X 12 m/90 m DEM; also capable of independent high-resolution imaging.' },
+    desc:'Flies in tandem formation with TerraSAR-X to generate the global TanDEM-X 12 m/90 m DEM; also capable of independent high-resolution imaging.',
+    desc_zh:'與 TerraSAR-X 雙星編隊飛行，用於生成全球 TanDEM-X 12 m/90 m DEM，也可獨立執行高解析任務。' },
 
   // ── ASI COSMO-SkyMed Second Generation (X) ──────────────────────────────
   { id:'CSG1', name:'COSMO-SkyMed SG-1',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2019-12-18', status:'op',
     asf_prefix:['CSG1','COSMO'],
-    desc:'Italian second-generation COSMO-SkyMed (Second Generation), dual civil/military use. Spotlight mode at 0.35 m; can revisit Taiwan within a few hours.' },
+    desc:'Italian second-generation COSMO-SkyMed (Second Generation), dual civil/military use. Spotlight mode at 0.35 m; can revisit Taiwan within a few hours.',
+    desc_zh:'義大利第二代 COSMO-SkyMed（Second Generation），軍民兩用。Spotlight 模式 0.35 m，可在數小時內重新對台灣取像。' },
   { id:'CSG2', name:'COSMO-SkyMed SG-2',     agency:'ASI',         band:'X', freq:'9.6 GHz',   res:'0.35–100 m', swath:'10–200 km', launched:'2022-03-31', status:'op',
     asf_prefix:['CSG2'],
-    desc:'Second satellite of the COSMO-SkyMed Second Generation; completes a 4-satellite coordinated constellation (including legacy units) with revisit intervals in the hours range.' },
+    desc:'Second satellite of the COSMO-SkyMed Second Generation; completes a 4-satellite coordinated constellation (including legacy units) with revisit intervals in the hours range.',
+    desc_zh:'COSMO-SkyMed 第二代第二顆，完成 4 星（含舊版）協調運作，重訪週期縮短至數小時級別。' },
 
   // ── CSA RADARSAT Constellation (C) ──────────────────────────────────────
   { id:'RCM1', name:'RADARSAT-C 1 (RCM-1)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM1','RCM-1'],
-    desc:'First satellite of the Canadian RADARSAT Constellation Mission. Three equally spaced satellites provide global coverage every 4 days, supporting maritime monitoring and disaster response.' },
+    desc:'First satellite of the Canadian RADARSAT Constellation Mission. Three equally spaced satellites provide global coverage every 4 days, supporting maritime monitoring and disaster response.',
+    desc_zh:'加拿大 RADARSAT 星座任務第一顆。3 顆等間距分布，每 4 天可覆蓋全球一次，支援海事監控與災害應變。' },
   { id:'RCM2', name:'RADARSAT-C 2 (RCM-2)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM2','RCM-2'],
-    desc:'Second RCM satellite, spaced 120° from RCM-1 and RCM-3. Supports full polarimetry (HH+HV+VH+VV) and compact polarimetry modes.' },
+    desc:'Second RCM satellite, spaced 120° from RCM-1 and RCM-3. Supports full polarimetry (HH+HV+VH+VV) and compact polarimetry modes.',
+    desc_zh:'RCM 星座第二顆，與 RCM-1/3 間距各 120°。提供全極化（HH+HV+VH+VV）及緊湊極化模式。' },
   { id:'RCM3', name:'RADARSAT-C 3 (RCM-3)',  agency:'CSA',         band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2019-06-12', status:'op',
     asf_prefix:['RCM3','RCM-3'],
-    desc:'Third RCM satellite, completing the three-satellite layout. Government priority applications include Arctic ice monitoring and marine oil-spill detection.' },
+    desc:'Third RCM satellite, completing the three-satellite layout. Government priority applications include Arctic ice monitoring and marine oil-spill detection.',
+    desc_zh:'RCM 星座第三顆，完成三星佈局。政府優先任務包括加拿大北部冰況監測、海洋排放溢油偵測等。' },
   { id:'RS2',  name:'RADARSAT-2',             agency:'CSA/MDA',     band:'C', freq:'5.405 GHz', res:'1–100 m',  swath:'20–500 km', launched:'2007-12-14', status:'op',
     asf_prefix:['RS2','RADARSAT-2','R2'],
-    desc:'Commercial C-band SAR with full polarimetry; Ultra-Fine mode at 1 m resolution. Data must be purchased from MDA, though emergency access is available for disaster response.' },
+    desc:'Commercial C-band SAR with full polarimetry; Ultra-Fine mode at 1 m resolution. Data must be purchased from MDA, though emergency access is available for disaster response.',
+    desc_zh:'商業 C 波段 SAR，全極化能力，超精細模式 1 m。資料需向 MDA 商購，但部分災害情況提供免費存取。' },
 
   // ── CONAE SAOCOM (L) ────────────────────────────────────────────────────
   { id:'SAO1A', name:'SAOCOM-1A',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2018-10-08', status:'op',
     asf_prefix:['SAOCOM1A','SAOCOM-1A','UAM'],
-    desc:'Argentine L-band SAR, primarily used for soil moisture monitoring and flood mapping. Full-polarimetry data available upon research request.' },
+    desc:'Argentine L-band SAR, primarily used for soil moisture monitoring and flood mapping. Full-polarimetry data available upon research request.',
+    desc_zh:'阿根廷 L 波段 SAR，主力應用為土壤溼度監測與洪水繪圖。全極化資料可申請研究用途。' },
   { id:'SAO1B', name:'SAOCOM-1B',             agency:'CONAE',       band:'L', freq:'1.275 GHz', res:'10–100 m', swath:'30–400 km', launched:'2020-08-30', status:'op',
     asf_prefix:['SAOCOM1B','SAOCOM-1B','UAM'],
-    desc:'Twin of SAOCOM-1A; coordinated operations reduce revisit time over Taiwan. Also participates in data exchange with COSMO-SkyMed under the SIASGE agreement.' },
+    desc:'Twin of SAOCOM-1A; coordinated operations reduce revisit time over Taiwan. Also participates in data exchange with COSMO-SkyMed under the SIASGE agreement.',
+    desc_zh:'SAOCOM-1A 雙星，兩星協調使台灣重訪週期縮短。也與意大利 COSMO-SkyMed 交換資料（SIASGE 協議）。' },
 
   // ── ISRO (X) ────────────────────────────────────────────────────────────
   { id:'RISAT2B', name:'RISAT-2BR1',          agency:'ISRO',        band:'X', freq:'9.35 GHz',  res:'0.5–50 m', swath:'5–300 km', launched:'2019-12-11', status:'op',
     asf_prefix:['RISAT2BR1','RISAT'],
-    desc:'Indian X-band SAR smallsat using the Israeli ELTA ELM-2022S radar. Spotlight mode at 0.5 m; used for agricultural surveys and security monitoring.' },
+    desc:'Indian X-band SAR smallsat using the Israeli ELTA ELM-2022S radar. Spotlight mode at 0.5 m; used for agricultural surveys and security monitoring.',
+    desc_zh:'印度 X 波段 SAR 小衛星，以色列 ELTA ELM-2022S 雷達。Spotlight 模式 0.5 m，用於農業普查與安全監測。' },
 
   // ── NovaSAR (S) ─────────────────────────────────────────────────────────
   { id:'NOVASAR', name:'NovaSAR-1',           agency:'SSTL/UKSA',   band:'S', freq:'3.2 GHz',   res:'6–30 m',   swath:'20–150 km', launched:'2018-09-16', status:'op',
     asf_prefix:['NOVASAR'],
-    desc:'S-band compact SAR developed by UK SSTL. S-band properties fall between C and L, offering better vegetation penetration than C-band. Data available upon request from SSTL.' },
+    desc:'S-band compact SAR developed by UK SSTL. S-band properties fall between C and L, offering better vegetation penetration than C-band. Data available upon request from SSTL.',
+    desc_zh:'英國 SSTL 開發的 S 波段小型 SAR。S 波段特性介於 C 與 L 之間，對植被穿透力較 C 強。資料可向 SSTL 申請。' },
 
   // ── Commercial Constellations ────────────────────────────────────────────
-  { id:'ICEYE',   name:'ICEYE Constellation (20+ sats)',  agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25–15 m', swath:'5–200 km', launched:'2018~', status:'op',
+  { id:'ICEYE',   name:'ICEYE Constellation (20+ sats)',  name_zh:'ICEYE 星座（20+ 顆）', agency:'ICEYE',     band:'X', freq:'9.65 GHz',  res:'0.25–15 m', swath:'5–200 km', launched:'2018~', status:'op',
     asf_prefix:['ICEYE'],
-    desc:'Finnish commercial SAR smallsat constellation with 20+ satellites in orbit. Spot Fine mode at 25 cm; can revisit Taiwan within 3 hours. Supports on-demand tasking.' },
-  { id:'CAPELLA', name:'Capella Constellation (7+ sats)', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35–5 m', swath:'5–50 km', launched:'2020~', status:'op',
+    desc:'Finnish commercial SAR smallsat constellation with 20+ satellites in orbit. Spot Fine mode at 25 cm; can revisit Taiwan within 3 hours. Supports on-demand tasking.',
+    desc_zh:'芬蘭商業 SAR 小衛星星座，已超過 20 顆在軌。Spot Fine 模式達 25 cm，可在 3 小時內重訪台灣。支援 on-demand 任務。' },
+  { id:'CAPELLA', name:'Capella Constellation (7+ sats)', name_zh:'Capella 星座（7+ 顆）', agency:'Capella Space', band:'X', freq:'9.65 GHz', res:'0.35–5 m', swath:'5–50 km', launched:'2020~', status:'op',
     asf_prefix:['CAPELLA'],
-    desc:'US commercial SAR with up to 0.35 m Spotlight imagery. Offers an Open Data Program — free tasking requests available for select areas.' },
-  { id:'UMBRA',   name:'Umbra Constellation (5+ sats)',   agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16–5 m', swath:'5–35 km', launched:'2021~', status:'op',
+    desc:'US commercial SAR with up to 0.35 m Spotlight imagery. Offers an Open Data Program — free tasking requests available for select areas.',
+    desc_zh:'美國商業 SAR，最高 0.35 m Spotlight 影像。提供 Open Data Program，部分地區可免費申請取像。' },
+  { id:'UMBRA',   name:'Umbra Constellation (5+ sats)',   name_zh:'Umbra 星座（5+ 顆）', agency:'Umbra',      band:'X', freq:'9.65 GHz',  res:'0.16–5 m', swath:'5–35 km', launched:'2021~', status:'op',
     asf_prefix:['UMBRA'],
-    desc:'Currently the highest-resolution commercial SAR (16 cm). Open Data Program provides free image downloads including historical Taiwan coverage.' },
-  { id:'SYNSPECTIVE', name:'Synspective Constellation',  agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1–3 m',   swath:'30 km',  launched:'2020~', status:'op',
+    desc:'Currently the highest-resolution commercial SAR (16 cm). Open Data Program provides free image downloads including historical Taiwan coverage.',
+    desc_zh:'目前民用最高解析度 SAR（16 cm）。Open Data Program 提供部分影像免費下載，包含台灣歷史存檔。' },
+  { id:'SYNSPECTIVE', name:'Synspective Constellation',   name_zh:'Synspective 星座', agency:'Synspective', band:'X', freq:'9.65 GHz',  res:'1–3 m',   swath:'30 km',  launched:'2020~', status:'op',
     asf_prefix:['SYNSPECTIVE'],
-    desc:'Japanese commercial SAR smallsat focused on the Asian market. Has cooperation agreements with Taiwanese research institutions for rapid disaster response imagery.' },
+    desc:'Japanese commercial SAR smallsat focused on the Asian market. Has cooperation agreements with Taiwanese research institutions for rapid disaster response imagery.',
+    desc_zh:'日本商業 SAR 小衛星，專注亞洲市場。與台灣科研機構有合作協議，可提供快速災害應變影像。' },
 
   // ── Retired ─────────────────────────────────────────────────────────────
   { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5–20 m',  swath:'80–400 km', launched:'2016-04-25', status:'ret', retired:'2022-08-23',
     asf_prefix:['S1B','SENTINEL-1B'],
-    desc:'Power system anomaly in December 2021 caused SAR instrument failure; officially retired August 2022. Its orbit slot was taken over by Sentinel-1C.' },
+    desc:'Power system anomaly in December 2021 caused SAR instrument failure; officially retired August 2022. Its orbit slot was taken over by Sentinel-1C.',
+    desc_zh:'2021 年 12 月電力系統異常，SAR 傳感器失效；2022 年 8 月正式退役。由 Sentinel-1C 接替其軌道。' },
   { id:'ALOS1', name:'ALOS (PALSAR)',           agency:'JAXA',        band:'L', freq:'1.27 GHz',  res:'7–100 m', swath:'40–350 km', launched:'2006-01-24', status:'ret', retired:'2011-04-22',
     asf_prefix:['ALOS','ALOS1'],
-    desc:'Predecessor to ALOS-2 and the first mission to provide free global L-band data. Archive data still freely available via ASF.' },
+    desc:'Predecessor to ALOS-2 and the first mission to provide free global L-band data. Archive data still freely available via ASF.',
+    desc_zh:'ALOS-2 的前身，第一個提供免費全球 L 波段資料的任務。存檔資料仍可透過 ASF 免費下載。' },
   { id:'ERS1', name:'ERS-1',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1991-07-17', status:'ret', retired:'2000-03-10',
     asf_prefix:['ERS1','ERS-1'],
-    desc:"ESA's first-generation SAR satellite that established the foundations of InSAR applications. Extensive archive data remains scientifically valuable and accessible via ASF." },
+    desc:"ESA's first-generation SAR satellite that established the foundations of InSAR applications. Extensive archive data remains scientifically valuable and accessible via ASF.",
+    desc_zh:'ESA 第一代 SAR 衛星，奠定 InSAR 應用基礎。大量存檔資料仍有科研價值，可由 ASF 存取。' },
   { id:'ERS2', name:'ERS-2',                    agency:'ESA',         band:'C', freq:'5.3 GHz',   res:'25 m',    swath:'100 km',    launched:'1995-04-21', status:'ret', retired:'2011-09-05',
     asf_prefix:['ERS2','ERS-2'],
-    desc:'Follow-on to ERS-1; together they formed the ERS Tandem mission. Re-entered the atmosphere in February 2024; complete archive available on ASF.' },
+    desc:'Follow-on to ERS-1; together they formed the ERS Tandem mission. Re-entered the atmosphere in February 2024; complete archive available on ASF.',
+    desc_zh:'ERS-1 接替星，與其組成 Tandem 任務。2024 年 2 月完成大氣再入，ASF 存有完整存檔。' },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRANSLATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+const TRANSLATIONS = {
+  en: {
+    'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
+    'updated':'Updated:','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
+    'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
+    'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
+    'other-missions-note':'Commercial and access-restricted missions stay collapsed by default so the sidebar stays centered on Sentinel-1 and NISAR.',
+    'all-satellites':'All satellites','satellite-label':'Satellite','orbit-direction':'Orbit Direction',
+    'dir-all':'All','dir-asc':'Ascending','dir-desc':'Descending',
+    'date-start':'Date Start','date-end':'Date End',
+    'track-min':'Track Min','track-max':'Track Max','frame-min':'Frame Min','frame-max':'Frame Max',
+    'product-types':'Product Types','loading-types':'Loading...','no-product-types':'No product types in current inventory.',
+    'reset-filters':'Reset Filters','show-same-track':'Show same track in drawer',
+    'show-other-tracks':'Show other Taiwan Sentinel-1 tracks',
+    'slc-default':'SLC / GSLC / RSLC are selected by default.',
+    'this-week':'This Week','this-month':'This Month','6-months':'6 Months','1-year':'1 Year','any':'Any',
+    'filtered-frames':'Filtered Frames','active-satellites':'Active Satellites','query-window':'Query Window',
+    'latest-tracks':'Latest Tracks','latest-a69-d105':'Latest A69 / D105',
+    'latest-visible':'Latest Visible Tracks','need-history':'Need history',
+    'visible-data':'Visible Data','no-visible-data':'No visible data matches the current filters.',
+    'selected-files':'Selected Files','mission-details':'Mission Details',
+    'frames-this-week':'Frames available this week',
+    'status':'Status','band':'Band','frequency':'Frequency','resolution':'Resolution',
+    'swath':'Swath','launch':'Launch','retired-label':'Retired',
+    'status-op':'Operational','status-ret':'Retired','status-up':'Upcoming',
+    'track':'Track','frame':'Frame','direction':'Direction','mode':'Mode',
+    'acquisitions':'Acquisitions','files-label':'Files','source':'Source','selected-date':'Selected Date',
+    'n-acquisition-dates':'{n} acquisition dates','n-files-in-drawer':'{n} file{s} in drawer',
+    'acquisition-files-section':'Acquisition Files Under Track {track} / Frame {frame}',
+    'no-download-url':'No download URL available.','no-file-match':'No file matches this track.',
+    'source-asf-cop':'ASF + Copernicus','source-cop-only':'Copernicus only',
+    'source-asf-only':'ASF only','source-none':'No download source',
+    'frame-meta-unavailable':'Frame metadata unavailable in source record',
+    'no-asf-metadata':'No matched ASF frame metadata in local dataset',
+    'filtered-downloads':'Filtered Downloads','export':'Export',
+    'current-selection':'Current Selection','copy-all-links':'Copy All Links','csv-export':'CSV Export',
+    'this-week-badge':'Frames available this week',
+    'n-files-count':'{n} files · ASF {asf} · CDSE {cop}',
+    'copied-n-links':'📋 Copied {n} Links!',
+    'no-urls-alert':'No URLs available for the current filters.',
+    'no-scenes-alert':'No {source} scenes match the current filters.',
+    'no-frames-alert':'No frames match the current filters.',
+    'update-tracker':'Update Tracker','no-imagery':'No visible imagery matches the current time window and filters.',
+    'open-date-range':'Open date range','unknown-date':'Unknown date',
+    'n-unique-files':'{n} unique file(s) in current view',
+    'n-files-day':'{n} file{s}',
+    'note-default':'Default focus is Sentinel-1 Track 69, Track 105, and NISAR.',
+    'note-with-other':'Showing Sentinel-1 Track 69 / 105 plus other Taiwan Sentinel-1 tracks and NISAR.',
+    'note-formats':'Formats for {sat}: {formats} | frame range {min}-{max} | {extra}',
+    'priority-only':'priority tracks only','with-other-tracks':'with other Sentinel-1 Taiwan tracks visible',
+    'unknown-granule':'Unknown Granule','unknown-acquisition':'Unknown acquisition time',
+    'this-week-map':'THIS WEEK',
+  },
+  'zh-TW': {
+    'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
+    'updated':'更新：','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
+    'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
+    'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
+    'other-missions-note':'商業及限制存取任務預設收折，讓側邊欄聚焦於 Sentinel-1 與 NISAR。',
+    'all-satellites':'全部衛星','satellite-label':'衛星','orbit-direction':'軌道方向',
+    'dir-all':'全部','dir-asc':'升軌','dir-desc':'降軌',
+    'date-start':'開始日期','date-end':'結束日期',
+    'track-min':'軌道最小值','track-max':'軌道最大值','frame-min':'幀號最小值','frame-max':'幀號最大值',
+    'product-types':'產品類型','loading-types':'載入中...','no-product-types':'目前清單無產品類型。',
+    'reset-filters':'重設篩選','show-same-track':'抽屜顯示同軌跡',
+    'show-other-tracks':'顯示其他台灣 Sentinel-1 軌跡',
+    'slc-default':'預設選取 SLC / GSLC / RSLC。',
+    'this-week':'本週','this-month':'本月','6-months':'6 個月','1-year':'1 年','any':'任意',
+    'filtered-frames':'篩選後幀數','active-satellites':'活躍衛星數','query-window':'查詢時段',
+    'latest-tracks':'最新軌跡','latest-a69-d105':'最新 A69 / D105',
+    'latest-visible':'最新可見軌跡','need-history':'無歷史資料',
+    'visible-data':'可見資料','no-visible-data':'目前篩選條件無符合資料。',
+    'selected-files':'選取檔案','mission-details':'任務說明',
+    'frames-this-week':'本週有取像資料',
+    'status':'狀態','band':'波段','frequency':'頻率','resolution':'解析度',
+    'swath':'刈幅','launch':'發射','retired-label':'退役',
+    'status-op':'運作中','status-ret':'已退役','status-up':'即將發射',
+    'track':'軌道','frame':'幀號','direction':'方向','mode':'模式',
+    'acquisitions':'取像次數','files-label':'檔案','source':'來源','selected-date':'選取日期',
+    'n-acquisition-dates':'{n} 個取像日期','n-files-in-drawer':'抽屜 {n} 個檔案',
+    'acquisition-files-section':'軌道 {track} / 幀號 {frame} 取像檔案',
+    'no-download-url':'無下載連結。','no-file-match':'此軌跡無符合檔案。',
+    'source-asf-cop':'ASF + Copernicus','source-cop-only':'僅 Copernicus',
+    'source-asf-only':'僅 ASF','source-none':'無下載來源',
+    'frame-meta-unavailable':'來源記錄中無幀元資料',
+    'no-asf-metadata':'本地資料集無匹配之 ASF 幀元資料',
+    'filtered-downloads':'篩選後下載','export':'匯出',
+    'current-selection':'目前選取','copy-all-links':'複製所有連結','csv-export':'CSV 匯出',
+    'this-week-badge':'本週有取像',
+    'n-files-count':'{n} 個檔案 · ASF {asf} · CDSE {cop}',
+    'copied-n-links':'📋 已複製 {n} 個連結！',
+    'no-urls-alert':'目前篩選條件無可用連結。',
+    'no-scenes-alert':'{source} 無符合目前篩選條件的場景。',
+    'no-frames-alert':'目前篩選條件無符合幀次。',
+    'update-tracker':'更新追蹤器','no-imagery':'目前時段及篩選條件無符合影像。',
+    'open-date-range':'開放日期範圍','unknown-date':'未知日期',
+    'n-unique-files':'目前顯示 {n} 個獨立檔案',
+    'n-files-day':'{n} 個檔案',
+    'note-default':'預設聚焦於 Sentinel-1 軌道 69、105 及 NISAR。',
+    'note-with-other':'顯示 Sentinel-1 軌道 69 / 105 及其他台灣 Sentinel-1 軌跡與 NISAR。',
+    'note-formats':'{sat} 格式：{formats} | 幀號範圍 {min}-{max} | {extra}',
+    'priority-only':'僅優先軌跡','with-other-tracks':'含其他 Sentinel-1 台灣軌跡可見',
+    'unknown-granule':'未知取像','unknown-acquisition':'未知取像時間',
+    'this-week-map':'本週',
+  },
+};
+
+function t(key, vars = {}) {
+  const lang = state?.lang || 'en';
+  const str = (TRANSLATIONS[lang] || TRANSLATIONS.en)[key] ?? TRANSLATIONS.en[key] ?? key;
+  return str.replace(/\{(\w+)\}/g, (_, k) => k in vars ? vars[k] : `{${k}}`);
+}
+
+function getSatName(sat) {
+  return (state?.lang === 'zh-TW' && sat.name_zh) ? sat.name_zh : sat.name;
+}
+
+function getSatDesc(sat) {
+  return (state?.lang === 'zh-TW' && sat.desc_zh) ? sat.desc_zh : sat.desc;
+}
+
+function toggleLang() {
+  state.lang = state.lang === 'en' ? 'zh-TW' : 'en';
+  localStorage.setItem('lang', state.lang);
+  document.documentElement.lang = state.lang;
+  applyI18n();
+}
+
+function applyI18n() {
+  const btn = document.getElementById('lang-toggle');
+  if (btn) btn.textContent = state.lang === 'en' ? '中文' : 'EN';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  // re-render all dynamic UI
+  setupReadableUI();
+  rebuildDownloadBar();
+  renderSatelliteSelect();
+  renderSatList();
+  renderFormatOptions();
+  updateStats(state.baseStats || {});
+  updateFilterHints();
+  updateNextExpected();
+  renderMobileFeed();
+}
 
 // ── Color mapping ─────────────────────────────────────────────────────────
 const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'NISAR']);
@@ -201,6 +378,7 @@ let state = {
   frames: [],
   tab:    'all',
   band:   'ALL',
+  lang:   localStorage.getItem('lang') || 'en',
   map:    null,
   frameLayer: null,
   selectedSat: null,
@@ -261,9 +439,9 @@ function focusMapOnFrames(frames, options = {}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════════════════
-function ldmsg(t) {
+function ldmsg(msg) {
   const el = document.getElementById('ld-msg');
-  if (el) el.textContent = t;
+  if (el) el.textContent = msg;
 }
 
 
@@ -398,33 +576,34 @@ function setupReadableUI() {
   const sbHead = document.querySelector('.sb-head h2');
   if (sbHead) sbHead.textContent = 'SAR Satellites';
   const sbCount = document.getElementById('sb-count');
-  if (sbCount && !state.rawFrames.length) sbCount.textContent = 'Waiting for inventory...';
+  if (sbCount && !state.rawFrames.length) sbCount.textContent = t('waiting-inventory');
 
   const loadingText = document.querySelector('.ld-txt');
   if (loadingText) loadingText.textContent = 'SAR TRACKER';
   const loadingSub = document.getElementById('ld-msg');
-  if (loadingSub && !loadingSub.textContent.trim()) loadingSub.textContent = 'Loading latest frame inventory...';
+  if (loadingSub && !loadingSub.textContent.trim()) loadingSub.textContent = t('loading-inventory');
 
   const statLabels = document.querySelectorAll('.map-stats .lbl');
-  if (statLabels[0]) statLabels[0].textContent = 'Filtered Frames';
-  if (statLabels[1]) statLabels[1].textContent = 'Active Satellites';
-  if (statLabels[2]) statLabels[2].textContent = 'Query Window';
+  if (statLabels[0]) statLabels[0].textContent = t('filtered-frames');
+  if (statLabels[1]) statLabels[1].textContent = t('active-satellites');
+  if (statLabels[2]) statLabels[2].textContent = t('query-window');
 
   const statsWrap = document.querySelector('.map-stats');
   if (statsWrap && !document.getElementById('st-next')) {
     const card = document.createElement('div');
     card.className = 'stat-card';
-    card.innerHTML = '<div class="lbl" id="st-next-label">Latest Tracks</div><div class="val small" id="st-next">Need history</div>';
+    card.innerHTML = `<div class="lbl" id="st-next-label">${t('latest-tracks')}</div><div class="val small" id="st-next">${t('need-history')}</div>`;
     statsWrap.appendChild(card);
+  } else {
+    const nextLabel = document.getElementById('st-next-label');
+    if (nextLabel && nextLabel.dataset.latestKey) nextLabel.textContent = t(nextLabel.dataset.latestKey);
   }
 
   const legend = document.querySelector('.map-legend');
-  if (legend) legend.innerHTML = '<div class="legend-title">Visible Data</div><div id="legend-items"></div>';
+  if (legend) legend.innerHTML = `<div class="legend-title">${t('visible-data')}</div><div id="legend-items"></div>`;
 
-
-  const closeBtn = document.querySelector('.drawer-close');
   const section = document.querySelector('.d-section');
-  if (section) section.textContent = 'Selected Files';
+  if (section) section.textContent = t('selected-files');
 }
 
 function rebuildDownloadBar() {
@@ -432,16 +611,16 @@ function rebuildDownloadBar() {
   if (!dlBar) return;
   dlBar.innerHTML = `
     <div class="dl-main">
-      <span class="dl-label">Filtered Downloads</span>
+      <span class="dl-label">${t('filtered-downloads')}</span>
       <span class="dl-count" id="dl-info">0 files</span>
     </div>
-    <button class="dl-btn csv export-toggle" id="btn-export-toggle" type="button" onclick="toggleExportPanel()">Export</button>
+    <button class="dl-btn csv export-toggle" id="btn-export-toggle" type="button" onclick="toggleExportPanel()">${t('export')}</button>
     <div class="export-panel" id="export-panel">
       <div class="export-card wide">
-        <div class="k">Current Selection</div>
+        <div class="k">${t('current-selection')}</div>
         <div class="export-actions">
-          <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">Copy All Links</button>
-          <button class="dl-btn csv" id="btn-csv" type="button" onclick="exportCSV()">CSV Export</button>
+          <button class="dl-btn asf" id="btn-copy-urls" type="button" onclick="copyFilteredUrls()">${t('copy-all-links')}</button>
+          <button class="dl-btn csv" id="btn-csv" type="button" onclick="exportCSV()">${t('csv-export')}</button>
         </div>
       </div>
       <div class="export-card">
@@ -710,7 +889,7 @@ async function liveFetchASF() {
       asf_count: state.rawFrames.length,
       copernicus_count: 0,
     };
-    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString('zh-TW');
+    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US');
     bindAdvancedControls();
     renderSatelliteSelect();
     renderFormatOptions();
@@ -795,7 +974,7 @@ function renderSatelliteSelect() {
     ...visibleSats.filter(sat => !isFeaturedSatellite(sat)),
   ];
 
-  const options = ['<option value="ALL">All satellites</option>'];
+  const options = [`<option value="ALL">${t('all-satellites')}</option>`];
   for (const sat of orderedSats) {
     const count = counts.get(sat.id) || 0;
     options.push(`<option value="${sat.id}">${sat.name}${count ? ` (${count})` : ''}</option>`);
@@ -998,7 +1177,7 @@ function updateLegend() {
 
   const frames = summarizeSelectedFrames();
   if (!frames.length) {
-    wrap.innerHTML = '<div class="legend-empty">No visible data matches the current filters.</div>';
+    wrap.innerHTML = `<div class="legend-empty">${t('no-visible-data')}</div>`;
     return;
   }
 
@@ -1033,8 +1212,8 @@ function renderMobileFeed() {
   if (!frames.length) {
     wrap.innerHTML = `
       <div class="mobile-feed-summary">
-        <div class="mobile-feed-title">Update Tracker</div>
-        <div class="mobile-feed-meta">No visible imagery matches the current time window and filters.</div>
+        <div class="mobile-feed-title">${t('update-tracker')}</div>
+        <div class="mobile-feed-meta">${t('no-imagery')}</div>
       </div>
     `;
     return;
@@ -1051,10 +1230,12 @@ function renderMobileFeed() {
 
   const dateSummary = state.filters.dateStart && state.filters.dateEnd
     ? `${state.filters.dateStart} → ${state.filters.dateEnd}`
-    : 'Open date range';
+    : t('open-date-range');
 
+  const feedLocale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
   const body = [...grouped.entries()].map(([day, dayFrames]) => {
-    const dayLabel = day === 'Unknown date' ? day : new Date(`${day}T00:00:00`).toLocaleDateString('zh-TW', {
+    const unknownDay = t('unknown-date');
+    const dayLabel = day === 'Unknown date' ? unknownDay : new Date(`${day}T00:00:00`).toLocaleDateString(feedLocale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -1062,7 +1243,7 @@ function renderMobileFeed() {
     });
 
     const cards = dayFrames.slice(0, 24).map(frame => {
-      const timeLabel = frame.date ? new Date(frame.date).toLocaleTimeString('zh-TW', {
+      const timeLabel = frame.date ? new Date(frame.date).toLocaleTimeString(feedLocale, {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -1086,7 +1267,7 @@ function renderMobileFeed() {
 
     return `
       <section class="mobile-feed-group">
-        <div class="mobile-feed-date">${dayLabel} · ${dayFrames.length} file${dayFrames.length === 1 ? '' : 's'}</div>
+        <div class="mobile-feed-date">${dayLabel} · ${t('n-files-day', { n: dayFrames.length, s: dayFrames.length === 1 ? '' : 's' })}</div>
         ${cards}
       </section>
     `;
@@ -1094,8 +1275,8 @@ function renderMobileFeed() {
 
   wrap.innerHTML = `
     <div class="mobile-feed-summary">
-      <div class="mobile-feed-title">Update Tracker</div>
-      <div class="mobile-feed-meta">${uniqueGranules} unique file(s) in current view</div>
+      <div class="mobile-feed-title">${t('update-tracker')}</div>
+      <div class="mobile-feed-meta">${t('n-unique-files', { n: uniqueGranules })}</div>
       <div class="mobile-feed-meta">${dateSummary}</div>
     </div>
     ${body}
@@ -1111,11 +1292,11 @@ function updateFilterHints() {
   if (!note || !frameMin || !frameMax) return;
 
   if (!values.length) {
-    frameMin.placeholder = 'Any';
-    frameMax.placeholder = 'Any';
+    frameMin.placeholder = t('any');
+    frameMax.placeholder = t('any');
     note.textContent = state.filters.showOtherSentinelTracks
-      ? 'Showing Sentinel-1 Track 69 / 105 plus other Taiwan Sentinel-1 tracks and NISAR.'
-      : 'Default focus is Sentinel-1 Track 69, Track 105, and NISAR.';
+      ? t('note-with-other')
+      : t('note-default');
     return;
   }
 
@@ -1123,9 +1304,9 @@ function updateFilterHints() {
   const max = Math.max(...values);
   frameMin.placeholder = String(min);
   frameMax.placeholder = String(max);
-  const extra = state.filters.showOtherSentinelTracks ? 'with other Sentinel-1 Taiwan tracks visible' : 'priority tracks only';
+  const extra = t(state.filters.showOtherSentinelTracks ? 'with-other-tracks' : 'priority-only');
   const satLabel = state.filters.satellite === 'ALL' ? 'Sentinel-1 + NISAR' : state.filters.satellite;
-  note.textContent = `Formats for ${satLabel}: ${[...state.filters.formats].join(', ') || 'none'} | frame range ${min}-${max} | ${extra}`;
+  note.textContent = t('note-formats', { sat: satLabel, formats: [...state.filters.formats].join(', ') || 'none', min, max, extra });
 }
 
 function openDrawer(sat, row, thisWeek) {
@@ -1137,19 +1318,19 @@ function openDrawer(sat, row, thisWeek) {
 
   document.getElementById('d-name').textContent = sat.name;
   document.getElementById('d-agency').textContent = sat.agency;
-  document.getElementById('d-week-wrap').innerHTML = thisWeek ? '<div class="d-week-badge">Frames available this week</div>' : '';
+  document.getElementById('d-week-wrap').innerHTML = thisWeek ? `<div class="d-week-badge">${t('frames-this-week')}</div>` : '';
 
-  const statusMap = { op:'Operational', ret:'Retired', up:'Upcoming' };
+  const statusLabel = t(`status-${sat.status}`) || sat.status;
   document.getElementById('d-grid').innerHTML = `
-    <div class="d-item"><div class="k">Status</div><div class="v">${statusMap[sat.status] || sat.status}</div></div>
-    <div class="d-item"><div class="k">Band</div><div class="v"><span class="badge b${sat.band}">${sat.band}-band</span></div></div>
-    <div class="d-item"><div class="k">Frequency</div><div class="v"><small>${sat.freq}</small></div></div>
-    <div class="d-item"><div class="k">Resolution</div><div class="v"><small>${sat.res}</small></div></div>
-    <div class="d-item"><div class="k">Swath</div><div class="v"><small>${sat.swath}</small></div></div>
-    <div class="d-item"><div class="k">Launch</div><div class="v"><small>${sat.launched}</small></div></div>
-    ${sat.retired ? `<div class="d-item"><div class="k">Retired</div><div class="v"><small>${sat.retired}</small></div></div>` : ''}
+    <div class="d-item"><div class="k">${t('status')}</div><div class="v">${statusLabel}</div></div>
+    <div class="d-item"><div class="k">${t('band')}</div><div class="v"><span class="badge b${sat.band}">${sat.band}-band</span></div></div>
+    <div class="d-item"><div class="k">${t('frequency')}</div><div class="v"><small>${sat.freq}</small></div></div>
+    <div class="d-item"><div class="k">${t('resolution')}</div><div class="v"><small>${sat.res}</small></div></div>
+    <div class="d-item"><div class="k">${t('swath')}</div><div class="v"><small>${sat.swath}</small></div></div>
+    <div class="d-item"><div class="k">${t('launch')}</div><div class="v"><small>${sat.launched}</small></div></div>
+    ${sat.retired ? `<div class="d-item"><div class="k">${t('retired-label')}</div><div class="v"><small>${sat.retired}</small></div></div>` : ''}
   `;
-  document.getElementById('d-desc').textContent = sat.desc;
+  document.getElementById('d-desc').textContent = getSatDesc(sat);
   document.getElementById('drawer').classList.add('open');
 }
 
@@ -1251,7 +1432,7 @@ function updateDownloadButtons() {
   const fileCount = new Set(state.filteredFrames.map(frame => normalizeGranuleKey(frame.granule))).size;
   const dlInfo = document.getElementById('dl-info');
   if (dlInfo) {
-    dlInfo.textContent = `${fileCount} files · ASF ${asfMeta4.count} · CDSE ${copMeta4.count}`;
+    dlInfo.textContent = t('n-files-count', { n: fileCount, asf: asfMeta4.count, cop: copMeta4.count });
   }
 }
 
@@ -1259,14 +1440,14 @@ window.copyFilteredUrls = function() {
   ensureAdvancedState();
   const urls = state.filteredFrames.map(f => f.asf_url || f.copernicus_url || (f.source === 'Copernicus' ? f.download_url : null)).filter(Boolean);
   if (!urls.length) {
-    alert('No URLs available for the current filters.');
+    alert(t('no-urls-alert'));
     return;
   }
   navigator.clipboard.writeText(urls.join('\n')).then(() => {
     const btn = document.getElementById('btn-copy-urls');
     if (btn) {
       const orig = btn.innerHTML;
-      btn.innerHTML = `📋 Copied ${urls.length} Links!`;
+      btn.innerHTML = t('copied-n-links', { n: urls.length });
       btn.style.background = 'var(--green)';
       btn.style.color = '#fff';
       btn.style.borderColor = 'var(--green)';
@@ -1284,7 +1465,7 @@ function downloadMeta4(source) {
   ensureAdvancedState();
   const meta4 = createMeta4(state.filteredFrames, source);
   if (!meta4.count) {
-    alert(`No ${source} scenes match the current filters.`);
+    alert(t('no-scenes-alert', { source }));
     return;
   }
   triggerDownload(buildDownloadName(source.toLowerCase(), 'meta4'), meta4.text, 'application/metalink4+xml;charset=utf-8');
@@ -1293,7 +1474,7 @@ function downloadMeta4(source) {
 function exportCSV() {
   ensureAdvancedState();
   if (!state.filteredFrames.length) {
-    alert('No frames match the current filters.');
+    alert(t('no-frames-alert'));
     return;
   }
 
@@ -1323,7 +1504,7 @@ function renderSatList() {
   if (featured.length) {
     const label = document.createElement('div');
     label.className = 'group-label';
-    label.textContent = 'Featured open missions';
+    label.textContent = t('featured-missions');
     list.appendChild(label);
     for (const sat of featured) total += appendSatelliteRow(list, sat);
   }
@@ -1333,13 +1514,13 @@ function renderSatList() {
     details.className = 'sat-fold';
     details.open = folded.some(sat => state.filters.satellite === sat.id);
     details.innerHTML = `
-      <summary>Other SAR missions <span>${folded.length}</span></summary>
-      <div class="sat-fold-note">Commercial and access-restricted missions stay collapsed by default so the sidebar stays centered on Sentinel-1 and NISAR.</div>`;
+      <summary>${t('other-missions')} <span>${folded.length}</span></summary>
+      <div class="sat-fold-note">${t('other-missions-note')}</div>`;
     for (const sat of folded) total += appendSatelliteRow(details, sat);
     list.appendChild(details);
   }
 
-  document.getElementById('sb-count').textContent = `${total} satellites listed`;
+  document.getElementById('sb-count').textContent = t('n-satellites', { n: total });
 }
 
 function appendSatelliteRow(container, sat) {
@@ -1353,11 +1534,11 @@ function appendSatelliteRow(container, sat) {
   row.innerHTML = `
     <div class="dot ${sat.status}"></div>
     <div class="sat-info">
-      <div class="sat-name">${sat.name}</div>
-      <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
+      <div class="sat-name">${getSatName(sat)}</div>
+      <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} ${t('filtered-frames').toLowerCase()}</div>
     </div>
     <div class="badges">
-      ${satellitesWithFrames.has(sat.id) ? '<span class="this-week">THIS WEEK</span>' : ''}
+      ${satellitesWithFrames.has(sat.id) ? `<span class="this-week">${t('this-week-map')}</span>` : ''}
       <span class="badge b${sat.band}">${sat.band}</span>
     </div>`;
   container.appendChild(row);
@@ -1444,7 +1625,7 @@ async function liveFetchASF() {
       asf_count: state.rawFrames.length,
       copernicus_count: 0,
     };
-    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString('zh-TW');
+    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US');
     applyTabDateWindow();
     renderSatelliteSelect();
     renderFormatOptions();
@@ -1502,8 +1683,9 @@ function getFrameAcquisitionInfo(frame) {
     ? new Date(startMs).toISOString().slice(0, 19)
     : `${getFrameSeriesKey(frame)}|${normalizeGranuleKey(frame?.granule) || 'unknown'}`;
 
+  const acqLocale = state?.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
   const label = startMs !== null
-    ? new Date(startMs).toLocaleString('zh-TW', {
+    ? new Date(startMs).toLocaleString(acqLocale, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -1513,7 +1695,7 @@ function getFrameAcquisitionInfo(frame) {
         hour12: false,
         timeZone: 'UTC',
       }) + ' UTC'
-    : 'Unknown acquisition time';
+    : t('unknown-acquisition');
 
   return { key, startMs, stopMs, label };
 }
@@ -1701,11 +1883,11 @@ function updateNextExpected() {
     });
 
   if (labelEl) {
-    labelEl.textContent = lines.some(line => line.startsWith('NISAR'))
-      ? 'Latest Visible Tracks'
-      : 'Latest A69 / D105';
+    const key = lines.some(line => line.startsWith('NISAR')) ? 'latest-visible' : 'latest-a69-d105';
+    labelEl.dataset.latestKey = key;
+    labelEl.textContent = t(key);
   }
-  el.textContent = lines.length ? lines.join(' | ') : 'Need history';
+  el.textContent = lines.length ? lines.join(' | ') : t('need-history');
 }
 
 function renderFrames() {
@@ -1835,18 +2017,16 @@ function openFrameDrawer(clickedFrame) {
   const getSourceState = frame => {
     const hasAsf = !!frame.asf_url;
     const hasCdse = !!(frame.copernicus_url || frame.download_url);
-    if (hasAsf && hasCdse) return 'ASF + Copernicus';
-    if (hasCdse) return 'Copernicus only';
-    if (hasAsf) return 'ASF only';
-    return 'No download source';
+    if (hasAsf && hasCdse) return t('source-asf-cop');
+    if (hasCdse) return t('source-cop-only');
+    if (hasAsf) return t('source-asf-only');
+    return t('source-none');
   };
   const getFrameStatus = frame => {
     if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
       return String(frame.frame_number_norm);
     }
-    return frame.asf_url
-      ? 'Frame metadata unavailable in source record'
-      : 'No matched ASF frame metadata in local dataset';
+    return frame.asf_url ? t('frame-meta-unavailable') : t('no-asf-metadata');
   };
   const frameCenterLabel = getFrameStatus(primary);
 
@@ -1854,18 +2034,18 @@ function openFrameDrawer(clickedFrame) {
   document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
-    <div class="d-item"><div class="k">Track</div><div class="v">${getFramePathNumber(primary) ?? '--'}</div></div>
-    <div class="d-item"><div class="k">Frame</div><div class="v">${frameCenterLabel}</div></div>
-    <div class="d-item"><div class="k">Direction</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Mode</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
-    <div class="d-item"><div class="k">Acquisitions</div><div class="v"><small>${acquisitionCount} acquisition dates</small></div></div>
-    <div class="d-item"><div class="k">Files</div><div class="v"><small>${entries.length} file${entries.length === 1 ? '' : 's'} in drawer</small></div></div>
-    <div class="d-item span-2"><div class="k">Source</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
-    <div class="d-item span-2"><div class="k">Selected Date</div><div class="v"><small>${acquisition.label}</small></div></div>
+    <div class="d-item"><div class="k">${t('track')}</div><div class="v">${getFramePathNumber(primary) ?? '--'}</div></div>
+    <div class="d-item"><div class="k">${t('frame')}</div><div class="v">${frameCenterLabel}</div></div>
+    <div class="d-item"><div class="k">${t('direction')}</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
+    <div class="d-item"><div class="k">${t('mode')}</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
+    <div class="d-item"><div class="k">${t('acquisitions')}</div><div class="v"><small>${t('n-acquisition-dates', { n: acquisitionCount })}</small></div></div>
+    <div class="d-item"><div class="k">${t('files-label')}</div><div class="v"><small>${t('n-files-in-drawer', { n: entries.length, s: entries.length === 1 ? '' : 's' })}</small></div></div>
+    <div class="d-item span-2"><div class="k">${t('source')}</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
+    <div class="d-item span-2"><div class="k">${t('selected-date')}</div><div class="v"><small>${acquisition.label}</small></div></div>
   `;
 
   const section = document.querySelector('.d-section');
-  if (section) section.textContent = `Acquisition Files Under Track ${getFramePathNumber(primary) ?? '--'} / Frame ${frameCenterLabel}`;
+  if (section) section.textContent = t('acquisition-files-section', { track: getFramePathNumber(primary) ?? '--', frame: frameCenterLabel });
 
   const groups = new Map();
   for (const frame of historyFrames) {
@@ -1897,7 +2077,7 @@ function openFrameDrawer(clickedFrame) {
           </div>
           <div class="d-link-top">
             <span>${escapeHtml(frame.product_type_norm || 'OCN')} / ${escapeHtml(size)}</span>
-            <span>${escapeHtml(frame.date ? new Date(frame.date).toLocaleString('zh-TW') : '--')}</span>
+            <span>${escapeHtml(frame.date ? new Date(frame.date).toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US') : '--')}</span>
           </div>
           <div class="d-link-submeta">
             ${escapeHtml(getSourceState(frame))} / path ${escapeHtml(getFramePathNumber(frame) ?? '--')} / frame ${escapeHtml(getFrameStatus(frame))}
@@ -1906,7 +2086,7 @@ function openFrameDrawer(clickedFrame) {
             ${granuleMeta}
           </div>
           <div class="d-link-actions">
-            ${actions || '<span class="d-link-empty">No download URL available.</span>'}
+            ${actions || `<span class="d-link-empty">${t('no-download-url')}</span>`}
           </div>
         </div>
       `;
@@ -1924,12 +2104,16 @@ function openFrameDrawer(clickedFrame) {
       </details>
     `;
   }).join('');
-  document.getElementById('d-desc').innerHTML = cards || '<span style="color: var(--muted)">No file matches this track.</span>';
+  document.getElementById('d-desc').innerHTML = cards || `<span style="color: var(--muted)">${t('no-file-match')}</span>`;
   document.getElementById('drawer').classList.add('open');
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
+  document.documentElement.lang = state.lang;
+  const langBtn = document.getElementById('lang-toggle');
+  if (langBtn) langBtn.textContent = state.lang === 'en' ? '中文' : 'EN';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   applyAppearanceSettings();
   syncAppearanceControls();
   setupReadableUI();
