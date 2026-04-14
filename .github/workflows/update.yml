@@ -123,6 +123,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Inject cache-busting version into index.html
+        run: |
+          VER=$(git rev-parse --short HEAD)
+          sed -i "s|styles\.css\"|styles.css?v=$VER\"|g"                index.html
+          sed -i "s|sar_status\.js\"|sar_status.js?v=$VER\"|g"          index.html
+          sed -i "s|src=\"app\.js\"|src=\"app.js?v=$VER\"|g"            index.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
