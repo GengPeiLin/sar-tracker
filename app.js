@@ -267,9 +267,8 @@ function toggleLang() {
 }
 
 function applyI18n() {
-  document.querySelectorAll('.lang-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === state.lang);
-  });
+  const sw = document.getElementById('lang-switch');
+  if (sw) sw.classList.toggle('zh', state.lang === 'zh-TW');
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
@@ -1511,7 +1510,10 @@ function renderSatList() {
     label.className = 'group-label';
     label.textContent = t('featured-missions');
     list.appendChild(label);
-    for (const sat of featured) total += appendSatelliteRow(list, sat);
+    const featuredGroup = document.createElement('div');
+    featuredGroup.className = 'featured-group';
+    for (const sat of featured) total += appendSatelliteRow(featuredGroup, sat);
+    list.appendChild(featuredGroup);
   }
 
   if (folded.length) {
@@ -2116,9 +2118,8 @@ function openFrameDrawer(clickedFrame) {
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   document.documentElement.lang = state.lang;
-  document.querySelectorAll('.lang-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === state.lang);
-  });
+  const langSw = document.getElementById('lang-switch');
+  if (langSw) langSw.classList.toggle('zh', state.lang === 'zh-TW');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   applyAppearanceSettings();
   syncAppearanceControls();
