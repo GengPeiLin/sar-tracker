@@ -42,6 +42,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore catalog cache
+        uses: actions/cache@v4
+        with:
+          path: data/catalog_db.json
+          key: catalog-db-${{ github.run_id }}
+          restore-keys: catalog-db-
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -71,6 +78,13 @@ jobs:
           import os; print(f"ASF meta4    : {os.path.getsize('data/asf_taiwan.meta4')} bytes")
           print(f"COP meta4    : {os.path.getsize('data/copernicus_taiwan.meta4')} bytes")
           EOF
+
+      - name: Save catalog cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/catalog_db.json
+          key: catalog-db-${{ github.run_id }}
 
       - name: Commit & push updated data
         id: commit
