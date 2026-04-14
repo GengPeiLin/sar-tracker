@@ -289,7 +289,8 @@ const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'NISAR']);
 const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
-const FONT_SIZE_OPTIONS = new Set(['2', '4', '6', '8']);
+const FONT_SIZE_STEPS   = [2, 4, 6, 8];
+const FONT_SIZE_OPTIONS = new Set(FONT_SIZE_STEPS.map(String));
 const APP_VERSION = 'v0.7.1';
 
 const PLATFORM_COLORS = {
@@ -547,9 +548,22 @@ function applyAppearanceSettings() {
 
 function syncAppearanceControls() {
   const themeSelect = document.getElementById('theme-select');
-  const fontSizeSelect = document.getElementById('font-size-select');
   if (themeSelect) themeSelect.value = getThemeValue(state.ui.theme);
-  if (fontSizeSelect) fontSizeSelect.value = getFontSizeValue(state.ui.fontSize);
+  const sizeVal = document.getElementById('size-val');
+  if (sizeVal) sizeVal.textContent = getFontSizeValue(state.ui.fontSize);
+  const idx = FONT_SIZE_STEPS.indexOf(Number(state.ui.fontSize));
+  const dec = document.getElementById('size-dec');
+  const inc = document.getElementById('size-inc');
+  if (dec) dec.disabled = idx <= 0;
+  if (inc) inc.disabled = idx >= FONT_SIZE_STEPS.length - 1;
+}
+
+function stepFontSize(dir) {
+  const idx = FONT_SIZE_STEPS.indexOf(Number(state.ui.fontSize));
+  const next = FONT_SIZE_STEPS[Math.max(0, Math.min(FONT_SIZE_STEPS.length - 1, idx + dir))];
+  state.ui.fontSize = String(next);
+  applyAppearanceSettings();
+  syncAppearanceControls();
 }
 
 function bindAppearanceControls() {
@@ -559,10 +573,8 @@ function bindAppearanceControls() {
     renderFrames();
   });
 
-  document.getElementById('font-size-select')?.addEventListener('change', event => {
-    state.ui.fontSize = getFontSizeValue(event.target.value);
-    applyAppearanceSettings();
-  });
+  document.getElementById('size-dec')?.addEventListener('click', () => stepFontSize(-1));
+  document.getElementById('size-inc')?.addEventListener('click', () => stepFontSize(1));
 }
 
 function setupReadableUI() {

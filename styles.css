@@ -247,6 +247,38 @@ header {
   border-color: var(--cyan);
 }
 
+.size-stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  min-width: 104px;
+}
+.size-step {
+  flex-shrink: 0;
+  width: 28px;
+  border: none;
+  background: transparent;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: calc(14px + var(--font-bump) - 2px);
+  line-height: 1;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.size-step:hover:not(:disabled) { background: rgba(0,229,255,.1); }
+.size-step:disabled { color: var(--muted); cursor: default; }
+.size-val {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  font-weight: 700;
+  color: var(--text-hi);
+  user-select: none;
+}
+
 
 /* ═══ BODY LAYOUT ══════════════════════════════════════════════════════════ */
 .layout { flex: 1; display: flex; overflow: hidden; }
