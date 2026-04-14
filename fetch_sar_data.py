@@ -25,7 +25,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 
 
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "7"))
@@ -47,15 +47,17 @@ def log(message: str) -> None:
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}", flush=True)
 
 
-def http_json(url: str, timeout: int = 60) -> dict | None:
+def http_json(url: str, timeout: int = 60, retries: int = 3) -> dict | None:
     request = urllib.request.Request(url, headers={"User-Agent": "sar-tracker/3.0"})
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        log(f"HTTP {exc.code}: {url[:120]}")
-    except Exception as exc:
-        log(f"Request failed: {exc}")
+    for attempt in range(1, retries + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            log(f"HTTP {exc.code}: {url[:120]}")
+            return None
+        except Exception as exc:
+            log(f"Request failed (attempt {attempt}/{retries}): {exc}")
     return None
 
 
@@ -69,25 +71,23 @@ def chunk_range(start: datetime, end: datetime, days: int) -> list[tuple[datetim
     return chunks
 
 
+def _empty_catalog() -> dict:
+    return {
+        "version": __version__,
+        "updated_at": "",
+        "last_successful_fetch": "",
+        "bootstrap_completed": False,
+        "frames": [],
+    }
+
+
 def load_catalog() -> dict:
     if not CATALOG_FILE.exists() or FORCE_FULL_REBUILD:
-        return {
-            "version": __version__,
-            "updated_at": "",
-            "last_successful_fetch": "",
-            "bootstrap_completed": False,
-            "frames": [],
-        }
+        return _empty_catalog()
     try:
         return json.loads(CATALOG_FILE.read_text(encoding="utf-8"))
     except Exception:
-        return {
-            "version": __version__,
-            "updated_at": "",
-            "last_successful_fetch": "",
-            "bootstrap_completed": False,
-            "frames": [],
-        }
+        return _empty_catalog()
 
 
 def save_catalog(payload: dict) -> None:
@@ -261,6 +261,42 @@ def fetch_asf_frames(s1_start: datetime, nisar_start: datetime, end: datetime, b
     return [process_asf_feature(feature) for feature in [*sentinel, *nisar]]
 
 
+def _process_copernicus_item(item: dict) -> dict:
+    attrs = {attr["Name"]: attr.get("Value", "") for attr in item.get("Attributes", [])}
+    name = str(item.get("Name", ""))
+    platform = name.split("_")[0]
+    direction = normalize_direction(attrs.get("orbitDirection", ""))
+    path_number = safe_int(attrs.get("relativeOrbitNumber"))
+    product_id = item.get("Id", "")
+    download_url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else ""
+    product_type = infer_product_type(name)
+    return {
+        "source": "Copernicus",
+        "granule": name.replace(".SAFE", ""),
+        "platform": platform,
+        "sensor": "C-SAR",
+        "date": item.get("ContentDate", {}).get("Start", ""),
+        "stop_time": item.get("ContentDate", {}).get("End", ""),
+        "mode": name.split("_")[1] if "_" in name else "",
+        "polarization": attrs.get("polarisationChannels", ""),
+        "orbit": attrs.get("relativeOrbitNumber", ""),
+        "path_number": attrs.get("relativeOrbitNumber", ""),
+        "frame_number": attrs.get("frameNumber", ""),
+        "direction": direction,
+        "product_type": product_type,
+        "processing_level": product_type,
+        "footprint": wkt_to_geojson(item.get("GeoFootprint") or item.get("Footprint")),
+        "asf_url": "",
+        "asf_meta_url": asf_metadata_url(name),
+        "download_url": download_url,
+        "copernicus_url": download_url,
+        "browse_url": "",
+        "file_size_mb": round((item.get("ContentLength") or 0) / 1_000_000, 1),
+        "satellite_id": platform,
+        "track_label": track_label(platform, direction, path_number),
+    }
+
+
 def fetch_copernicus_frames(start: datetime, end: datetime, bootstrap: bool) -> list[dict]:
     log("Fetching Copernicus Sentinel-1 inventory")
     frames: list[dict] = []
@@ -282,39 +318,17 @@ def fetch_copernicus_frames(start: datetime, end: datetime, bootstrap: bool) -> 
         if not payload or "value" not in payload:
             continue
 
+        next_url: str | None = None
         for item in payload["value"]:
-            attrs = {attr["Name"]: attr.get("Value", "") for attr in item.get("Attributes", [])}
-            platform = str(item.get("Name", "")).split("_")[0]
-            direction = normalize_direction(attrs.get("orbitDirection", ""))
-            path_number = safe_int(attrs.get("relativeOrbitNumber"))
-            product_id = item.get("Id", "")
-            frames.append(
-                {
-                    "source": "Copernicus",
-                    "granule": str(item.get("Name", "")).replace(".SAFE", ""),
-                    "platform": platform,
-                    "sensor": "C-SAR",
-                    "date": item.get("ContentDate", {}).get("Start", ""),
-                    "stop_time": item.get("ContentDate", {}).get("End", ""),
-                    "mode": str(item.get("Name", "")).split("_")[1] if "_" in str(item.get("Name", "")) else "",
-                    "polarization": attrs.get("polarisationChannels", ""),
-                    "orbit": attrs.get("relativeOrbitNumber", ""),
-                    "path_number": attrs.get("relativeOrbitNumber", ""),
-                    "frame_number": attrs.get("frameNumber", ""),
-                    "direction": direction,
-                    "product_type": infer_product_type(item.get("Name", "")),
-                    "processing_level": infer_product_type(item.get("Name", "")),
-                    "footprint": wkt_to_geojson(item.get("GeoFootprint") or item.get("Footprint")),
-                    "asf_url": "",
-                    "asf_meta_url": asf_metadata_url(item.get("Name", "")),
-                    "download_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
-                    "copernicus_url": f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value" if product_id else "",
-                    "browse_url": "",
-                    "file_size_mb": round((item.get("ContentLength") or 0) / 1_000_000, 1),
-                    "satellite_id": platform,
-                    "track_label": track_label(platform, direction, path_number),
-                }
-            )
+            frames.append(_process_copernicus_item(item))
+        next_url = payload.get("@odata.nextLink")
+        while next_url:
+            payload = http_json(next_url, timeout=90)
+            if not payload or "value" not in payload:
+                break
+            for item in payload["value"]:
+                frames.append(_process_copernicus_item(item))
+            next_url = payload.get("@odata.nextLink")
     log(f"Copernicus Sentinel-1 products: {len(frames)}")
     return frames
 
@@ -416,7 +430,7 @@ def merge_frames(frames: list[dict]) -> list[dict]:
         current["frame_number"] = current.get("frame_number") or frame.get("frame_number")
         current["path_number"] = current.get("path_number") or frame.get("path_number")
         current["direction"] = current.get("direction") or frame.get("direction")
-        current["asf_meta_url"] = current.get("asf_url") or current.get("asf_meta_url") or asf_metadata_url(current.get("granule", ""))
+        current["asf_meta_url"] = current.get("asf_meta_url") or asf_metadata_url(current.get("granule", ""))
     merged_frames = sorted(merged.values(), key=lambda item: item.get("date", ""), reverse=True)
     return sorted(backfill_from_asf_metadata(merged_frames), key=lambda item: item.get("date", ""), reverse=True)
 
@@ -426,7 +440,7 @@ def write_meta4(frames: list[dict], target: Path, source: str) -> None:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<metalink xmlns="urn:ietf:params:xml:ns:metalink">',
-        f'  <!-- generated {datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")} -->',
+        f'  <!-- generated {datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")} -->',
         f'  <!-- {len(selected)} scenes -->',
     ]
     for frame in selected:
@@ -482,7 +496,7 @@ def main() -> int:
         "updated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
         "last_successful_fetch": now.isoformat(),
         "bootstrap_completed": True,
-        "bootstrap_started_at": catalog.get("bootstrap_started_at") or (s1_start.isoformat() if bootstrap else catalog.get("bootstrap_started_at")),
+        "bootstrap_started_at": catalog.get("bootstrap_started_at") or (s1_start.isoformat() if bootstrap else None),
         "incremental_overlap_days": INCREMENTAL_OVERLAP_DAYS,
         "frames": all_frames,
     }

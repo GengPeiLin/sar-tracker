@@ -291,7 +291,7 @@ const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_STEPS   = [2, 4, 6, 8];
 const FONT_SIZE_OPTIONS = new Set(FONT_SIZE_STEPS.map(String));
-const APP_VERSION = 'v0.7.1';
+const APP_VERSION = 'v0.8.0';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
