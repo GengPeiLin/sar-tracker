@@ -1,7 +1,9 @@
 name: Deploy static content to Pages
 
 on:
-  workflow_dispatch: # manual-only; automatic deploy is handled by update.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
