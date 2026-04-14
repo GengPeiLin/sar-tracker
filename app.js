@@ -266,6 +266,30 @@ function toggleLang() {
   setLang(state.lang === 'en' ? 'zh-TW' : 'en');
 }
 
+const TITLE_FONTS = [
+  { family: 'IBM Plex Mono', weight: 600, spacing: '3px',   transform: 'none' },
+  { family: 'Orbitron',      weight: 700, spacing: '1px',   transform: 'uppercase' },
+  { family: 'Space Grotesk', weight: 700, spacing: '0.5px', transform: 'none' },
+  { family: 'Chakra Petch',  weight: 600, spacing: '2px',   transform: 'none' },
+  { family: 'Bebas Neue',    weight: 400, spacing: '2px',   transform: 'uppercase' },
+  { family: 'Rajdhani',      weight: 700, spacing: '2px',   transform: 'none' },
+];
+function applyTitleFont() {
+  const logo = document.querySelector('.hdr-logo');
+  if (!logo) return;
+  const idx = Number(localStorage.getItem('titleFont') || 0) % TITLE_FONTS.length;
+  const f = TITLE_FONTS[idx];
+  logo.style.fontFamily = `'${f.family}', sans-serif`;
+  logo.style.fontWeight = f.weight;
+  logo.style.letterSpacing = f.spacing;
+  logo.style.textTransform = f.transform;
+}
+function cycleTitleFont() {
+  const idx = (Number(localStorage.getItem('titleFont') || 0) + 1) % TITLE_FONTS.length;
+  localStorage.setItem('titleFont', idx);
+  applyTitleFont();
+}
+
 function updateMobDbBadge(version) {
   const badge = document.getElementById('mob-db-ts');
   if (!badge || !version || !/^\d{8}T/.test(version)) return;
@@ -600,7 +624,12 @@ function bindAppearanceControls() {
 function setupReadableUI() {
   document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
-  if (logo) logo.innerHTML = `SAR <em>·</em> Tracker <span class="hdr-version">${APP_VERSION}</span>`;
+  if (logo) {
+    logo.innerHTML = `SAR Tracker <span class="hdr-version">${APP_VERSION}</span>`;
+    logo.style.cursor = 'pointer';
+    logo.onclick = cycleTitleFont;
+    applyTitleFont();
+  }
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
