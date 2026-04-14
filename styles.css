@@ -181,24 +181,34 @@ header {
 }
 .hdr-tabs { display: none; }
 
-.lang-btn {
+.lang-switcher {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.lang-opt {
   font-family: var(--mono);
   font-size: calc(10px + var(--font-bump) - 2px);
   font-weight: 600;
-  letter-spacing: 1px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 3px 9px;
+  border: none;
   background: transparent;
-  color: var(--fg);
+  color: var(--muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
-.lang-btn:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+.lang-opt + .lang-opt {
+  border-left: 1px solid var(--border);
+}
+.lang-opt.active {
+  background: var(--cyan);
+  color: var(--bg);
+}
+.lang-opt:not(.active):hover {
+  background: var(--surface);
+  color: var(--text);
 }
 
 .control-field {

@@ -255,16 +255,21 @@ function getSatDesc(sat) {
   return (state?.lang === 'zh-TW' && sat.desc_zh) ? sat.desc_zh : sat.desc;
 }
 
-function toggleLang() {
-  state.lang = state.lang === 'en' ? 'zh-TW' : 'en';
-  localStorage.setItem('lang', state.lang);
-  document.documentElement.lang = state.lang;
+function setLang(lang) {
+  state.lang = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
   applyI18n();
 }
 
+function toggleLang() {
+  setLang(state.lang === 'en' ? 'zh-TW' : 'en');
+}
+
 function applyI18n() {
-  const btn = document.getElementById('lang-toggle');
-  if (btn) btn.textContent = state.lang === 'en' ? '中文' : 'EN';
+  document.querySelectorAll('.lang-opt').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === state.lang);
+  });
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
@@ -568,13 +573,13 @@ function setupReadableUI() {
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
-    hdrStatus.innerHTML = `Updated: <b id="hdr-time">--</b>&nbsp;|&nbsp;ASF DAAC &amp; Copernicus CDSE&nbsp;|&nbsp;${APP_VERSION}`;
+    hdrStatus.innerHTML = `<span data-i18n="updated">${t('updated')}</span> <b id="hdr-time">--</b>&nbsp;|&nbsp;ASF DAAC &amp; Copernicus CDSE&nbsp;|&nbsp;${APP_VERSION}`;
   }
 
   syncViewModeControl();
 
   const sbHead = document.querySelector('.sb-head h2');
-  if (sbHead) sbHead.textContent = 'SAR Satellites';
+  if (sbHead) sbHead.textContent = t('sat-fleet');
   const sbCount = document.getElementById('sb-count');
   if (sbCount && !state.rawFrames.length) sbCount.textContent = t('waiting-inventory');
 
@@ -2111,8 +2116,9 @@ function openFrameDrawer(clickedFrame) {
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   document.documentElement.lang = state.lang;
-  const langBtn = document.getElementById('lang-toggle');
-  if (langBtn) langBtn.textContent = state.lang === 'en' ? '中文' : 'EN';
+  document.querySelectorAll('.lang-opt').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === state.lang);
+  });
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   applyAppearanceSettings();
   syncAppearanceControls();
