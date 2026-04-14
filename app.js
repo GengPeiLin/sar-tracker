@@ -579,11 +579,11 @@ function bindAppearanceControls() {
 function setupReadableUI() {
   document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
-  if (logo) logo.innerHTML = `SAR <em>Tracker</em> <span style="font-size:11px;color:var(--muted);letter-spacing:1px;">${APP_VERSION}</span>`;
+  if (logo) logo.innerHTML = `SAR <em>·</em> Tracker`;
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
-    hdrStatus.innerHTML = `<b id="hdr-time">--</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
+    hdrStatus.innerHTML = `${APP_VERSION}&nbsp;·&nbsp;<b id="hdr-time">database: --</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
   }
 
   syncViewModeControl();
@@ -814,7 +814,7 @@ async function loadData() {
     const data = await response.json();
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
 
-    document.getElementById('hdr-time').textContent = data.version || data.updated_at || '--';
+    document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
     state.baseStats = data;
     state.rawFrames = reconcileFrameMetadata(
       data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
