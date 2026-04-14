@@ -1166,8 +1166,9 @@ header {
   letter-spacing: 1px;
 }
 
-/* mob-tabs only visible on mobile */
-.mob-tabs { display: none; }
+/* mob-tabs and mob-db-ts only visible on mobile */
+.mob-tabs  { display: none; }
+.mob-db-ts { display: none; }
 
 /* ═══ VERTICAL / PORTRAIT DESKTOP ══════════════════════════════════════════ */
 @media (min-width: 900px) and (max-aspect-ratio: 4/3) {
@@ -1244,6 +1245,21 @@ header {
   }
   .hdr-sep, .hdr-status, .hdr-controls, .hdr-tabs { display: none; }
   .hdr-logo { flex: 1; min-width: 0; }
+  .mob-db-ts {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    padding: 3px 7px;
+    border: 1px solid currentColor;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    opacity: .75;
+  }
+  .mob-db-ts.fresh  { color: var(--green);  opacity: 1; }
+  .mob-db-ts.recent { color: var(--amber);  opacity: 1; }
+  .mob-db-ts.stale  { color: var(--orange); opacity: 1; }
 
   /* ── layout: stacking context ── */
   .layout { flex: 1; position: relative; overflow: hidden; display: block; }

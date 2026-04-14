@@ -266,6 +266,19 @@ function toggleLang() {
   setLang(state.lang === 'en' ? 'zh-TW' : 'en');
 }
 
+function updateMobDbBadge(version) {
+  const badge = document.getElementById('mob-db-ts');
+  if (!badge || !version || !/^\d{8}T/.test(version)) return;
+  const dbDate  = version.slice(0, 8); // "20260414"
+  const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
+  const today = fmt(new Date());
+  const yesterday = fmt(new Date(Date.now() - 86400000));
+  const label = `${dbDate.slice(0,4)}-${dbDate.slice(4,6)}-${dbDate.slice(6,8)}`;
+  badge.textContent = label;
+  badge.className = 'mob-db-ts ' +
+    (dbDate === today ? 'fresh' : dbDate === yesterday ? 'recent' : 'stale');
+}
+
 function setMobTab(tab, btn) {
   document.body.dataset.mobTab = tab;
   document.querySelectorAll('.mob-tab').forEach(b =>
@@ -823,6 +836,7 @@ async function loadData() {
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
 
     document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
+    updateMobDbBadge(data.version);
     state.baseStats = data;
     state.rawFrames = reconcileFrameMetadata(
       data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
