@@ -1291,9 +1291,41 @@ header {
   body[data-mob-tab="filters"] .mobile-feed { display: none; }
   body[data-mob-tab="filters"] .filter-panel { display: block; }
 
-  /* ── MAP tab: hide overlays, drawer becomes bottom sheet ── */
-  .map-stats, .map-legend, .dl-bar { display: none !important; }
+  /* ── MAP tab: hide overlays except stats; drawer = bottom sheet ── */
+  .map-legend, .dl-bar { display: none !important; }
   .mobile-feed { display: none; }
+
+  /* stat strip — compact in-flow bar above the map */
+  .map-stats {
+    position: relative;
+    top: auto; left: auto;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border2);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    pointer-events: none;
+    flex-shrink: 0;
+    backdrop-filter: none;
+    transition: none;
+  }
+  .map-wrap:has(.drawer.open) .map-stats { max-width: none; }
+  .stat-card {
+    flex: 1;
+    border: none;
+    border-right: 1px solid var(--border2);
+    padding: 5px 10px;
+    background: transparent;
+    backdrop-filter: none;
+    min-width: 0;
+  }
+  .stat-card:last-child { border-right: none; }
+  .stat-card .lbl   { font-size: 7px; letter-spacing: 0.5px; }
+  .stat-card .val   { font-size: 15px; }
+  .stat-card .val.small { font-size: 9px; padding-top: 2px; }
 
   .drawer {
     position: absolute;
