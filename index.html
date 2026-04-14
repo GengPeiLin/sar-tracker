@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="styles.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
-<body>
+<body data-mob-tab="map">
 
 <div id="loading">
   <div class="ld-txt">SAR · TRACKER</div>
@@ -191,6 +191,21 @@
 
   </div><!-- .map-wrap -->
 </div><!-- .layout -->
+
+<nav class="mob-tabs" id="mob-tabs">
+  <button class="mob-tab active" data-tab="map"     onclick="setMobTab('map',this)">
+    <span class="mob-tab-icon">◉</span>
+    <span>Map</span>
+  </button>
+  <button class="mob-tab"        data-tab="list"    onclick="setMobTab('list',this)">
+    <span class="mob-tab-icon">☰</span>
+    <span>List</span>
+  </button>
+  <button class="mob-tab"        data-tab="filters" onclick="setMobTab('filters',this)">
+    <span class="mob-tab-icon">⚙</span>
+    <span>Filters</span>
+  </button>
+</nav>
 
 <script src="app.js"></script>
 </body>

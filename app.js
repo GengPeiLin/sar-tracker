@@ -266,6 +266,14 @@ function toggleLang() {
   setLang(state.lang === 'en' ? 'zh-TW' : 'en');
 }
 
+function setMobTab(tab, btn) {
+  document.body.dataset.mobTab = tab;
+  document.querySelectorAll('.mob-tab').forEach(b =>
+    b.classList.toggle('active', b === btn || b.dataset.tab === tab)
+  );
+  if (tab === 'map' && state.map) setTimeout(() => state.map.invalidateSize(), 50);
+}
+
 function applyI18n() {
   const sw = document.getElementById('lang-switch');
   if (sw) sw.classList.toggle('zh', state.lang === 'zh-TW');
