@@ -573,8 +573,7 @@ function bindAppearanceControls() {
     renderFrames();
   });
 
-  document.getElementById('size-dec')?.addEventListener('click', () => stepFontSize(-1));
-  document.getElementById('size-inc')?.addEventListener('click', () => stepFontSize(1));
+  // size-dec / size-inc use onclick in HTML
 }
 
 function setupReadableUI() {

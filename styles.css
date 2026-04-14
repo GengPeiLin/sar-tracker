@@ -249,24 +249,26 @@ header {
 
 .size-stepper {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   border: 1px solid var(--border2);
   background: var(--card);
   min-width: 104px;
 }
 .size-step {
-  flex-shrink: 0;
-  width: 28px;
+  padding: 5px 8px;
   border: none;
   background: transparent;
   color: var(--cyan);
   font-family: var(--mono);
-  font-size: calc(14px + var(--font-bump) - 2px);
-  line-height: 1;
-  padding: 4px 0;
+  font-size: calc(10px + var(--font-bump) - 1px);
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.12s;
+  display: flex;
+  align-items: center;
 }
+.size-step:first-child { border-right: 1px solid var(--border2); }
+.size-step:last-child  { border-left:  1px solid var(--border2); }
 .size-step:hover:not(:disabled) { background: rgba(0,229,255,.1); }
 .size-step:disabled { color: var(--muted); cursor: default; }
 .size-val {
@@ -277,6 +279,9 @@ header {
   font-weight: 700;
   color: var(--text-hi);
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 
