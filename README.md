@@ -1,224 +1,113 @@
 # SAR Tracker
 
-SAR Tracker is a static GitHub Pages app for monitoring SAR acquisitions over Taiwan. It combines a Leaflet-based frontend in `index.html`, a Python data-generation script in `fetch_sar_data.py`, and scheduled deployment through `.github/workflows/update.yml`.
-
-## Current Status
-
-The project is usable and deployable, and the recent work focused on making the UI clearer while keeping the current single-file frontend architecture intact.
-
-### Completed Recently
-
-- Moved time shortcuts into the left filter area with `This Week` and `This Month`
-- Removed the old top-right mode buttons
-- Moved the satellite context card to the top-right map area
-- Moved the legend to the lower-left and made it react to current visible data
-- Reworked the bottom download bar into a lighter `Export` entry instead of a permanently dominant toolbar
-- Widened and cleaned up the right-side detail drawer
-- Added automatic map focus behavior for filtered data and selected frames
-- Added product-filter summary behavior and reduced left-panel clutter
-- Added safer metadata reconciliation logic so nearby records can fill missing `frame_number_norm` and `asf_url` when a valid local match exists
-- Added automatic wrapping for long file titles in the right-side drawer
-- Removed the non-functional filter summary pills such as `All Satellites`, date range, `DESCENDING`, and `All tracks`
+A static GitHub Pages dashboard for monitoring Sentinel-1, NISAR, and other SAR satellite acquisitions over Taiwan. Data is fetched from ASF DAAC and Copernicus CDSE, updated daily by a GitHub Actions workflow, and served as a Leaflet map with filtering and download support.
 
 ## Repository Structure
 
-```text
-SAR_data_monitor/
-|-- .github/
-|   `-- workflows/
-|       `-- update.yml
-|-- data/
-|   |-- sar_status.json
-|   |-- asf_taiwan.meta4
-|   |-- copernicus_taiwan.meta4
-|   `-- catalog_db.json
-|-- fetch_sar_data.py
-|-- index.html
-`-- README.md
 ```
+sar-tracker/
+├── .github/
+│   └── workflows/
+│       ├── update.yml        # daily data refresh + Pages deploy
+│       └── deploy-pages.yml  # manual-only Pages deploy
+├── data/
+│   ├── sar_status.json       # merged frame catalog (frontend reads this)
+│   ├── asf_taiwan.meta4      # metalink download manifest (ASF)
+│   └── copernicus_taiwan.meta4  # metalink download manifest (Copernicus)
+├── app.js                    # all frontend JavaScript
+├── styles.css                # all frontend CSS
+├── index.html                # HTML structure only (~192 lines)
+├── fetch_sar_data.py         # data pipeline script
+└── README.md
+```
+
+`data/catalog_db.json` (internal cache) is gitignored.
 
 ## How It Works
 
 ### Frontend
 
-`index.html` is a self-contained application. It currently handles:
+The frontend is split across three files:
 
-- map rendering with Leaflet
-- filter state
-- satellite list rendering
-- detail drawer rendering
-- export button state
-- legend and context updates
-- data-source reconciliation at display time
+- `index.html` — HTML structure and external resource links
+- `styles.css` — all CSS including four switchable themes
+- `app.js` — satellite database, state, filters, map, drawer, export logic
+
+It loads `data/sar_status.json` on startup and renders an interactive Leaflet map with a satellite list sidebar, filter panel, detail drawer, and export bar.
 
 ### Data Pipeline
 
-`fetch_sar_data.py` generates the data consumed by the frontend and writes:
+`fetch_sar_data.py` (v0.7.1) runs on GitHub Actions and writes:
 
-- `data/sar_status.json`
-- `data/asf_taiwan.meta4`
-- `data/copernicus_taiwan.meta4`
+- `data/sar_status.json` — merged frame metadata from both sources
+- `data/asf_taiwan.meta4` — ASF metalink manifest
+- `data/copernicus_taiwan.meta4` — Copernicus metalink manifest
 
-The frontend mainly reads `data/sar_status.json`, especially the `taiwan_frames` array.
+It queries the ASF Search API and Copernicus OData API for Sentinel-1 and NISAR frames intersecting Taiwan, then merges and deduplicates results. Incremental updates use a configurable overlap window to avoid missing frames near the last-fetch boundary.
+
+Environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DAYS_BACK` | 3 | Days to query from today |
+| `INCREMENTAL_OVERLAP_DAYS` | 2 | Days to recheck around last fetch |
+| `FORCE_FULL_REBUILD` | false | Rebuild complete catalog from scratch |
+| `MAX_RESULTS` | 1000 | Max results per API query |
 
 ### Deployment
 
-`.github/workflows/update.yml` updates the data outputs and deploys the site to GitHub Pages.
+`update.yml` runs daily at 02:00 UTC (10:00 Taiwan time), updates the data files, commits them to `main`, and deploys to GitHub Pages. A manual trigger is also available via `workflow_dispatch`.
+
+`deploy-pages.yml` is manual-only and can be used to redeploy without a data update.
 
 ## Local Usage
 
-Run the data script:
+Run the data pipeline:
 
 ```bash
 python fetch_sar_data.py
 ```
 
-Run with a limited lookback window:
+With options:
 
 ```bash
 DAYS_BACK=14 python fetch_sar_data.py
+FORCE_FULL_REBUILD=true python fetch_sar_data.py
 ```
 
-For frontend-only changes, edit `index.html`, commit, and let GitHub Pages redeploy through the workflow.
+For frontend changes, edit `app.js` or `styles.css` and open `index.html` in a browser. No build step required. To deploy, commit and push to `main` — the next scheduled run will redeploy, or trigger `deploy-pages.yml` manually.
 
 ## Versioning
 
-- Bump `APP_VERSION` in [index.html](c:/Users/saris56/work/SAR_data_monitor/index.html) for every user-visible change
-- Keep the browser tab title version-free; the version should appear in the in-page header only
-- Treat `APP_VERSION` and `data/sar_status.json` `version` as different things:
-  - `APP_VERSION` is the frontend/app version
-  - `data.version` is the generated dataset version
+- `APP_VERSION` in `app.js` is the frontend version, shown in the page header
+- `data.version` in `sar_status.json` is the data pipeline version
+- They are independent — bump `APP_VERSION` for any user-visible frontend change
 
-## Progress Summary
+## Satellite Coverage
 
-### UI Progress
+The sidebar shows SAR satellites grouped by status:
 
-The UI is noticeably cleaner than before:
+- **Featured open missions** — active satellites with open data: Sentinel-1A, Sentinel-1C, Sentinel-1D, NISAR
+- **Other SAR missions** — commercial, restricted-access, and retired satellites (collapsed by default)
 
-- the highest-friction controls were regrouped
-- redundant summary badges were removed
-- the map is given more visual priority
-- the right drawer is more readable
-- export actions are less intrusive
+Retired satellites (including Sentinel-1B, retired 2022-08-23) appear in "Other SAR missions" when historical data is in view, never in the featured group.
 
-### Data Handling Progress
+## Known Limitations
 
-The frontend now tries to reconcile incomplete records more carefully. When the local dataset contains matching entries for the same event, missing frame numbers and ASF URLs can be filled into the selected view.
+- Some frames are Copernicus-only with no matched ASF record. The merge logic is conservative — it will not link an ASF record from a different acquisition date to fill a missing field.
+- No automated browser tests. UI changes should be validated manually against the QA checklist below.
 
-## Remaining Problems
+## QA Checklist
 
-The project still has structural and data-quality limits that should be treated explicitly.
+Before shipping a UI change:
 
-### 1. `index.html` still contains duplicated logic
-
-There are multiple definitions of functions such as `openFrameDrawer()` and render helpers inside the same file. The last definition wins at runtime, which makes the code fragile and difficult to maintain.
-
-Impact:
-
-- edits can accidentally target an older inactive implementation
-- regressions are easy to introduce
-- behavior is harder to reason about during debugging
-
-### 2. Some local data records are incomplete by source
-
-The UI cannot invent an ASF link or frame number when the local dataset does not contain a valid corresponding ASF record.
-
-Confirmed example:
-
-- `S1A / path 105 / DESCENDING / SLC / 2026-03-31` appears in local Copernicus data
-- the nearest local ASF candidate is about 12 days away
-- because it is not the same acquisition event, it should not be merged
-
-Impact:
-
-- some drawer entries correctly remain Copernicus-only
-- users may interpret this as a UI error unless the interface explains it clearly
-
-### 3. Legacy text and encoding residue still exist
-
-Some old strings and comments in `index.html` still contain garbled characters from previous encoding issues.
-
-Impact:
-
-- source readability is reduced
-- future copy edits are riskier
-
-### 4. No browser-based regression verification yet
-
-Recent work has been validated by source inspection and local data checks, but not by automated browser tests.
-
-Impact:
-
-- layout edge cases may still exist on some viewport sizes
-- interaction regressions can slip through
-
-### 5. Frontend state is still centralized in one large file
-
-Rendering, filtering, map state, drawer state, and export state are all tightly coupled.
-
-Impact:
-
-- small changes have wide blast radius
-- onboarding is slower
-
-## Recommended Next Steps
-
-### Priority 1: Stabilize User-Facing Truth
-
-1. In the right drawer, explicitly label entries as:
-   - `ASF + Copernicus`
-   - `Copernicus only`
-   - `ASF only`
-2. When `frame_number_norm` is unavailable, show a clear reason such as `No matched ASF frame metadata in local dataset`
-3. Keep the current conservative merge rule. Do not merge across days just to fill missing fields.
-
-### Priority 2: Remove Dead and Duplicate Frontend Paths
-
-1. Deduplicate repeated functions in `index.html`
-2. Keep only one active implementation for:
-   - data loading
-   - frame rendering
-   - drawer rendering
-   - export panel updates
-3. Add short comments at the real active implementation boundaries
-
-### Priority 3: Improve Maintainability
-
-1. Split `index.html` into:
-   - `index.html`
-   - `styles.css`
-   - `app.js`
-2. Move static configuration such as satellite metadata into a dedicated module
-3. Normalize text language and encoding in the source
-
-### Priority 4: Add Lightweight Verification
-
-1. Add a small fixture dataset for frontend-only checks
-2. Add a script that verifies required fields in generated JSON
-3. Add a manual QA checklist for:
-   - desktop layout
-   - mobile layout
-   - D105 descending drawer behavior
-   - export button behavior
-   - legend updates
-
-## Suggested QA Checklist
-
-Before shipping future UI changes, verify:
-
-1. Left filters fit in one screen on common desktop widths without unnecessary scrolling
-2. The map auto-focuses correctly when filters change
-3. The legend reflects the selected or visible dataset
-4. The right drawer wraps long titles and remains readable
-5. A known `D105 DESCENDING` Copernicus-only record does not falsely show an ASF link
-6. Export actions open, close, and disable correctly
-
-## Notes for Future Contributors
-
-- When editing `index.html`, search for duplicate function names before changing logic
-- Treat the last function definition as the active one unless the file is refactored
-- Validate data-source claims against `data/sar_status.json`, not assumptions from the UI
-- Prefer explicit absence messaging over aggressive fallback inference
+- [ ] Left filter panel fits on common desktop widths without unnecessary scroll
+- [ ] Map auto-focuses correctly when filters change
+- [ ] Legend reflects the current visible dataset
+- [ ] Detail drawer wraps long titles and stays readable
+- [ ] A known Copernicus-only frame does not falsely show an ASF link
+- [ ] Export panel opens, closes, and disables correctly
+- [ ] Sentinel-1B does not appear in "Featured open missions"
 
 ## License
 

@@ -104,7 +104,7 @@ const SATS = [
 ];
 
 // ── 顏色映射 ──────────────────────────────────────────────────────────────
-const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'S1B', 'NISAR']);
+const FEATURED_SATELLITES = new Set(['S1A', 'S1C', 'S1D', 'NISAR']);
 const OPEN_DATA_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D', 'NISAR']);
 const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
