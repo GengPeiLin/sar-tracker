@@ -1,9 +1,7 @@
 name: Deploy static content to Pages
 
 on:
-  push:
-    branches: ["main", "master"] # 當推送至 main 或 master 分支時觸發
-  workflow_dispatch: # 允許手動觸發
+  workflow_dispatch: # manual-only; automatic deploy is handled by update.yml
 
 permissions:
   contents: read

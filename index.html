@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -1403,7 +1403,7 @@ header {
 
     <!-- detail drawer -->
     <div class="drawer" id="drawer">
-      <button class="drawer-close" onclick="closeDrawer()">✕ 關閉</button>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
       <div class="d-name"   id="d-name"></div>
       <div class="d-agency" id="d-agency"></div>
       <div id="d-week-wrap"></div>
@@ -1684,89 +1684,6 @@ function ldmsg(t) {
   if (el) el.textContent = t;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RENDER SATELLITE LIST
-// ═══════════════════════════════════════════════════════════════════════════
-function renderSatList() {
-  const list = document.getElementById('sat-list');
-  list.innerHTML = '';
-
-  // Which satellites had Taiwan frames this week?
-  const activePlatforms = new Set(state.frames.map(f => (f.platform||'').toUpperCase().slice(0,4)));
-
-  const filtered = SATS.filter(s => {
-    if (state.band !== 'ALL' && s.band !== state.band) return false;
-    if (state.tab === 'op'  && s.status === 'ret') return false;
-    if (state.tab === 'tw') {
-      // show only sats with frames this week
-      return hasThisWeek(s, activePlatforms);
-    }
-    return true;
-  });
-
-  const groups = [
-    { key:'op',  label:'● 現役衛星' },
-    { key:'ret', label:'○ 歷史任務' },
-  ];
-
-  let total = 0;
-  for (const g of groups) {
-    const sats = filtered.filter(s => s.status === g.key);
-    if (!sats.length) continue;
-    const gl = document.createElement('div');
-    gl.className = 'group-label';
-    gl.textContent = g.label;
-    list.appendChild(gl);
-
-    for (const sat of sats) {
-      total++;
-      const thisWeek = hasThisWeek(sat, activePlatforms);
-      const row = document.createElement('div');
-      row.className = 'sat-row' + (state.selectedSat?.id === sat.id ? ' active' : '');
-      row.onclick = () => openDrawer(sat, row, thisWeek);
-
-      row.innerHTML = `
-        <div class="dot ${sat.status}"></div>
-        <div class="sat-info">
-          <div class="sat-name">${sat.name}</div>
-          <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired?' – '+sat.retired.slice(0,4):''} · ${sat.res}</div>
-        </div>
-        <div class="badges">
-          ${thisWeek ? '<span class="this-week">本週</span>' : ''}
-          <span class="badge b${sat.band}">${sat.band}</span>
-        </div>`;
-      list.appendChild(row);
-    }
-  }
-
-  document.getElementById('sb-count').textContent = `顯示 ${total} 顆衛星`;
-}
-
-function hasThisWeek(sat, activePlatforms) {
-  for (const pfx of sat.asf_prefix||[]) {
-    if (activePlatforms.has(pfx.toUpperCase().slice(0,4))) return true;
-  }
-  return false;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// STATS
-// ═══════════════════════════════════════════════════════════════════════════
-function updateStats(d) {
-  document.getElementById('st-frames').textContent = d.total_frames ?? state.frames.length;
-  const sats = new Set(state.frames.map(f => f.platform));
-  document.getElementById('st-sats').textContent   = sats.size;
-
-  const s = new Date(d.query_start||Date.now()-7*864e5);
-  const e = new Date(d.query_end  ||Date.now());
-  const f = d => `${d.getMonth()+1}/${d.getDate()}`;
-  document.getElementById('st-period').textContent = `${f(s)} – ${f(e)}`;
-
-  const asf = (d.asf_count ?? state.frames.filter(x=>x.source==='ASF').length);
-  const cop = (d.copernicus_count ?? state.frames.filter(x=>x.source==='Copernicus').length);
-  document.getElementById('dl-info').textContent = `ASF ${asf} · Copernicus ${cop} 幀`;
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 function closeDrawer() {
@@ -2456,47 +2373,6 @@ function applyAdvancedFilters() {
   updateDownloadButtons();
 }
 
-function renderSatList() {
-  ensureAdvancedState();
-  const list = document.getElementById('sat-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  const filteredSats = SATS.filter(matchesSidebarFilters);
-  const featured = filteredSats.filter(isFeaturedSatellite);
-  const folded = filteredSats.filter(sat => !isFeaturedSatellite(sat));
-
-  let total = 0;
-  for (const group of groups) {
-    const sats = filteredSats.filter(sat => sat.status === group.key);
-    if (!sats.length) continue;
-    const label = document.createElement('div');
-    label.className = 'group-label';
-    label.textContent = group.label;
-    list.appendChild(label);
-
-    for (const sat of sats) {
-      total++;
-      const count = state.rawFrames.filter(frame => frame.satellite_id === sat.id).length;
-      const row = document.createElement('div');
-      row.className = 'sat-row' + (state.filters.satellite === sat.id ? ' active' : '');
-      row.onclick = () => selectSatellite(sat, row);
-      row.innerHTML = `
-        <div class="dot ${sat.status}"></div>
-        <div class="sat-info">
-          <div class="sat-name">${sat.name}</div>
-          <div class="sat-meta">${sat.agency} · ${sat.launched.slice(0,4)}${sat.retired ? ` - ${sat.retired.slice(0,4)}` : ''} · ${count} frames</div>
-        </div>
-        <div class="badges">
-          ${state.rawFrames.some(frame => satMatchesFrame(sat, frame)) ? '<span class="this-week">THIS WEEK</span>' : ''}
-          <span class="badge b${sat.band}">${sat.band}</span>
-        </div>`;
-      list.appendChild(row);
-    }
-  }
-  document.getElementById('sb-count').textContent = `${total} satellites listed`;
-}
-
 function selectSatellite(sat, row) {
   ensureAdvancedState();
   state.selectedSat = sat;
@@ -2642,56 +2518,6 @@ function renderMobileFeed() {
     </div>
     ${body}
   `;
-}
-
-function estimateNextExpected() {
-  const grouped = new Map();
-  for (const frame of state.filteredFrames) {
-    if (!frame.date) continue;
-    const timestamp = new Date(frame.date).getTime();
-    if (!Number.isFinite(timestamp)) continue;
-    const key = [
-      frame.satellite_id,
-      frame.direction_norm,
-      frame.path_number || 'NA',
-      frame.frame_number_norm ?? 'NA',
-    ].join('|');
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(timestamp);
-  }
-
-  const candidates = [];
-  for (const [key, values] of grouped.entries()) {
-    const uniq = [...new Set(values)].sort((a, b) => a - b);
-    if (uniq.length < 2) continue;
-    const intervals = [];
-    for (let i = 1; i < uniq.length; i++) {
-      intervals.push((uniq[i] - uniq[i - 1]) / 86400000);
-    }
-    const avg = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
-    const last = uniq[uniq.length - 1];
-    const next = last + avg * 86400000;
-    candidates.push({ key, avg, last, next });
-  }
-
-  if (!candidates.length) return null;
-  candidates.sort((a, b) => a.next - b.next);
-  return candidates[0];
-}
-
-function updateNextExpected() {
-  const el = document.getElementById('st-next');
-  if (!el) return;
-  const forecast = estimateNextExpected();
-  if (!forecast) {
-    el.textContent = 'Need history';
-    return;
-  }
-
-  const nextDate = new Date(forecast.next);
-  const days = Math.round((forecast.next - Date.now()) / 86400000);
-  const prefix = days <= 0 ? 'Watch now' : `${days}d`;
-  el.textContent = `${nextDate.getMonth() + 1}/${nextDate.getDate()} · ${prefix}`;
 }
 
 function updateFilterHints() {
