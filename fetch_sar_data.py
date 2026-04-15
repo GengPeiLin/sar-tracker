@@ -503,6 +503,25 @@ def main() -> int:
     }
     save_catalog(catalog_payload)
 
+    # Strip fields unused by the frontend and round footprint coordinates
+    # to reduce JSON payload size (~30% smaller).
+    _STRIP = {"browse_url", "asf_meta_url"}
+
+    def _slim_frame(f: dict) -> dict:
+        out = {k: v for k, v in f.items() if k not in _STRIP}
+        fp = out.get("footprint")
+        if fp and fp.get("type") == "Polygon":
+            out["footprint"] = {
+                "type": "Polygon",
+                "coordinates": [
+                    [[round(x, 4), round(y, 4)] for x, y in ring]
+                    for ring in fp["coordinates"]
+                ],
+            }
+        return out
+
+    slim_frames = [_slim_frame(f) for f in all_frames]
+
     payload = {
         "version": __version__,
         "updated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
@@ -511,13 +530,13 @@ def main() -> int:
         "days_back": DAYS_BACK if not bootstrap else None,
         "bootstrap_completed": True,
         "last_successful_fetch": now.isoformat(),
-        "total_frames": len(all_frames),
-        "asf_count": len([frame for frame in all_frames if frame.get("asf_url")]),
-        "copernicus_count": len([frame for frame in all_frames if frame.get("download_url")]),
+        "total_frames": len(slim_frames),
+        "asf_count": len([frame for frame in slim_frames if frame.get("asf_url")]),
+        "copernicus_count": len([frame for frame in slim_frames if frame.get("download_url")]),
         "focus_tracks": ["A69", "D105", "NISAR", "OTHER_S1"],
         "track_summary": track_summary,
         "satellite_summary": satellite_summary,
-        "taiwan_frames": all_frames,
+        "taiwan_frames": slim_frames,
     }
 
     json_text = json.dumps(payload, ensure_ascii=False, indent=2)

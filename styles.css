@@ -182,7 +182,39 @@ header {
   flex-wrap: wrap;
   margin-left: auto;
 }
-.hdr-tabs { display: none; }
+.hdr-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tab {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  letter-spacing: .05em;
+  padding: 4px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.tab:hover { color: var(--text-hi); border-color: var(--cyan); }
+.tab.on {
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.tab-stats {
+  border-color: color-mix(in srgb, var(--orange) 60%, transparent);
+  color: var(--orange);
+  margin-left: 6px;
+}
+.tab-stats:hover {
+  border-color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 12%, transparent);
+}
 
 .lang-switch {
   position: relative;
@@ -1458,7 +1490,6 @@ header {
 /* ═══ VERTICAL / PORTRAIT DESKTOP ══════════════════════════════════════════ */
 @media (min-width: 900px) and (max-aspect-ratio: 4/3) {
   :root { --sidebar: 420px; }
-  .hdr-tabs { display: flex; }
   .sb-list  { max-height: none; }
 }
 

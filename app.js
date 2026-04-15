@@ -877,6 +877,8 @@ async function loadData() {
     } else {
       const response = await fetch('./data/sar_status.json', { cache: 'default' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      // Dismiss loading overlay now — page is visible while JSON is parsed
+      document.getElementById('loading')?.classList.add('gone');
       data = await response.json();
     }
     if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
@@ -2628,7 +2630,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') closeStatsPanel();
   });
 
-  setTimeout(() => {
-    document.getElementById('loading').classList.add('gone');
-  }, 700);
+  // Safety net: ensure loading overlay is gone even if loadData resolved early
+  document.getElementById('loading')?.classList.add('gone');
 });
