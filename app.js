@@ -860,7 +860,19 @@ async function loadData() {
   ldmsg('Loading cached frame inventory...');
   try {
     let data;
-    if (window.__SAR_DATA && Array.isArray(window.__SAR_DATA.taiwan_frames)) {
+    // On file:// (local clone), fetch() is blocked by CORS — load the JS bundle instead
+    if (location.protocol === 'file:') {
+      if (!window.__SAR_DATA) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = './data/sar_status.js';
+          s.onload = resolve;
+          s.onerror = () => reject(new Error('sar_status.js load failed'));
+          document.head.appendChild(s);
+        });
+      }
+      if (!window.__SAR_DATA || !Array.isArray(window.__SAR_DATA.taiwan_frames))
+        throw new Error('sar_status.js did not populate window.__SAR_DATA');
       data = window.__SAR_DATA;
     } else {
       const response = await fetch('./data/sar_status.json', { cache: 'default' });
