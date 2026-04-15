@@ -58,6 +58,7 @@
     <button class="tab on"  onclick="setTab('all',this)" data-i18n="tab-all">All Satellites</button>
     <button class="tab"     onclick="setTab('op',this)"  data-i18n="tab-op">Active</button>
     <button class="tab"     onclick="setTab('tw',this)"  data-i18n="tab-tw">This Week</button>
+    <button class="tab tab-stats" onclick="openStatsPanel()">Stats</button>
   </div>
 </header>
 
@@ -206,7 +207,20 @@
     <span class="mob-tab-icon">⚙</span>
     <span>Filters</span>
   </button>
+  <button class="mob-tab"        data-tab="stats"   onclick="openStatsPanel()">
+    <span class="mob-tab-icon">▤</span>
+    <span>Stats</span>
+  </button>
 </nav>
+
+<!-- ═══ STATS PANEL ══════════════════════════════════════════════════════════ -->
+<div class="stats-panel" id="stats-panel">
+  <div class="stats-panel-hdr">
+    <span class="stats-panel-title">Update Frequency</span>
+    <button class="stats-close" onclick="closeStatsPanel()">✕</button>
+  </div>
+  <div class="stats-panel-body" id="stats-panel-body"></div>
+</div>
 
 <script src="./data/sar_status.js"></script>
 <script src="app.js"></script>

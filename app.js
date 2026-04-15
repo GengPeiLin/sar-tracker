@@ -2184,6 +2184,411 @@ function openFrameDrawer(clickedFrame) {
   document.getElementById('drawer').classList.add('open');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// STATS PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+
+const STATS_CELL_STEPS = [1, 2, 3, 5, 7, 14, 30];
+const STATS_CHART_SATS = ['S1A', 'S1C', 'S1D', 'NISAR'];
+const STATS_SAT_COLORS = {
+  S1A: 'var(--cyan)', S1C: 'var(--cyan-dim)', S1D: '#0097b2', NISAR: 'var(--orange)',
+};
+
+const statsState = {
+  months:     6,
+  cellIdx:    0,
+  activeSats: new Set(['S1A', 'S1C', 'NISAR']),
+  sortBy:     'lastDate',
+  bandFilter: 'ALL',
+  source:     'all',
+  expanded:   new Set(),
+};
+
+function openStatsPanel() {
+  document.getElementById('stats-panel')?.classList.add('open');
+  renderStatsPanel();
+}
+function closeStatsPanel() {
+  document.getElementById('stats-panel')?.classList.remove('open');
+}
+
+// ── Data ────────────────────────────────────────────────────────────────────
+
+function buildFrequencyStats() {
+  const frames = state.rawFrames || [];
+  const groups = new Map();
+  for (const f of frames) {
+    const satId = f.satellite_id || 'UNKNOWN';
+    const track = f.path_number_norm ?? null;
+    const dir   = f.direction_norm  || 'UNKNOWN';
+    const key   = `${satId}||${track}||${dir}`;
+    if (!groups.has(key)) groups.set(key, { satId, track, dir, dates: new Set() });
+    if (f.date) groups.get(key).dates.add(f.date.slice(0, 10));
+  }
+  const trackStats = [];
+  for (const g of groups.values()) {
+    const sorted = [...g.dates].sort();
+    const gaps   = [];
+    for (let i = 1; i < sorted.length; i++)
+      gaps.push((new Date(sorted[i]) - new Date(sorted[i - 1])) / 86400000);
+    const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null;
+    const stdGap = (gaps.length > 1 && avgGap)
+      ? Math.sqrt(gaps.reduce((s, x) => s + (x - avgGap) ** 2, 0) / gaps.length) : 0;
+    const consistency = (avgGap && avgGap > 0)
+      ? Math.max(0, Math.min(5, 5 - Math.round(5 * stdGap / avgGap))) : 0;
+    const now = new Date();
+    const sparkline = Array.from({ length: 24 }, (_, i) => {
+      const d  = new Date(now.getFullYear(), now.getMonth() - (23 - i), 1);
+      const px = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return sorted.filter(dt => dt.startsWith(px)).length;
+    });
+    trackStats.push({
+      satId: g.satId, track: g.track, dir: g.dir,
+      count: sorted.length,
+      lastDate:  sorted.at(-1) || null,
+      firstDate: sorted[0]    || null,
+      avgGap, consistency, sparkline,
+    });
+  }
+  const satMap = new Map();
+  for (const ts of trackStats) {
+    if (!satMap.has(ts.satId)) {
+      const sat = SATS.find(s => s.id === ts.satId);
+      satMap.set(ts.satId, {
+        satId: ts.satId, band: sat?.band || '?', name: sat?.name || ts.satId,
+        tracks: [], totalCount: 0, lastDate: null, avgGap: null,
+      });
+    }
+    const s = satMap.get(ts.satId);
+    s.tracks.push(ts);
+    s.totalCount += ts.count;
+    if (!s.lastDate || (ts.lastDate && ts.lastDate > s.lastDate)) s.lastDate = ts.lastDate;
+  }
+  for (const s of satMap.values()) {
+    const wg = s.tracks.filter(t => t.avgGap);
+    if (wg.length) {
+      const tw = wg.reduce((a, t) => a + t.count, 0);
+      s.avgGap = wg.reduce((a, t) => a + t.avgGap * t.count, 0) / tw;
+    }
+    s.tracks.sort((a, b) => {
+      const da = a.dir === 'ASCENDING' ? 0 : 1;
+      const db = b.dir === 'ASCENDING' ? 0 : 1;
+      return da !== db ? da - db : (a.track ?? 9999) - (b.track ?? 9999);
+    });
+  }
+  return Array.from(satMap.values());
+}
+
+function buildChartBuckets() {
+  const frames    = statsState.source === 'filtered' ? (state.filteredFrames || []) : (state.rawFrames || []);
+  const cellDays  = STATS_CELL_STEPS[statsState.cellIdx];
+  const activeSats = statsState.activeSats;
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - statsState.months);
+  const startStr = start.toISOString().slice(0, 10);
+  const endStr   = end.toISOString().slice(0, 10);
+  const relevant = frames.filter(f =>
+    f.date && activeSats.has(f.satellite_id) &&
+    f.date.slice(0, 10) >= startStr && f.date.slice(0, 10) < endStr
+  );
+  const buckets = [];
+  let cursor = new Date(start);
+  while (cursor < end) {
+    const bEnd = new Date(cursor);
+    bEnd.setDate(bEnd.getDate() + cellDays);
+    if (bEnd > end) bEnd.setTime(end.getTime());
+    const bs = cursor.toISOString().slice(0, 10);
+    const be = bEnd.toISOString().slice(0, 10);
+    const counts = {};
+    for (const id of activeSats) counts[id] = 0;
+    for (const f of relevant) {
+      const d = f.date.slice(0, 10);
+      if (d >= bs && d < be) counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
+    }
+    buckets.push({
+      label: bs, start: new Date(cursor), end: new Date(bEnd),
+      counts, total: Object.values(counts).reduce((a, b) => a + b, 0),
+    });
+    cursor = new Date(bEnd);
+  }
+  return buckets;
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+
+function renderStatsPanel() {
+  const body = document.getElementById('stats-panel-body');
+  if (!body) return;
+  body.innerHTML = buildStatsPanelHTML();
+  requestAnimationFrame(renderStatsChart);
+}
+
+function buildStatsPanelHTML() {
+  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const srcAll   = statsState.source === 'all';
+
+  const chipHTML = STATS_CHART_SATS.map(id => {
+    const on  = statsState.activeSats.has(id);
+    const clr = STATS_SAT_COLORS[id] || 'var(--cyan)';
+    return `<button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button>`;
+  }).join('');
+
+  const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Avg Gap'],['name','Name']].map(([v, l]) =>
+    `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
+  ).join('');
+
+  const bandHTML = ['ALL','C','L','X','S'].map(b =>
+    `<button class="stats-chip${statsState.bandFilter === b ? ' on' : ''}" onclick="statsSetBand('${b}')">${b === 'ALL' ? 'All' : b + '-Band'}</button>`
+  ).join('');
+
+  const legendHTML = STATS_CHART_SATS
+    .filter(id => statsState.activeSats.has(id))
+    .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${STATS_SAT_COLORS[id]}"></span>${id}</span>`)
+    .join('');
+
+  return `
+  <div class="stats-section">
+    <div class="stats-section-hd">Acquisition Frequency Chart</div>
+    <div class="stats-ctrls">
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Period</span>
+        <div class="stats-stepper">
+          <button class="sts-btn" onclick="statsSetMonths(${statsState.months - 1})">−</button>
+          <span class="sts-val">${statsState.months} mo</span>
+          <button class="sts-btn" onclick="statsSetMonths(${statsState.months + 1})">+</button>
+        </div>
+      </div>
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Cell</span>
+        <div class="stats-stepper">
+          <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
+          <span class="sts-val">${cellDays}d</span>
+          <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx + 1})">+</button>
+        </div>
+      </div>
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Sats</span>
+        <div class="stats-chips">${chipHTML}</div>
+      </div>
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Source</span>
+        <div class="stats-chips">
+          <button class="stats-chip${srcAll ? ' on' : ''}" onclick="statsSetSource('all')">All time</button>
+          <button class="stats-chip${!srcAll ? ' on' : ''}" onclick="statsSetSource('filtered')">Filtered</button>
+        </div>
+      </div>
+    </div>
+    <div class="stats-chart-scroll">
+      <div class="stats-chart-wrap" id="stats-chart-wrap">
+        <span class="stats-muted-msg">Computing…</span>
+      </div>
+    </div>
+    <div class="stats-legend">${legendHTML}</div>
+  </div>
+
+  <div class="stats-section">
+    <div class="stats-section-hd">Track Statistics <span class="stats-section-sub">· click a track row to apply as sidebar filter</span></div>
+    <div class="stats-ctrls">
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Sort</span>
+        <div class="stats-chips">${sortHTML}</div>
+      </div>
+      <div class="stats-ctrl-row">
+        <span class="stats-ctrl-lbl">Band</span>
+        <div class="stats-chips">${bandHTML}</div>
+      </div>
+    </div>
+    <div class="stats-table-wrap">${buildStatsTableHTML()}</div>
+  </div>`;
+}
+
+function buildStatsTableHTML() {
+  let satStats = buildFrequencyStats();
+  if (statsState.bandFilter !== 'ALL')
+    satStats = satStats.filter(s => s.band === statsState.bandFilter);
+  satStats = [...satStats].sort((a, b) => {
+    switch (statsState.sortBy) {
+      case 'count':    return b.totalCount - a.totalCount;
+      case 'interval': return (a.avgGap || 9999) - (b.avgGap || 9999);
+      case 'lastDate': return (b.lastDate || '').localeCompare(a.lastDate || '');
+      default:         return a.satId.localeCompare(b.satId);
+    }
+  });
+  if (!satStats.length)
+    return `<div class="stats-muted-msg">No data for selected band</div>`;
+
+  const bodies = satStats.map(s => {
+    const exp     = statsState.expanded.has(s.satId);
+    const gapStr  = s.avgGap ? `${s.avgGap.toFixed(1)}d` : '—';
+    const lastStr = s.lastDate ? s.lastDate.slice(0, 10) : '—';
+
+    const trackRows = exp ? s.tracks.map(t => {
+      const tNum  = t.track !== null ? String(t.track).padStart(3, '0') : '—';
+      const tDir  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : t.dir.slice(0, 4);
+      const tDCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
+      const tGap  = t.avgGap ? `${t.avgGap.toFixed(1)}d` : '—';
+      const tLast = t.lastDate ? t.lastDate.slice(5, 10) : '—';
+      const dots  = buildStatsDots(t.consistency);
+      const spark = buildSparklineSvg(t.sparkline);
+      const tVal  = t.track !== null ? t.track : '';
+      return `<tr class="sts-track-row" onclick="applyStatsTrackFilter('${s.satId}','${tVal}','${t.dir}')">
+        <td><div class="sts-row-cell"><span class="sts-tnum">${tNum}</span><span class="sts-tdir ${tDCls}">${tDir}</span></div></td>
+        <td class="sts-num">${t.count.toLocaleString()}</td>
+        <td class="sts-num">${tGap}</td>
+        <td>${dots}</td>
+        <td><div class="sts-row-cell"><span class="sts-last-date">${tLast}</span>${spark}</div></td>
+      </tr>`;
+    }).join('') : '';
+
+    return `<tbody>
+      <tr class="sts-sat-row${exp ? ' exp' : ''}" onclick="statsToggleExpand('${s.satId}')">
+        <td><div class="sts-row-cell"><span class="sts-expand">${exp ? '▾' : '▸'}</span><span class="sts-sat-name">${s.satId}</span><span class="sts-band">${s.band}</span></div></td>
+        <td class="sts-num sts-dim">${s.tracks.length}t</td>
+        <td class="sts-num">${s.totalCount.toLocaleString()}</td>
+        <td class="sts-num">${gapStr}</td>
+        <td colspan="2" class="sts-num">${lastStr}</td>
+      </tr>
+      ${trackRows}
+    </tbody>`;
+  }).join('');
+
+  return `<table class="sts-table">
+    <thead><tr>
+      <th>Satellite</th>
+      <th class="sts-num">Tks</th>
+      <th class="sts-num">Frames</th>
+      <th class="sts-num">Avg Gap</th>
+      <th>Consist.</th>
+      <th>Last · Trend</th>
+    </tr></thead>
+    ${bodies}
+  </table>`;
+}
+
+function buildStatsDots(n) {
+  return `<div class="sts-dots">${Array.from({ length: 5 }, (_, i) =>
+    `<span class="sts-dot${i < n ? ' on' : ''}"></span>`).join('')}</div>`;
+}
+
+function buildSparklineSvg(data) {
+  const max  = Math.max(...data, 1);
+  const H    = 18;
+  const bw   = 3;
+  const gap  = 1;
+  const bars = data.map((v, i) => {
+    const h = v > 0 ? Math.max(2, Math.round((v / max) * H)) : 0;
+    return `<rect x="${i * (bw + gap)}" y="${H - h}" width="${bw}" height="${h}" class="spark-bar"/>`;
+  }).join('');
+  return `<svg class="spark-svg" viewBox="0 0 ${data.length * (bw + gap)} ${H}" width="${data.length * (bw + gap)}" height="${H}">${bars}</svg>`;
+}
+
+function renderStatsChart() {
+  const wrap = document.getElementById('stats-chart-wrap');
+  if (!wrap) return;
+  const buckets = buildChartBuckets();
+  if (!buckets.length || buckets.every(b => b.total === 0)) {
+    wrap.innerHTML = `<span class="stats-muted-msg">No data in this window for the selected satellites</span>`;
+    return;
+  }
+  const activeSats = [...statsState.activeSats];
+  const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
+  const BAR_W = 8, GAP = 2, stride = BAR_W + GAP;
+  const cH = 120, labH = 22, barH = cH - labH;
+  const svgW = buckets.length * stride;
+
+  let gridSVG = '';
+  for (const frac of [0.25, 0.5, 0.75, 1.0]) {
+    const y   = (barH - frac * barH).toFixed(1);
+    const cnt = Math.round(frac * maxTotal);
+    gridSVG += `<line x1="0" y1="${y}" x2="${svgW}" y2="${y}" class="schart-grid"/>`;
+    gridSVG += `<text x="2" y="${(Number(y) - 2).toFixed(1)}" class="schart-glabel">${cnt}</text>`;
+  }
+
+  const cellDays   = STATS_CELL_STEPS[statsState.cellIdx];
+  const labelEvery = Math.max(1, Math.ceil(buckets.length / 18));
+  let barsSVG = '', labelsSVG = '';
+
+  for (let i = 0; i < buckets.length; i++) {
+    const b = buckets[i];
+    const x = i * stride;
+    let stackY = barH;
+    for (const satId of [...activeSats].reverse()) {
+      const cnt = b.counts[satId] || 0;
+      if (!cnt) continue;
+      const h = Math.max(1, Math.round((cnt / maxTotal) * barH));
+      stackY -= h;
+      const clr = STATS_SAT_COLORS[satId] || 'var(--cyan)';
+      barsSVG += `<rect x="${x}" y="${stackY}" width="${BAR_W}" height="${h}" fill="${clr}" opacity="0.88"><title>${b.label} · ${satId}: ${cnt}</title></rect>`;
+    }
+    if (i % labelEvery === 0) {
+      const d   = b.start;
+      const lbl = cellDays >= 28
+        ? `${d.toLocaleString('default', { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
+        : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
+      labelsSVG += `<text x="${x + BAR_W / 2}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
+    }
+  }
+
+  wrap.innerHTML = `<svg class="schart-svg" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
+    ${gridSVG}${barsSVG}${labelsSVG}
+  </svg>`;
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function statsSetMonths(n) {
+  statsState.months = Math.max(1, Math.min(12, n));
+  renderStatsPanel();
+}
+function statsSetCellIdx(idx) {
+  statsState.cellIdx = Math.max(0, Math.min(STATS_CELL_STEPS.length - 1, idx));
+  renderStatsPanel();
+}
+function statsToggleSat(id) {
+  if (statsState.activeSats.has(id)) {
+    if (statsState.activeSats.size > 1) statsState.activeSats.delete(id);
+  } else {
+    statsState.activeSats.add(id);
+  }
+  renderStatsPanel();
+}
+function statsSetSort(v)  { statsState.sortBy    = v; renderStatsPanel(); }
+function statsSetBand(b)  { statsState.bandFilter = b; renderStatsPanel(); }
+function statsSetSource(s){ statsState.source     = s; renderStatsPanel(); }
+function statsToggleExpand(satId) {
+  statsState.expanded.has(satId) ? statsState.expanded.delete(satId) : statsState.expanded.add(satId);
+  renderStatsPanel();
+}
+
+function applyStatsTrackFilter(satId, trackNum, dir) {
+  ensureAdvancedState();
+  state.filters.satellite = satId;
+  state.selectedSat = SATS.find(s => s.id === satId) || null;
+  const satSel = document.getElementById('filter-satellite');
+  if (satSel) satSel.value = satId;
+
+  if (dir && dir !== 'UNKNOWN') {
+    state.filters.direction = dir;
+    const dirSel = document.getElementById('filter-direction');
+    if (dirSel) dirSel.value = dir;
+  }
+
+  const tn = String(trackNum);
+  if (tn && tn !== 'null' && tn !== '') {
+    state.filters.pathMin = tn;
+    state.filters.pathMax = tn;
+    const pMin = document.getElementById('filter-path-min');
+    const pMax = document.getElementById('filter-path-max');
+    if (pMin) pMin.value = tn;
+    if (pMax) pMax.value = tn;
+  }
+
+  applyAdvancedFilters();
+  closeStatsPanel();
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   document.documentElement.lang = state.lang;
@@ -2205,6 +2610,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!panel || !panel.classList.contains('open')) return;
     if (panel.contains(event.target) || toggle?.contains(event.target)) return;
     toggleExportPanel(false);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeStatsPanel();
   });
 
   setTimeout(() => {
