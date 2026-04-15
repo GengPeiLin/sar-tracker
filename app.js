@@ -2213,8 +2213,6 @@ const statsState = {
   cellIdx:    0,
   activeSats: new Set(['S1A', 'S1C', 'NISAR']),
   sortBy:     'lastDate',
-  bandFilter: 'ALL',
-  source:     'all',
   expanded:   new Set(),
 };
 
@@ -2294,7 +2292,7 @@ function buildFrequencyStats() {
 }
 
 function buildChartBuckets() {
-  const frames    = statsState.source === 'filtered' ? (state.filteredFrames || []) : (state.rawFrames || []);
+  const frames    = state.rawFrames || [];
   const cellDays  = STATS_CELL_STEPS[statsState.cellIdx];
   const activeSats = statsState.activeSats;
   const now = new Date();
@@ -2341,7 +2339,6 @@ function renderStatsPanel() {
 
 function buildStatsPanelHTML() {
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
-  const srcAll   = statsState.source === 'all';
 
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
@@ -2349,12 +2346,8 @@ function buildStatsPanelHTML() {
     return `<button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button>`;
   }).join('');
 
-  const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Avg Gap'],['name','Name']].map(([v, l]) =>
+  const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Interval'],['name','Name']].map(([v, l]) =>
     `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
-  ).join('');
-
-  const bandHTML = ['ALL','C','L','X','S'].map(b =>
-    `<button class="stats-chip${statsState.bandFilter === b ? ' on' : ''}" onclick="statsSetBand('${b}')">${b === 'ALL' ? 'All' : b + '-Band'}</button>`
   ).join('');
 
   const legendHTML = STATS_CHART_SATS
@@ -2375,7 +2368,7 @@ function buildStatsPanelHTML() {
         </div>
       </div>
       <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Cell</span>
+        <span class="stats-ctrl-lbl">Cell size</span>
         <div class="stats-stepper">
           <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
           <span class="sts-val">${cellDays}d</span>
@@ -2383,15 +2376,8 @@ function buildStatsPanelHTML() {
         </div>
       </div>
       <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Sats</span>
+        <span class="stats-ctrl-lbl">Satellites</span>
         <div class="stats-chips">${chipHTML}</div>
-      </div>
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Source</span>
-        <div class="stats-chips">
-          <button class="stats-chip${srcAll ? ' on' : ''}" onclick="statsSetSource('all')">All time</button>
-          <button class="stats-chip${!srcAll ? ' on' : ''}" onclick="statsSetSource('filtered')">Filtered</button>
-        </div>
       </div>
     </div>
     <div class="stats-chart-scroll">
@@ -2403,15 +2389,11 @@ function buildStatsPanelHTML() {
   </div>
 
   <div class="stats-section">
-    <div class="stats-section-hd">Track Statistics <span class="stats-section-sub">· click a track row to apply as sidebar filter</span></div>
+    <div class="stats-section-hd">Track Statistics <span class="sts-hd-hint">· click a track row to filter the map</span></div>
     <div class="stats-ctrls">
       <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Sort</span>
+        <span class="stats-ctrl-lbl">Sort by</span>
         <div class="stats-chips">${sortHTML}</div>
-      </div>
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Band</span>
-        <div class="stats-chips">${bandHTML}</div>
       </div>
     </div>
     <div class="stats-table-wrap">${buildStatsTableHTML()}</div>
@@ -2420,8 +2402,6 @@ function buildStatsPanelHTML() {
 
 function buildStatsTableHTML() {
   let satStats = buildFrequencyStats();
-  if (statsState.bandFilter !== 'ALL')
-    satStats = satStats.filter(s => s.band === statsState.bandFilter);
   satStats = [...satStats].sort((a, b) => {
     switch (statsState.sortBy) {
       case 'count':    return b.totalCount - a.totalCount;
@@ -2431,24 +2411,26 @@ function buildStatsTableHTML() {
     }
   });
   if (!satStats.length)
-    return `<div class="stats-muted-msg">No data for selected band</div>`;
+    return `<div class="stats-muted-msg">No data available</div>`;
 
   const bodies = satStats.map(s => {
-    const exp     = statsState.expanded.has(s.satId);
-    const gapStr  = s.avgGap ? `${s.avgGap.toFixed(1)}d` : '—';
-    const lastStr = s.lastDate ? s.lastDate.slice(0, 10) : '—';
+    const exp      = statsState.expanded.has(s.satId);
+    const gapStr   = s.avgGap  ? `~${s.avgGap.toFixed(1)}d`  : '—';
+    const lastStr  = s.lastDate ? s.lastDate.slice(0, 10)     : '—';
+    const tkCount  = `${s.tracks.length} track${s.tracks.length !== 1 ? 's' : ''}`;
 
     const trackRows = exp ? s.tracks.map(t => {
-      const tNum  = t.track !== null ? String(t.track).padStart(3, '0') : '—';
-      const tDir  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : t.dir.slice(0, 4);
-      const tDCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
-      const tGap  = t.avgGap ? `${t.avgGap.toFixed(1)}d` : '—';
-      const tLast = t.lastDate ? t.lastDate.slice(5, 10) : '—';
-      const dots  = buildStatsDots(t.consistency);
-      const spark = buildSparklineSvg(t.sparkline);
-      const tVal  = t.track !== null ? t.track : '';
+      const tNum    = t.track !== null ? String(t.track).padStart(3, '0') : '—';
+      const tDirSh  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : t.dir.slice(0, 4);
+      const tDirCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
+      const tGap    = t.avgGap   ? `${t.avgGap.toFixed(1)}d`  : '—';
+      const tLast   = t.lastDate ? t.lastDate.slice(5, 10)    : '—';
+      const dots    = buildStatsDots(t.consistency);
+      const spark   = buildSparklineSvg(t.sparkline);
+      const tVal    = t.track !== null ? t.track : '';
       return `<tr class="sts-track-row" onclick="applyStatsTrackFilter('${s.satId}','${tVal}','${t.dir}')">
-        <td><div class="sts-row-cell"><span class="sts-tnum">${tNum}</span><span class="sts-tdir ${tDCls}">${tDir}</span></div></td>
+        <td class="sts-num">${tNum}</td>
+        <td><span class="sts-tdir ${tDirCls}">${tDirSh}</span></td>
         <td class="sts-num">${t.count.toLocaleString()}</td>
         <td class="sts-num">${tGap}</td>
         <td>${dots}</td>
@@ -2456,13 +2438,17 @@ function buildStatsTableHTML() {
       </tr>`;
     }).join('') : '';
 
+    // Satellite row spans all columns as a group header
     return `<tbody>
       <tr class="sts-sat-row${exp ? ' exp' : ''}" onclick="statsToggleExpand('${s.satId}')">
-        <td><div class="sts-row-cell"><span class="sts-expand">${exp ? '▾' : '▸'}</span><span class="sts-sat-name">${s.satId}</span><span class="sts-band">${s.band}</span></div></td>
-        <td class="sts-num sts-dim">${s.tracks.length}t</td>
-        <td class="sts-num">${s.totalCount.toLocaleString()}</td>
-        <td class="sts-num">${gapStr}</td>
-        <td colspan="2" class="sts-num">${lastStr}</td>
+        <td colspan="6">
+          <div class="sts-row-cell">
+            <span class="sts-expand">${exp ? '▾' : '▸'}</span>
+            <span class="sts-sat-name">${s.satId}</span>
+            <span class="sts-band">${s.band}</span>
+            <span class="sts-dim">${tkCount} · ${s.totalCount.toLocaleString()} frames · ${gapStr} avg · last ${lastStr}</span>
+          </div>
+        </td>
       </tr>
       ${trackRows}
     </tbody>`;
@@ -2470,12 +2456,12 @@ function buildStatsTableHTML() {
 
   return `<table class="sts-table">
     <thead><tr>
-      <th>Satellite</th>
-      <th class="sts-num">Tks</th>
+      <th>Track</th>
+      <th>Dir</th>
       <th class="sts-num">Frames</th>
-      <th class="sts-num">Avg Gap</th>
+      <th class="sts-num">Interval</th>
       <th>Consist.</th>
-      <th>Last · Trend</th>
+      <th>Last · 24mo</th>
     </tr></thead>
     ${bodies}
   </table>`;
@@ -2568,9 +2554,7 @@ function statsToggleSat(id) {
   }
   renderStatsPanel();
 }
-function statsSetSort(v)  { statsState.sortBy    = v; renderStatsPanel(); }
-function statsSetBand(b)  { statsState.bandFilter = b; renderStatsPanel(); }
-function statsSetSource(s){ statsState.source     = s; renderStatsPanel(); }
+function statsSetSort(v)  { statsState.sortBy = v; renderStatsPanel(); }
 function statsToggleExpand(satId) {
   statsState.expanded.has(satId) ? statsState.expanded.delete(satId) : statsState.expanded.add(satId);
   renderStatsPanel();

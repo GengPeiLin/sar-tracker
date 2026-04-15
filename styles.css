@@ -1269,6 +1269,13 @@ header {
   padding: 10px 14px 8px;
   border-bottom: 1px solid var(--border);
 }
+.sts-hd-hint {
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
 .stats-section-sub {
   font-size: calc(10px + var(--font-bump));
   color: var(--muted);
