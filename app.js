@@ -2485,7 +2485,20 @@ function buildStatsPanelHTML() {
 
 function buildStatsTableHTML() {
   let satStats = buildFrequencyStats();
+
+  // Ensure all chart satellites appear, even if they have no data yet
+  const present = new Set(satStats.map(s => s.satId));
+  for (const id of STATS_CHART_SATS) {
+    if (!present.has(id)) {
+      const sat = SATS.find(s => s.id === id);
+      satStats.push({ satId: id, band: sat?.band || '?', name: sat?.name || id,
+                      tracks: [], totalCount: 0, lastDate: null, avgGap: null, noData: true });
+    }
+  }
+
   satStats = [...satStats].sort((a, b) => {
+    // No-data rows sort last within any sort mode
+    if (a.noData !== b.noData) return a.noData ? 1 : -1;
     switch (statsState.sortBy) {
       case 'count':    return b.totalCount - a.totalCount;
       case 'interval': return (a.avgGap || 9999) - (b.avgGap || 9999);
@@ -2497,6 +2510,19 @@ function buildStatsTableHTML() {
     return `<div class="stats-muted-msg">No data available</div>`;
 
   const bodies = satStats.map(s => {
+    if (s.noData) {
+      const sat = SATS.find(x => x.id === s.satId);
+      const note = sat?.status === 'op' ? 'No acquisitions in database yet' : 'Not yet operational';
+      return `<tbody><tr class="sts-sat-row sts-sat-nodata">
+        <td colspan="6"><div class="sts-row-cell">
+          <span class="sts-expand" style="visibility:hidden">▸</span>
+          <span class="sts-sat-name">${s.satId}</span>
+          <span class="sts-band">${s.band}</span>
+          <span class="sts-dim">${note}</span>
+        </div></td>
+      </tr></tbody>`;
+    }
+
     const exp      = statsState.expanded.has(s.satId);
     const gapStr   = s.avgGap  ? `~${s.avgGap.toFixed(1)}d`  : '—';
     const lastStr  = s.lastDate ? s.lastDate.slice(0, 10)     : '—';
@@ -2521,7 +2547,6 @@ function buildStatsTableHTML() {
       </tr>`;
     }).join('') : '';
 
-    // Satellite row spans all columns as a group header
     return `<tbody>
       <tr class="sts-sat-row${exp ? ' exp' : ''}" onclick="statsToggleExpand('${s.satId}')">
         <td colspan="6">
@@ -2539,8 +2564,7 @@ function buildStatsTableHTML() {
 
   return `<table class="sts-table">
     <thead><tr>
-      <th>Track</th>
-      <th>Dir</th>
+      <th>Track</th><th>Dir</th>
       <th class="sts-num">Frames</th>
       <th class="sts-num">Interval</th>
       <th>Consist.</th>

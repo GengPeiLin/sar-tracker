@@ -1308,6 +1308,7 @@ header {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  flex-shrink: 0; /* prevent flex compression — lets panel-body overflow-y:auto engage */
 }
 .stats-section-hd {
   font-family: var(--mono);
@@ -1490,11 +1491,18 @@ header {
 }
 
 /* ── frequency table ── */
+.stats-table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(520px, 50vh);
+  overscroll-behavior: contain;
+}
 .sts-table {
   width: 100%;
   border-collapse: collapse;
   font-size: calc(11px + var(--font-bump));
 }
+.sts-table thead { position: sticky; top: 0; z-index: 2; }
 .sts-table th {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump));
@@ -1504,7 +1512,8 @@ header {
   color: var(--muted);
   text-align: left;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
   white-space: nowrap;
 }
 .sts-table th:not(:first-child) { text-align: right; }
@@ -1512,6 +1521,8 @@ header {
 .sts-sat-row { background: var(--surface); cursor: pointer; }
 .sts-sat-row:hover { background: var(--border); }
 .sts-sat-row.exp { background: color-mix(in srgb, var(--cyan) 8%, var(--surface)); }
+.sts-sat-nodata { cursor: default; opacity: .55; }
+.sts-sat-nodata:hover { background: var(--surface); }
 .sts-track-row { background: var(--card); }
 .sts-track-row:hover { background: color-mix(in srgb, var(--cyan) 6%, var(--card)); cursor: pointer; }
 
