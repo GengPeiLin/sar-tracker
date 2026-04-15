@@ -855,53 +855,75 @@ function reconcileFrameMetadata(frames) {
   return frames;
 }
 
+function applyFrameData(data) {
+  if (!Array.isArray(data.taiwan_frames)) return;
+  document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
+  updateMobDbBadge(data.version);
+  state.baseStats = data;
+  state.rawFrames = reconcileFrameMetadata(
+    data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
+  );
+  applyTabDateWindow();
+  bindAdvancedControls();
+  renderSatelliteSelect();
+  renderFormatOptions();
+  resetAdvancedFilters(false);
+  applyAdvancedFilters();
+}
+
 async function loadData() {
   ensureAdvancedState();
-  ldmsg('Loading cached frame inventory...');
-  try {
-    let data;
-    // On file:// (local clone), fetch() is blocked by CORS — load the JS bundle instead
-    if (location.protocol === 'file:') {
-      if (!window.__SAR_DATA) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = './data/sar_status.js';
-          s.onload = resolve;
-          s.onerror = () => reject(new Error('sar_status.js load failed'));
-          document.head.appendChild(s);
-        });
-      }
-      if (!window.__SAR_DATA || !Array.isArray(window.__SAR_DATA.taiwan_frames))
-        throw new Error('sar_status.js did not populate window.__SAR_DATA');
-      data = window.__SAR_DATA;
-    } else {
-      const response = await fetch('./data/sar_status.json', { cache: 'default' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      // Dismiss loading overlay now — page is visible while JSON is parsed
-      document.getElementById('loading')?.classList.add('gone');
-      data = await response.json();
-    }
-    if (!Array.isArray(data.taiwan_frames)) throw new Error('Invalid payload');
 
-    document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
-    updateMobDbBadge(data.version);
-    state.baseStats = data;
-    state.rawFrames = reconcileFrameMetadata(
-      data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
-    );
-    applyTabDateWindow();
-    bindAdvancedControls();
-    renderSatelliteSelect();
-    renderFormatOptions();
-    resetAdvancedFilters(false);
-    applyAdvancedFilters();
+  // ── file:// local clone — load the full JS bundle synchronously ──────────
+  if (location.protocol === 'file:') {
+    if (!window.__SAR_DATA) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = './data/sar_status.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('sar_status.js load failed'));
+        document.head.appendChild(s);
+      });
+    }
+    document.getElementById('loading')?.classList.add('gone');
+    applyFrameData(window.__SAR_DATA || {});
     return;
-  } catch (error) {
-    console.warn('Cached JSON unavailable, fallback to live ASF query.', error);
   }
 
-  ldmsg('Loading live ASF frames...');
-  await liveFetchASF();
+  // ── Web: Phase 1 — load recent frames first for instant display ──────────
+  // sar_recent.json is only the last 14 days (~50–200 KB), loads in < 1 s.
+  let phase1ok = false;
+  try {
+    const res = await fetch('./data/sar_recent.json', { cache: 'default' });
+    if (res.ok) {
+      document.getElementById('loading')?.classList.add('gone');
+      const data = await res.json();
+      if (Array.isArray(data.taiwan_frames) && data.taiwan_frames.length) {
+        applyFrameData(data);
+        phase1ok = true;
+      }
+    }
+  } catch (_) { /* fall through to full load */ }
+
+  if (!phase1ok) document.getElementById('loading')?.classList.add('gone');
+
+  // ── Phase 2 — upgrade to full historical dataset in background ───────────
+  // Runs without await so the user can interact immediately.
+  (async () => {
+    try {
+      const res = await fetch('./data/sar_status.json', { cache: 'default' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      // Only replace if the full set is actually larger (guards against stale cache)
+      if (Array.isArray(data.taiwan_frames) &&
+          data.taiwan_frames.length > (state.rawFrames?.length || 0)) {
+        applyFrameData(data);
+      }
+    } catch (error) {
+      console.warn('Full dataset unavailable:', error);
+      if (!state.rawFrames?.length) await liveFetchASF();
+    }
+  })();
 }
 
 async function liveFetchASF() {
