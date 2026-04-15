@@ -217,6 +217,13 @@
     <button class="stats-close" onclick="closeStatsPanel()">✕</button>
   </div>
   <div class="stats-panel-body" id="stats-panel-body"></div>
+  <div class="stats-footer">
+    <span class="dl-label">Chart</span>
+    <button class="dl-btn asf" onclick="statsExportChartSVG()">SVG</button>
+    <button class="dl-btn csv" onclick="statsExportChartCSV()">CSV</button>
+    <span class="dl-label stats-footer-sep">Table</span>
+    <button class="dl-btn csv" onclick="statsExportTableCSV()">CSV</button>
+  </div>
 </div>
 
 <script src="app.js" defer></script>

@@ -2600,6 +2600,88 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
   closeStatsPanel();
 }
 
+// ── Stats exports ────────────────────────────────────────────────────────────
+
+function statsExportChartSVG() {
+  const svgEl = document.querySelector('#stats-chart-wrap svg');
+  if (!svgEl) return;
+
+  // Resolve CSS custom properties so the exported file is self-contained
+  const cs  = getComputedStyle(document.documentElement);
+  const val = name => cs.getPropertyValue(name).trim();
+
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  // Replace fill="var(--xxx)" with the computed colour
+  clone.querySelectorAll('[fill]').forEach(el => {
+    const fill = el.getAttribute('fill');
+    const m    = fill && fill.match(/var\(--([\w-]+)\)/);
+    if (m) el.setAttribute('fill', val('--' + m[1]) || fill);
+  });
+
+  // Embed resolved styles for text and grid lines
+  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = [
+    `text { font-family: 'IBM Plex Mono', monospace; font-size: 9px; }`,
+    `.schart-label, .schart-glabel { fill: ${val('--muted')}; }`,
+    `.schart-grid { stroke: ${val('--border')}; stroke-width: 1; stroke-dasharray: 3 3; }`,
+  ].join(' ');
+  clone.insertBefore(styleEl, clone.firstChild);
+
+  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  triggerDownload(
+    `sar_chart_${statsState.months}mo_${cellDays}d.svg`,
+    new XMLSerializer().serializeToString(clone),
+    'image/svg+xml'
+  );
+}
+
+function statsExportChartCSV() {
+  const buckets = buildChartBuckets();
+  if (!buckets.length) return;
+  const sats    = [...statsState.activeSats].sort();
+  const headers = ['period_start', 'period_end', ...sats, 'total'];
+  const rows    = buckets.map(b => [
+    b.label,
+    b.end.toISOString().slice(0, 10),
+    ...sats.map(id => b.counts[id] || 0),
+    b.total,
+  ]);
+  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  triggerDownload(
+    `sar_chart_${statsState.months}mo_${cellDays}d.csv`,
+    '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n'),
+    'text/csv;charset=utf-8'
+  );
+}
+
+function statsExportTableCSV() {
+  const satStats = buildFrequencyStats();
+  const headers  = ['satellite_id', 'band', 'track', 'direction', 'frames',
+                    'avg_interval_days', 'consistency_0_5', 'first_date', 'last_date'];
+  const rows = [];
+  for (const s of satStats) {
+    for (const t of s.tracks) {
+      rows.push([
+        s.satId, s.band,
+        t.track !== null ? t.track : '',
+        t.dir,
+        t.count,
+        t.avgGap   ? t.avgGap.toFixed(2)  : '',
+        t.consistency,
+        t.firstDate || '',
+        t.lastDate  || '',
+      ]);
+    }
+  }
+  triggerDownload(
+    'sar_track_stats.csv',
+    '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n'),
+    'text/csv;charset=utf-8'
+  );
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   ensureAdvancedState();
   document.documentElement.lang = state.lang;
