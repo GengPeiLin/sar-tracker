@@ -2279,12 +2279,31 @@ function statsResetAllColors() {
 }
 
 const statsState = {
-  months:     6,
+  chartPreset:  '6mo',  // '1mo' | '6mo' | '1yr' | 'custom'
+  chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
+  chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
   cellIdx:    0,
   activeSats: new Set(['S1A', 'S1C', 'NISAR']),
   sortBy:     'lastDate',
   expanded:   new Set(),
 };
+
+function getChartDateRange() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  if (statsState.chartPreset === 'custom' && statsState.chartStart && statsState.chartEnd) {
+    const s = new Date(statsState.chartStart);
+    const e = new Date(statsState.chartEnd);
+    if (!isNaN(s) && !isNaN(e) && s < e) {
+      e.setDate(e.getDate() + 1);
+      return { start: s, end: e };
+    }
+  }
+  const start = new Date(end);
+  const months = statsState.chartPreset === '1mo' ? 1 : statsState.chartPreset === '1yr' ? 12 : 6;
+  start.setMonth(start.getMonth() - months);
+  return { start, end };
+}
 
 function openStatsPanel() {
   document.getElementById('stats-panel')?.classList.add('open');
@@ -2365,10 +2384,7 @@ function buildChartBuckets() {
   const frames    = state.rawFrames || [];
   const cellDays  = STATS_CELL_STEPS[statsState.cellIdx];
   const activeSats = statsState.activeSats;
-  const now = new Date();
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const start = new Date(end);
-  start.setMonth(start.getMonth() - statsState.months);
+  const { start, end } = getChartDateRange();
   const startStr = start.toISOString().slice(0, 10);
   const endStr   = end.toISOString().slice(0, 10);
   const relevant = frames.filter(f =>
@@ -2419,6 +2435,18 @@ function renderStatsPanel() {
 function buildStatsPanelHTML() {
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
 
+  const presetHTML = [['1mo','1 mo'],['6mo','6 mo'],['1yr','1 yr'],['custom','Custom']].map(([k,l]) =>
+    `<button class="stats-chip${statsState.chartPreset === k ? ' on' : ''}" onclick="statsSetPreset('${k}')">${l}</button>`
+  ).join('');
+
+  const customRowHTML = statsState.chartPreset === 'custom' ? `
+    <div class="stats-ctrl-row stats-custom-range">
+      <span class="stats-ctrl-lbl"></span>
+      <input class="stats-date-input" type="date" value="${statsState.chartStart}" onchange="statsSetChartDate('start',this.value)">
+      <span class="stats-range-sep">→</span>
+      <input class="stats-date-input" type="date" value="${statsState.chartEnd}" onchange="statsSetChartDate('end',this.value)">
+    </div>` : '';
+
   const satColors = getSatColors();
   const hasCustomColors = STATS_CHART_SATS.some(id => {
     try { return !!JSON.parse(localStorage.getItem('sar_sat_colors') || '{}')[id]; } catch { return false; }
@@ -2444,12 +2472,9 @@ function buildStatsPanelHTML() {
     <div class="stats-ctrls">
       <div class="stats-ctrl-row">
         <span class="stats-ctrl-lbl">Period</span>
-        <div class="stats-stepper">
-          <button class="sts-btn" onclick="statsSetMonths(${statsState.months - 1})">−</button>
-          <span class="sts-val">${statsState.months} mo</span>
-          <button class="sts-btn" onclick="statsSetMonths(${statsState.months + 1})">+</button>
-        </div>
+        <div class="stats-chips">${presetHTML}</div>
       </div>
+      ${customRowHTML}
       <div class="stats-ctrl-row">
         <span class="stats-ctrl-lbl">Cell size</span>
         <div class="stats-stepper">
@@ -2659,8 +2684,21 @@ function renderStatsChart() {
 
 // ── Controls ────────────────────────────────────────────────────────────────
 
-function statsSetMonths(n) {
-  statsState.months = Math.max(1, Math.min(12, n));
+function statsSetPreset(p) {
+  statsState.chartPreset = p;
+  if (p === 'custom' && !statsState.chartStart) {
+    const now = new Date();
+    const e = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const s = new Date(e);
+    s.setMonth(s.getMonth() - 3);
+    statsState.chartEnd   = e.toISOString().slice(0, 10);
+    statsState.chartStart = s.toISOString().slice(0, 10);
+  }
+  renderStatsPanel();
+}
+function statsSetChartDate(field, val) {
+  if (field === 'start') statsState.chartStart = val;
+  else statsState.chartEnd = val;
   renderStatsPanel();
 }
 function statsSetCellIdx(idx) {
@@ -2694,8 +2732,16 @@ function statsBarClick(event, bucketIdx, satId) {
     f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate
   );
 
+  // Deduplicate same as buildChartBuckets: unique (date, path, dir, frame_number)
+  const seenAcq = new Set();
   const trackMap = new Map();
+  let uniqueCount = 0;
   for (const f of inBucket) {
+    const d = f.date.slice(0, 10);
+    const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${f.frame_number_norm ?? ''}`;
+    if (seenAcq.has(acqKey)) continue;
+    seenAcq.add(acqKey);
+    uniqueCount++;
     const k = `${f.path_number_norm ?? ''}|${f.direction_norm || ''}`;
     if (!trackMap.has(k)) trackMap.set(k, { track: f.path_number_norm, dir: f.direction_norm, count: 0 });
     trackMap.get(k).count++;
@@ -2725,7 +2771,7 @@ function statsBarClick(event, bucketIdx, satId) {
       <span class="scp-period">${periodLabel}</span>
       <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">✕</button>
     </div>
-    <div class="scp-total">${inBucket.length} frame${inBucket.length !== 1 ? 's' : ''}</div>
+    <div class="scp-total">${uniqueCount} frame${uniqueCount !== 1 ? 's' : ''}</div>
     ${trackHTML || '<div class="scp-empty">No track data</div>'}
   `;
   popup.hidden = false;
@@ -2796,8 +2842,10 @@ function statsExportChartSVG() {
   clone.insertBefore(styleEl, clone.firstChild);
 
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const rangeTag = statsState.chartPreset === 'custom'
+    ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
   triggerDownload(
-    `sar_chart_${statsState.months}mo_${cellDays}d.svg`,
+    `sar_chart_${rangeTag}_${cellDays}d.svg`,
     new XMLSerializer().serializeToString(clone),
     'image/svg+xml'
   );
@@ -2815,8 +2863,10 @@ function statsExportChartCSV() {
     b.total,
   ]);
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const rangeTag2 = statsState.chartPreset === 'custom'
+    ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
   triggerDownload(
-    `sar_chart_${statsState.months}mo_${cellDays}d.csv`,
+    `sar_chart_${rangeTag2}_${cellDays}d.csv`,
     '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n'),
     'text/csv;charset=utf-8'
   );

@@ -1408,6 +1408,24 @@ header {
 }
 .stats-chip-reset:hover { color: var(--text-hi); border-color: var(--cyan); }
 
+/* custom date range row */
+.stats-custom-range { flex-wrap: nowrap; gap: 6px; }
+.stats-date-input {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump));
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  color: var(--text-hi);
+  border-radius: 4px;
+  padding: 3px 7px;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+  max-width: 140px;
+}
+.stats-date-input:focus { outline: none; border-color: var(--cyan); }
+.stats-range-sep { color: var(--muted); flex-shrink: 0; font-size: 12px; }
+
 /* per-satellite color pickers */
 .stats-chip-ctr {
   display: flex;
