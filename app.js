@@ -910,9 +910,9 @@ async function loadData() {
   // ── Phase 2 — upgrade to full historical dataset in background ───────────
   // Runs without await so the user can interact immediately.
   (async () => {
-    const bgEl = document.getElementById('bg-load-pct');
-    const showPct = txt => { if (bgEl) { bgEl.textContent = txt; bgEl.style.opacity = '1'; } };
-    const hidePct = ()  => { if (bgEl) { bgEl.style.opacity = '0'; setTimeout(() => { if (bgEl) bgEl.textContent = ''; bgEl.style.opacity = '1'; }, 350); } };
+    const bgEl = document.getElementById('bg-load-bar');
+    const showBar = pct => { if (bgEl) { bgEl.hidden = false; bgEl.style.width = Math.min(100, pct) + '%'; } };
+    const hideBar = ()  => { if (bgEl) { bgEl.style.width = '100%'; bgEl.classList.add('done'); setTimeout(() => { bgEl.hidden = true; bgEl.style.width = '0%'; bgEl.classList.remove('done'); }, 400); } };
     try {
       const res = await fetch('./data/sar_status.json', { cache: 'default' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -923,13 +923,13 @@ async function loadData() {
         let loaded = 0;
         const chunks = [];
         const reader = res.body.getReader();
-        showPct('0%');
+        showBar(0);
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           chunks.push(value);
           loaded += value.length;
-          showPct(`${Math.round(100 * loaded / total)}%`);
+          showBar(Math.round(100 * loaded / total));
         }
         const full = new Uint8Array(loaded);
         let off = 0;
@@ -938,14 +938,14 @@ async function loadData() {
       } else {
         data = await res.json();
       }
-      hidePct();
+      hideBar();
       // Only replace if the full set is actually larger (guards against stale cache)
       if (Array.isArray(data.taiwan_frames) &&
           data.taiwan_frames.length > (state.rawFrames?.length || 0)) {
         applyFrameData(data);
       }
     } catch (error) {
-      hidePct();
+      hideBar();
       console.warn('Full dataset unavailable:', error);
       if (!state.rawFrames?.length) await liveFetchASF();
     }

@@ -139,6 +139,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 
 /* ═══ HEADER ═══════════════════════════════════════════════════════════════ */
 header {
+  position: relative;
   min-height: var(--hdr);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -1652,17 +1653,22 @@ header {
 .scp-tcnt { color: var(--muted); font-size: calc(10px + var(--font-bump)); }
 .scp-empty { padding: 8px 12px; color: var(--muted); font-size: calc(10px + var(--font-bump)); }
 
-/* background history load indicator */
-.bg-load-pct {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--muted);
-  opacity: 1;
-  transition: opacity .35s;
-  margin-left: 5px;
-  letter-spacing: .04em;
+/* background history load bar */
+.bg-load-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: var(--cyan);
+  transition: width .2s linear;
   pointer-events: none;
-  vertical-align: middle;
+  z-index: 10;
+  opacity: .7;
+}
+.bg-load-bar.done {
+  transition: width .15s linear, opacity .35s .1s;
+  opacity: 0;
 }
 
 /* mob-tabs and mob-db-ts only visible on mobile */
