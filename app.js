@@ -339,8 +339,8 @@ const FONT_SIZE_OPTIONS = new Set(FONT_SIZE_STEPS.map(String));
 const APP_VERSION = '20260414T000000';
 
 const PLATFORM_COLORS = {
-  'S1A':'#00e5ff','S1C':'#00b8d4','S1D':'#0097b2',
-  'SENTINEL-1A':'#00e5ff','SENTINEL-1C':'#00b8d4','SENTINEL-1D':'#0097b2',
+  'S1A':'#00e5ff','S1C':'#ce93d8','S1D':'#4db6ac',
+  'SENTINEL-1A':'#00e5ff','SENTINEL-1C':'#ce93d8','SENTINEL-1D':'#4db6ac',
   'ALOS-2':'#ce93d8','ALOS-4':'#ab68c4','ALOS2':'#ce93d8','ALOS4':'#ab68c4',
   'RADARSAT-2':'#ffc107','RCM-1':'#ffb300','RCM-2':'#ffa000','RCM-3':'#ff8f00',
   'R2':'#ffc107','RCM':'#ffb300',
@@ -910,16 +910,42 @@ async function loadData() {
   // ── Phase 2 — upgrade to full historical dataset in background ───────────
   // Runs without await so the user can interact immediately.
   (async () => {
+    const bgEl = document.getElementById('bg-load-pct');
+    const showPct = txt => { if (bgEl) { bgEl.textContent = txt; bgEl.style.opacity = '1'; } };
+    const hidePct = ()  => { if (bgEl) { bgEl.style.opacity = '0'; setTimeout(() => { if (bgEl) bgEl.textContent = ''; bgEl.style.opacity = '1'; }, 350); } };
     try {
       const res = await fetch('./data/sar_status.json', { cache: 'default' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const contentLength = res.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let data;
+      if (total > 0 && res.body) {
+        let loaded = 0;
+        const chunks = [];
+        const reader = res.body.getReader();
+        showPct('0%');
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          showPct(`${Math.round(100 * loaded / total)}%`);
+        }
+        const full = new Uint8Array(loaded);
+        let off = 0;
+        for (const c of chunks) { full.set(c, off); off += c.length; }
+        data = JSON.parse(new TextDecoder().decode(full));
+      } else {
+        data = await res.json();
+      }
+      hidePct();
       // Only replace if the full set is actually larger (guards against stale cache)
       if (Array.isArray(data.taiwan_frames) &&
           data.taiwan_frames.length > (state.rawFrames?.length || 0)) {
         applyFrameData(data);
       }
     } catch (error) {
+      hidePct();
       console.warn('Full dataset unavailable:', error);
       if (!state.rawFrames?.length) await liveFetchASF();
     }
@@ -1297,7 +1323,6 @@ function updateLegend() {
 
   const items = [...groups.values()]
     .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
     .map(item => `
       <div class="legend-item">
         <div class="legend-main">
@@ -2226,9 +2251,32 @@ function openFrameDrawer(clickedFrame) {
 
 const STATS_CELL_STEPS = [1, 2, 3, 5, 7, 14, 30];
 const STATS_CHART_SATS = ['S1A', 'S1C', 'S1D', 'NISAR'];
-const STATS_SAT_COLORS = {
-  S1A: 'var(--cyan)', S1C: 'var(--cyan-dim)', S1D: '#0097b2', NISAR: 'var(--orange)',
+const STATS_SAT_DEFAULT_COLORS = {
+  S1A: '#29b6f6', S1C: '#ce93d8', S1D: '#4db6ac', NISAR: '#ffb74d',
 };
+
+function getSatColors() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_sat_colors') || '{}');
+    return { ...STATS_SAT_DEFAULT_COLORS, ...saved };
+  } catch { return { ...STATS_SAT_DEFAULT_COLORS }; }
+}
+function statsSetSatColor(id, color) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_sat_colors') || '{}');
+    saved[id] = color;
+    localStorage.setItem('sar_sat_colors', JSON.stringify(saved));
+  } catch {}
+  renderStatsPanel();
+}
+function statsResetAllColors() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_sat_colors') || '{}');
+    for (const id of STATS_CHART_SATS) delete saved[id];
+    localStorage.setItem('sar_sat_colors', JSON.stringify(saved));
+  } catch {}
+  renderStatsPanel();
+}
 
 const statsState = {
   months:     6,
@@ -2362,11 +2410,15 @@ function renderStatsPanel() {
 function buildStatsPanelHTML() {
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
 
+  const satColors = getSatColors();
+  const hasCustomColors = STATS_CHART_SATS.some(id => {
+    try { return !!JSON.parse(localStorage.getItem('sar_sat_colors') || '{}')[id]; } catch { return false; }
+  });
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
-    const clr = STATS_SAT_COLORS[id] || 'var(--cyan)';
-    return `<button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button>`;
-  }).join('');
+    const clr = satColors[id] || '#29b6f6';
+    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="Edit color"><input type="color" value="${clr}" oninput="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
+  }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="Reset all to defaults">↺</button>` : '');
 
   const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Interval'],['name','Name']].map(([v, l]) =>
     `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
@@ -2374,7 +2426,7 @@ function buildStatsPanelHTML() {
 
   const legendHTML = STATS_CHART_SATS
     .filter(id => statsState.activeSats.has(id))
-    .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${STATS_SAT_COLORS[id]}"></span>${id}</span>`)
+    .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${satColors[id]}"></span>${id}</span>`)
     .join('');
 
   return `
@@ -2544,6 +2596,7 @@ function renderStatsChart() {
     gridSVG += `<text x="2" y="${(Number(y) - 2).toFixed(1)}" class="schart-glabel">${cnt}</text>`;
   }
 
+  const barSatColors = getSatColors();
   let barsSVG = '', labelsSVG = '';
   for (let i = 0; i < buckets.length; i++) {
     const b = buckets[i];
@@ -2554,8 +2607,8 @@ function renderStatsChart() {
       if (!cnt) continue;
       const h = Math.max(1, Math.round((cnt / maxTotal) * barH));
       stackY -= h;
-      const clr = STATS_SAT_COLORS[satId] || 'var(--cyan)';
-      barsSVG += `<rect x="${x}" y="${stackY}" width="${BAR_W}" height="${h}" fill="${clr}" opacity="0.88"><title>${b.label} · ${satId}: ${cnt}</title></rect>`;
+      const clr = barSatColors[satId] || '#29b6f6';
+      barsSVG += `<rect x="${x}" y="${stackY}" width="${BAR_W}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${b.label} · ${satId}: ${cnt}</title></rect>`;
     }
     if (i % labelEvery === 0) {
       const d   = b.start;
@@ -2593,6 +2646,64 @@ function statsSetSort(v)  { statsState.sortBy = v; renderStatsPanel(); }
 function statsToggleExpand(satId) {
   statsState.expanded.has(satId) ? statsState.expanded.delete(satId) : statsState.expanded.add(satId);
   renderStatsPanel();
+}
+
+function statsBarClick(event, bucketIdx, satId) {
+  const buckets = buildChartBuckets();
+  const b = buckets[bucketIdx];
+  if (!b) return;
+
+  const frames = state.rawFrames || [];
+  const bsDate = b.start.toISOString().slice(0, 10);
+  const beDate = b.end.toISOString().slice(0, 10);
+  const inBucket = frames.filter(f =>
+    f.satellite_id === satId && f.date &&
+    f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate
+  );
+
+  const trackMap = new Map();
+  for (const f of inBucket) {
+    const k = `${f.path_number_norm ?? ''}|${f.direction_norm || ''}`;
+    if (!trackMap.has(k)) trackMap.set(k, { track: f.path_number_norm, dir: f.direction_norm, count: 0 });
+    trackMap.get(k).count++;
+  }
+  const tracks = [...trackMap.values()].sort((a, c) => c.count - a.count);
+
+  const clr = getSatColors()[satId] || '#29b6f6';
+  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const endLabel = new Date(b.end.getTime() - 86400000).toISOString().slice(0, 10);
+  const periodLabel = cellDays === 1 ? b.label : `${b.label} – ${endLabel}`;
+
+  const trackHTML = tracks.map(t => {
+    const dirSh  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : (t.dir || '?').slice(0, 4);
+    const dirCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
+    return `<div class="scp-track-row">
+      <span class="sts-tdir ${dirCls}">${dirSh}</span>
+      <span class="scp-tnum">T${t.track ?? '?'}</span>
+      <span class="scp-tcnt">${t.count} fr</span>
+    </div>`;
+  }).join('');
+
+  const popup = document.getElementById('schart-popup');
+  if (!popup) return;
+  popup.innerHTML = `
+    <div class="scp-hdr" style="border-left:3px solid ${clr}">
+      <span class="scp-sat" style="color:${clr}">${satId}</span>
+      <span class="scp-period">${periodLabel}</span>
+      <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">✕</button>
+    </div>
+    <div class="scp-total">${inBucket.length} frame${inBucket.length !== 1 ? 's' : ''}</div>
+    ${trackHTML || '<div class="scp-empty">No track data</div>'}
+  `;
+  popup.hidden = false;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = event.clientX + 14;
+  let top  = event.clientY - 8;
+  if (left + 220 > vw) left = event.clientX - 234;
+  if (top + 220 > vh) top  = vh - 228;
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
 }
 
 function applyStatsTrackFilter(satId, trackNum, dir) {
@@ -2728,7 +2839,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeStatsPanel();
+    if (e.key === 'Escape') {
+      closeStatsPanel();
+      const popup = document.getElementById('schart-popup');
+      if (popup) popup.hidden = true;
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const popup = document.getElementById('schart-popup');
+    if (popup && !popup.hidden && !popup.contains(e.target) && !e.target.closest('.schart-bar')) {
+      popup.hidden = true;
+    }
   });
 
   // Safety net: ensure loading overlay is gone even if loadData resolved early

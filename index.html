@@ -55,7 +55,7 @@
     </div>
   </div>
   <div class="hdr-tabs">
-    <button class="tab tab-stats" onclick="openStatsPanel()">Stats</button>
+    <button class="tab tab-stats" onclick="openStatsPanel()">Stats<span id="bg-load-pct" class="bg-load-pct"></span></button>
   </div>
 </header>
 
@@ -218,14 +218,21 @@
   </div>
   <div class="stats-panel-body" id="stats-panel-body"></div>
   <div class="stats-footer">
-    <span class="dl-label">Chart</span>
-    <button class="dl-btn asf" onclick="statsExportChartSVG()">SVG</button>
-    <button class="dl-btn csv" onclick="statsExportChartCSV()">CSV</button>
-    <span class="dl-label stats-footer-sep">Table</span>
-    <button class="dl-btn csv" onclick="statsExportTableCSV()">CSV</button>
+    <span class="stats-footer-title">Export</span>
+    <div class="stats-footer-group">
+      <span class="stats-footer-grp-lbl">Chart</span>
+      <button class="stats-footer-btn" onclick="statsExportChartSVG()">SVG</button>
+      <button class="stats-footer-btn" onclick="statsExportChartCSV()">CSV</button>
+    </div>
+    <div class="stats-footer-rule"></div>
+    <div class="stats-footer-group">
+      <span class="stats-footer-grp-lbl">Table</span>
+      <button class="stats-footer-btn" onclick="statsExportTableCSV()">CSV</button>
+    </div>
   </div>
 </div>
 
+<div id="schart-popup" class="schart-popup" hidden></div>
 <script src="app.js" defer></script>
 </body>
 </html>
