@@ -2385,9 +2385,18 @@ function buildChartBuckets() {
     const be = bEnd.toISOString().slice(0, 10);
     const counts = {};
     for (const id of activeSats) counts[id] = 0;
+    const seen = new Set();
     for (const f of relevant) {
       const d = f.date.slice(0, 10);
-      if (d >= bs && d < be) counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
+      if (d >= bs && d < be) {
+        // Deduplicate: same physical acquisition can appear from multiple sources (ASF + Copernicus)
+        // and multiple product types. Count each unique frame scene only once.
+        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${f.frame_number_norm ?? ''}`;
+        if (!seen.has(acqKey)) {
+          seen.add(acqKey);
+          counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
+        }
+      }
     }
     buckets.push({
       label: bs, start: new Date(cursor), end: new Date(bEnd),
