@@ -818,6 +818,31 @@ header {
   color: var(--muted);
   flex-shrink: 0;
 }
+.legend-hl-row {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+.legend-hl-btn {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump));
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .1s, color .1s, border-color .1s;
+  letter-spacing: .03em;
+}
+.legend-hl-btn.on {
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.legend-hl-btn:hover:not(.on) { color: var(--text-hi); border-color: var(--border2); background: var(--border); }
+
 .legend-empty {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);

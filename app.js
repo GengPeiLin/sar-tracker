@@ -341,17 +341,17 @@ const APP_VERSION = '20260414T000000';
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#ce93d8','S1D':'#4db6ac',
   'SENTINEL-1A':'#00e5ff','SENTINEL-1C':'#ce93d8','SENTINEL-1D':'#4db6ac',
-  'ALOS-2':'#ce93d8','ALOS-4':'#ab68c4','ALOS2':'#ce93d8','ALOS4':'#ab68c4',
+  'ALOS-2':'#ff80ab','ALOS-4':'#ab68c4','ALOS2':'#ff80ab','ALOS4':'#ab68c4',
   'RADARSAT-2':'#ffc107','RCM-1':'#ffb300','RCM-2':'#ffa000','RCM-3':'#ff8f00',
   'R2':'#ffc107','RCM':'#ffb300',
   '_default':'#ff7043',
 };
 
 const NISAR_TRACK_COLORS = {
-  'ASCENDING|39': '#00e676',
-  'ASCENDING|111': '#67f7b2',
-  'DESCENDING|61': '#00c2d1',
-  'DESCENDING|133': '#58d8e3',
+  'ASCENDING|39':   '#00e676',  // vivid green
+  'ASCENDING|111':  '#ffd740',  // amber — clearly distinct from green
+  'DESCENDING|61':  '#f06292',  // rose/pink
+  'DESCENDING|133': '#b388ff',  // lavender — distinct from pink and green
 };
 
 function platColor(platform) {
@@ -1307,9 +1307,17 @@ function updateLegend() {
   const wrap = document.getElementById('legend-items');
   if (!wrap) return;
 
+  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  const hlLabels = { ring: 'Solid', dash: 'Dash', color: 'Color', gold: 'Gold' };
+  const hlRow = `<div class="legend-hl-row">${
+    Object.keys(HIGHLIGHT_STYLES).map(id =>
+      `<button class="legend-hl-btn${hlId === id ? ' on' : ''}" onclick="setHighlightStyle('${id}')">${hlLabels[id]}</button>`
+    ).join('')
+  }</div>`;
+
   const frames = summarizeSelectedFrames();
   if (!frames.length) {
-    wrap.innerHTML = `<div class="legend-empty">${t('no-visible-data')}</div>`;
+    wrap.innerHTML = hlRow + `<div class="legend-empty">${t('no-visible-data')}</div>`;
     return;
   }
 
@@ -1332,7 +1340,7 @@ function updateLegend() {
         <div class="legend-value">${item.count}</div>
       </div>
     `);
-  wrap.innerHTML = items.join('');
+  wrap.innerHTML = hlRow + items.join('');
 }
 
 function renderMobileFeed() {
@@ -1680,12 +1688,27 @@ function appendSatelliteRow(container, sat) {
   return 1;
 }
 
+const HIGHLIGHT_STYLES = {
+  ring:  { color: '#ffffff', weight: 3.5, dashArray: null,  fill: 0.36 },
+  dash:  { color: '#ffffff', weight: 3.2, dashArray: '7 5', fill: 0.40 },
+  color: { color: null,      weight: 4.5, dashArray: null,  fill: 0.55 }, // null → own frame color
+  gold:  { color: '#ffd740', weight: 3.5, dashArray: null,  fill: 0.38 },
+};
+
+function setHighlightStyle(id) {
+  localStorage.setItem('sar_hl_style', id);
+  updateMapSelectionState();
+}
+
 function updateMapSelectionState() {
   const hasSelection = !!state.selectedFrameKey;
+  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  const hl   = HIGHLIGHT_STYLES[hlId] || HIGHLIGHT_STYLES.ring;
   for (const item of state.framePolygons) {
     const color = item.polygon.options.baseColor;
     if (item.key === state.selectedFrameKey) {
-      item.polygon.setStyle({ color: '#ffffff', weight: 3.5, fillColor: color, fillOpacity: 0.4, opacity: 1, dashArray: '8 5' });
+      item.polygon.setStyle({ color: hl.color ?? color, weight: hl.weight,
+        fillColor: color, fillOpacity: hl.fill, opacity: 1, dashArray: hl.dashArray });
       item.polygon.bringToFront();
     } else if (hasSelection) {
       item.polygon.setStyle({ color, weight: 1, fillColor: color, fillOpacity: 0.03, opacity: 0.2, dashArray: null });
