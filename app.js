@@ -2494,9 +2494,25 @@ function renderStatsChart() {
   }
   const activeSats = [...statsState.activeSats];
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
-  const BAR_W = 8, GAP = 2, stride = BAR_W + GAP;
+  const GAP = 2;
   const cH = 120, labH = 22, barH = cH - labH;
-  const svgW = buckets.length * stride;
+
+  // Fill the container when there are few bars; scroll when many.
+  // Subtract padding (14px each side) from available width.
+  const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
+  const minBarW    = 8;
+  const naturalW   = buckets.length * (minBarW + GAP) - GAP;
+  const BAR_W      = naturalW < containerW
+    ? Math.max(minBarW, Math.floor((containerW - GAP * (buckets.length - 1)) / buckets.length))
+    : minBarW;
+  const stride = BAR_W + GAP;
+  const svgW   = buckets.length * stride - GAP;  // no trailing gap
+
+  // Show a label every N bars so adjacent labels don't overlap.
+  // Label width ~30px for "M/DD", ~36px for "Mon'YY".
+  const cellDays    = STATS_CELL_STEPS[statsState.cellIdx];
+  const labelW      = cellDays >= 28 ? 36 : 30;
+  const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
 
   let gridSVG = '';
   for (const frac of [0.25, 0.5, 0.75, 1.0]) {
@@ -2506,10 +2522,7 @@ function renderStatsChart() {
     gridSVG += `<text x="2" y="${(Number(y) - 2).toFixed(1)}" class="schart-glabel">${cnt}</text>`;
   }
 
-  const cellDays   = STATS_CELL_STEPS[statsState.cellIdx];
-  const labelEvery = Math.max(1, Math.ceil(buckets.length / 18));
   let barsSVG = '', labelsSVG = '';
-
   for (let i = 0; i < buckets.length; i++) {
     const b = buckets[i];
     const x = i * stride;
