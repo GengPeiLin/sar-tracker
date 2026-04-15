@@ -2311,6 +2311,7 @@ function openStatsPanel() {
 }
 function closeStatsPanel() {
   document.getElementById('stats-panel')?.classList.remove('open');
+  if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
 }
 
 // ── Data ────────────────────────────────────────────────────────────────────
@@ -2425,11 +2426,24 @@ function buildChartBuckets() {
 
 // ── Render ──────────────────────────────────────────────────────────────────
 
+let _statsChartRO = null;
+
 function renderStatsPanel() {
   const body = document.getElementById('stats-panel-body');
   if (!body) return;
   body.innerHTML = buildStatsPanelHTML();
-  requestAnimationFrame(renderStatsChart);
+
+  if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
+
+  requestAnimationFrame(() => {
+    renderStatsChart();
+    const scrollEl = document.querySelector('.stats-chart-scroll');
+    if (scrollEl && window.ResizeObserver) {
+      let t;
+      _statsChartRO = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(renderStatsChart, 40); });
+      _statsChartRO.observe(scrollEl);
+    }
+  });
 }
 
 function buildStatsPanelHTML() {
