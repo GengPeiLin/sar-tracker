@@ -183,11 +183,6 @@ header {
   flex-wrap: wrap;
   margin-left: auto;
 }
-.hdr-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 .tab {
   font-family: var(--mono);
   font-size: calc(10px + var(--font-bump) - 1px);
@@ -210,7 +205,13 @@ header {
 .tab-stats {
   border-color: color-mix(in srgb, var(--orange) 60%, transparent);
   color: var(--orange);
-  margin-left: 6px;
+}
+
+/* invisible spacer label so Stats button bottom-aligns with Theme/Text-Size widgets */
+.hdr-tabs-spacer {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
 }
 .tab-stats:hover {
   border-color: var(--orange);
@@ -1234,18 +1235,28 @@ header {
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
-  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  /* visibility:hidden fires after the 0.28s slide-out so the panel is fully off-screen before
+     hit-testing is removed — on open, visibility:visible kicks in immediately (0s delay). */
+  transition: transform .28s cubic-bezier(.4,0,.2,1), visibility 0s .28s;
   overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
 }
-.stats-panel.open { transform: translateY(0); }
+.stats-panel.open {
+  transform: translateY(0);
+  transition: transform .28s cubic-bezier(.4,0,.2,1), visibility 0s 0s;
+  pointer-events: auto;
+  visibility: visible;
+}
 
 .stats-panel-hdr {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px 12px;
+  gap: 10px;
+  padding: 10px 16px 10px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .stats-panel-title {
   font-family: var(--mono);
@@ -1254,7 +1265,45 @@ header {
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--cyan);
+  margin-right: 4px;
 }
+
+/* ── layout switcher ── */
+.stats-layout-sw {
+  display: flex;
+  gap: 4px;
+}
+.sl-btn {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--muted);
+  width: 32px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.sl-btn:hover { color: var(--text-hi); border-color: var(--cyan); }
+.sl-btn.on {
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ── export in panel header ── */
+.stats-hdr-export {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
+/* push close to the far right */
+.stats-panel-hdr > .stats-close { margin-left: 4px; }
 .stats-close {
   background: none;
   border: 1px solid var(--border2);
@@ -1272,17 +1321,98 @@ header {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 20px 24px;
+}
+
+/* ── dashboard grid ── */
+.stats-dash {
+  display: grid;
+  gap: 16px;
+  padding: 16px 20px 28px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* layout: stack — single column (default) */
+.stats-dash.layout-stack {
+  grid-template-columns: 1fr;
+  grid-template-areas: "kpis" "chart" "table";
+}
+/* layout: split — chart left, table right */
+.stats-dash.layout-split {
+  grid-template-columns: 55fr 45fr;
+  grid-template-areas:
+    "kpis  kpis"
+    "chart table";
+}
+/* layout: chart — full-width tall chart, table below */
+.stats-dash.layout-chart {
+  grid-template-columns: 1fr;
+  grid-template-areas: "kpis" "chart" "table";
+}
+
+.stats-kpi-row   { grid-area: kpis; }
+.stats-sec-chart { grid-area: chart; }
+.stats-sec-table { grid-area: table; }
+
+/* in split, table scrolls within its column */
+.stats-dash.layout-split .stats-table-wrap {
+  max-height: calc(100vh - 260px);
+}
+/* in chart-focus, taller chart scroll area */
+.stats-dash.layout-chart .stats-chart-scroll {
+  min-height: 180px;
+}
+
+/* ── KPI strip ── */
+.stats-kpi-row {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.stats-kpi-card {
+  flex: 1;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+.stats-kpi-card--wide { flex: 2; min-width: 200px; }
+.stats-kpi-lbl {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.stats-kpi-val {
+  font-family: var(--mono);
+  font-size: calc(22px + var(--font-bump));
+  font-weight: 600;
+  color: var(--cyan);
+  line-height: 1.1;
+}
+.stats-kpi-val.orange { color: var(--orange); }
+.stats-kpi-val.small  { font-size: calc(13px + var(--font-bump)); padding-top: 4px; }
+
+/* ── below 900px: all layouts collapse to stack ── */
+@media (max-width: 900px) {
+  .stats-dash {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "kpis" "chart" "table" !important;
+    padding: 12px 14px 24px;
+  }
+  .stats-layout-sw { display: none; }
+  .stats-dash.layout-split .stats-table-wrap { max-height: min(520px, 50vh); }
 }
 .stats-footer {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
@@ -1893,6 +2023,8 @@ header {
     height: 52px;
     background: var(--surface);
     border-top: 1px solid var(--border);
+    position: relative;   /* establish stacking context */
+    z-index: 800;          /* sit above the stats panel (600) in all cases */
   }
   .mob-tab {
     flex: 1;
@@ -1929,12 +2061,35 @@ header {
   .sat-row       { padding: 8px 12px; }
 
   /* ── stats panel mobile ── */
-  .stats-panel-body { padding: 10px 12px 16px; gap: 14px; }
+
+  /* sit above the 52px tab bar, not covering it */
+  .stats-panel { bottom: 52px; }
+
+  /* dashboard grid tighter on mobile */
+  .stats-dash { padding: 10px 12px 16px; gap: 10px; }
+
+  /* KPI strip: 2×2 grid on narrow screens */
+  .stats-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stats-kpi-card { min-width: 0; padding: 8px 10px; border-radius: 4px; }
+  .stats-kpi-card--wide { grid-column: 1 / -1; }
+  .stats-kpi-val { font-size: calc(18px + var(--font-bump)); }
+  .stats-kpi-val.small { font-size: calc(10px + var(--font-bump)); padding-top: 2px; }
+
+  /* hide export buttons from header — too cramped; still accessible on desktop */
+  .stats-hdr-export { display: none; }
+
+  /* panel header: snug */
+  .stats-panel-hdr { padding: 8px 12px; gap: 8px; }
+  .stats-panel-title { font-size: calc(11px + var(--font-bump)); }
+
+  /* sections */
   .stats-ctrls { padding: 8px 10px; gap: 6px; }
   .stats-ctrl-lbl { min-width: 60px; }
   .stats-section-hd { padding: 8px 10px 6px; }
-  .stats-section-sub { padding: 4px 10px 8px; }
   .stats-chart-scroll { padding: 4px 10px 8px; }
   .stats-legend { padding: 2px 10px 8px; gap: 10px; }
   .sts-table th, .sts-sat-row td, .sts-track-row td { padding: 5px 8px; }
+
+  /* table max-height adjusted for the shorter panel */
+  .stats-table-wrap { max-height: min(360px, 40vh); }
 }

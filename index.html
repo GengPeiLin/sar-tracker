@@ -53,9 +53,10 @@
         <button class="size-step" id="size-inc" onclick="stepFontSize(1)">+</button>
       </div>
     </div>
-  </div>
-  <div class="hdr-tabs">
-    <button class="tab tab-stats" onclick="openStatsPanel()">Stats</button>
+    <div class="control-field">
+      <label aria-hidden="true" class="hdr-tabs-spacer">&nbsp;</label>
+      <button class="tab tab-stats" onclick="openStatsPanel()">Stats</button>
+    </div>
   </div>
   <div id="bg-load-bar" class="bg-load-bar" hidden></div>
 </header>
@@ -133,6 +134,15 @@
         </div>
       </details>
       <div class="filter-actions">
+        <div class="filter-hl-row">
+          <span class="filter-hl-lbl">Highlight</span>
+          <div class="filter-hl-btns" id="hl-btns">
+            <button class="legend-hl-btn" id="hl-ring"  onclick="setHighlightStyle('ring')">Solid</button>
+            <button class="legend-hl-btn" id="hl-dash"  onclick="setHighlightStyle('dash')">Dash</button>
+            <button class="legend-hl-btn" id="hl-color" onclick="setHighlightStyle('color')">Color</button>
+            <button class="legend-hl-btn" id="hl-gold"  onclick="setHighlightStyle('gold')">Gold</button>
+          </div>
+        </div>
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()" data-i18n="reset-filters">Reset Filters</button>
         <label class="filter-toggle" for="filter-show-same-track">
           <input id="filter-show-same-track" type="checkbox">
@@ -214,23 +224,29 @@
 <!-- ═══ STATS PANEL ══════════════════════════════════════════════════════════ -->
 <div class="stats-panel" id="stats-panel">
   <div class="stats-panel-hdr">
-    <span class="stats-panel-title">Update Frequency</span>
-    <button class="stats-close" onclick="closeStatsPanel()">✕</button>
-  </div>
-  <div class="stats-panel-body" id="stats-panel-body"></div>
-  <div class="stats-footer">
-    <span class="stats-footer-title">Export</span>
-    <div class="stats-footer-group">
+    <span class="stats-panel-title">Statistics</span>
+    <div class="stats-layout-sw">
+      <button id="sl-stack" class="sl-btn" onclick="statsSetLayout('stack')" title="Stacked">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="16" height="3" rx="1"/><rect x="0" y="5.5" width="16" height="3" rx="1"/><rect x="0" y="11" width="16" height="3" rx="1"/></svg>
+      </button>
+      <button id="sl-split" class="sl-btn" onclick="statsSetLayout('split')" title="Side by side">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="7" height="14" rx="1"/><rect x="9" y="0" width="7" height="14" rx="1"/></svg>
+      </button>
+      <button id="sl-chart" class="sl-btn" onclick="statsSetLayout('chart')" title="Chart focus">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="16" height="8" rx="1"/><rect x="0" y="10" width="16" height="4" rx="1"/></svg>
+      </button>
+    </div>
+    <div class="stats-hdr-export">
       <span class="stats-footer-grp-lbl">Chart</span>
       <button class="stats-footer-btn" onclick="statsExportChartSVG()">SVG</button>
       <button class="stats-footer-btn" onclick="statsExportChartCSV()">CSV</button>
-    </div>
-    <div class="stats-footer-rule"></div>
-    <div class="stats-footer-group">
+      <div class="stats-footer-rule"></div>
       <span class="stats-footer-grp-lbl">Table</span>
       <button class="stats-footer-btn" onclick="statsExportTableCSV()">CSV</button>
     </div>
+    <button class="stats-close" onclick="closeStatsPanel()">✕</button>
   </div>
+  <div class="stats-panel-body" id="stats-panel-body"></div>
 </div>
 
 <div id="schart-popup" class="schart-popup" hidden></div>
