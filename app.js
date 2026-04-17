@@ -633,7 +633,8 @@ function setupReadableUI() {
 
   const hdrStatus = document.querySelector('.hdr-status');
   if (hdrStatus) {
-    hdrStatus.innerHTML = `<b id="hdr-time">database: --</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
+    const prevTime = document.getElementById('hdr-time')?.textContent || 'database: --';
+    hdrStatus.innerHTML = `<b id="hdr-time">${prevTime}</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE`;
   }
 
   syncViewModeControl();
@@ -1697,7 +1698,15 @@ const HIGHLIGHT_STYLES = {
 
 function setHighlightStyle(id) {
   localStorage.setItem('sar_hl_style', id);
+  syncHighlightButtons();
   updateMapSelectionState();
+}
+
+function syncHighlightButtons() {
+  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  document.querySelectorAll('#hl-btns .legend-hl-btn').forEach(btn => {
+    btn.classList.toggle('on', btn.id === 'hl-' + hlId);
+  });
 }
 
 function updateMapSelectionState() {
@@ -2001,51 +2010,36 @@ function applyTabDateWindow() {
   updateDateShortcutState();
 }
 
+function computeNextExpected() {
+  const latestFrames = [...(state.filteredFrames || [])].filter(frame => frame?.date);
+  const groups = new Map();
+  for (const frame of latestFrames) {
+    const visual = getFrameVisualInfo(frame);
+    const current = groups.get(visual.label);
+    if (!current || String(frame.date || '') > String(current.date || ''))
+      groups.set(visual.label, frame);
+  }
+  const preferredOrder = ['A69', 'D105', 'NISAR A39', 'NISAR A111', 'NISAR D61', 'NISAR D133'];
+  const lines = [...groups.entries()]
+    .sort((a, b) => {
+      const ai = preferredOrder.indexOf(a[0]);
+      const bi = preferredOrder.indexOf(b[0]);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      return a[0].localeCompare(b[0]);
+    })
+    .slice(0, 6)
+    .map(([label, frame]) => { const d = new Date(frame.date); return `${label} ${d.getMonth()+1}/${d.getDate()}`; });
+  const key = lines.some(l => l.startsWith('NISAR')) ? 'latest-visible' : 'latest-a69-d105';
+  return { key, label: t(key), value: lines.length ? lines.join(' | ') : t('need-history') };
+}
+
 function updateNextExpected() {
   const el = document.getElementById('st-next');
   const labelEl = document.getElementById('st-next-label');
   if (!el) return;
-  const latestFrames = [...(state.filteredFrames || [])].filter(frame => frame?.date);
-  const groups = new Map();
-
-  for (const frame of latestFrames) {
-    const visual = getFrameVisualInfo(frame);
-    const current = groups.get(visual.label);
-    if (!current || String(frame.date || '') > String(current.date || '')) {
-      groups.set(visual.label, frame);
-    }
-  }
-
-  const preferredOrder = [
-    'A69',
-    'D105',
-    'NISAR A39',
-    'NISAR A111',
-    'NISAR D61',
-    'NISAR D133',
-  ];
-
-  const lines = [...groups.entries()]
-    .sort((a, b) => {
-      const aIndex = preferredOrder.indexOf(a[0]);
-      const bIndex = preferredOrder.indexOf(b[0]);
-      if (aIndex !== -1 || bIndex !== -1) {
-        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-      }
-      return a[0].localeCompare(b[0]);
-    })
-    .slice(0, 6)
-    .map(([label, frame]) => {
-      const date = new Date(frame.date);
-      return `${label} ${date.getMonth() + 1}/${date.getDate()}`;
-    });
-
-  if (labelEl) {
-    const key = lines.some(line => line.startsWith('NISAR')) ? 'latest-visible' : 'latest-a69-d105';
-    labelEl.dataset.latestKey = key;
-    labelEl.textContent = t(key);
-  }
-  el.textContent = lines.length ? lines.join(' | ') : t('need-history');
+  const result = computeNextExpected();
+  if (labelEl) { labelEl.dataset.latestKey = result.key; labelEl.textContent = result.label; }
+  el.textContent = result.value;
 }
 
 function renderFrames() {
@@ -2306,9 +2300,10 @@ const statsState = {
   chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
   chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
   cellIdx:    0,
-  activeSats: new Set(['S1A', 'S1C', 'NISAR']),
+  activeSats: new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
   sortBy:     'lastDate',
   expanded:   new Set(),
+  layout:     localStorage.getItem('sar_stats_layout') || 'stack',  // 'stack' | 'split' | 'chart'
 };
 
 function getChartDateRange() {
@@ -2329,12 +2324,42 @@ function getChartDateRange() {
 }
 
 function openStatsPanel() {
-  document.getElementById('stats-panel')?.classList.add('open');
-  renderStatsPanel();
+  const panel = document.getElementById('stats-panel');
+  panel?.classList.add('open');
+  syncLayoutButtons();
+  try {
+    renderStatsPanel();
+  } catch (err) {
+    console.error('[Stats] renderStatsPanel failed:', err);
+    const body = document.getElementById('stats-panel-body');
+    if (body) body.innerHTML = `<div style="padding:24px;color:var(--orange);font-family:var(--mono);font-size:13px">Stats render error: ${err.message}</div>`;
+  }
+  // mark stats mob-tab active
+  document.querySelectorAll('.mob-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === 'stats')
+  );
 }
 function closeStatsPanel() {
   document.getElementById('stats-panel')?.classList.remove('open');
   if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
+  // restore active state to the current body tab (or map)
+  const cur = document.body.dataset.mobTab || 'map';
+  document.querySelectorAll('.mob-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === cur)
+  );
+}
+
+function syncLayoutButtons() {
+  ['stack', 'split', 'chart'].forEach(id => {
+    document.getElementById('sl-' + id)?.classList.toggle('on', id === statsState.layout);
+  });
+}
+
+function statsSetLayout(l) {
+  statsState.layout = l;
+  localStorage.setItem('sar_stats_layout', l);
+  syncLayoutButtons();
+  renderStatsPanel();
 }
 
 // ── Data ────────────────────────────────────────────────────────────────────
@@ -2491,7 +2516,7 @@ function buildStatsPanelHTML() {
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
     const clr = satColors[id] || '#29b6f6';
-    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="Edit color"><input type="color" value="${clr}" oninput="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
+    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="Edit color"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
   }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="Reset all to defaults">↺</button>` : '');
 
   const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Interval'],['name','Name']].map(([v, l]) =>
@@ -2503,45 +2528,78 @@ function buildStatsPanelHTML() {
     .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${satColors[id]}"></span>${id}</span>`)
     .join('');
 
+  // KPI values — computed fresh each render from current state
+  const data    = state.baseStats || {};
+  const frames  = state.filteredFrames || [];
+  const fmtD    = v => `${v.getMonth()+1}/${v.getDate()}`;
+  const qStart  = new Date(data.query_start || Date.now() - 7*864e5);
+  const qEnd    = new Date(data.query_end   || Date.now());
+  const next    = computeNextExpected();
+  const kpiHTML = `
+    <div class="stats-kpi-card">
+      <div class="stats-kpi-lbl">${t('filtered-frames')}</div>
+      <div class="stats-kpi-val">${frames.length}</div>
+    </div>
+    <div class="stats-kpi-card">
+      <div class="stats-kpi-lbl">${t('active-satellites')}</div>
+      <div class="stats-kpi-val orange">${new Set(frames.map(f => f.satellite_id)).size}</div>
+    </div>
+    <div class="stats-kpi-card">
+      <div class="stats-kpi-lbl">${t('query-window')}</div>
+      <div class="stats-kpi-val small">${fmtD(qStart)} – ${fmtD(qEnd)}</div>
+    </div>
+    <div class="stats-kpi-card stats-kpi-card--wide">
+      <div class="stats-kpi-lbl">${next.label}</div>
+      <div class="stats-kpi-val small">${next.value}</div>
+    </div>`;
+
   return `
-  <div class="stats-section">
-    <div class="stats-section-hd">Acquisition Frequency Chart</div>
-    <div class="stats-ctrls">
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Period</span>
-        <div class="stats-chips">${presetHTML}</div>
-      </div>
-      ${customRowHTML}
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Cell size</span>
-        <div class="stats-stepper">
-          <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
-          <span class="sts-val">${cellDays}d</span>
-          <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx + 1})">+</button>
+  <div class="stats-dash layout-${statsState.layout}">
+
+    <div class="stats-kpi-row">
+      ${kpiHTML}
+    </div>
+
+    <div class="stats-section stats-sec-chart">
+      <div class="stats-section-hd">Acquisition Frequency Chart <span class="sts-hd-hint">· all acquisitions</span></div>
+      <div class="stats-ctrls">
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">Period</span>
+          <div class="stats-chips">${presetHTML}</div>
+        </div>
+        ${customRowHTML}
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">Cell size</span>
+          <div class="stats-stepper">
+            <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
+            <span class="sts-val">${cellDays}d</span>
+            <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx + 1})">+</button>
+          </div>
+        </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">Satellites</span>
+          <div class="stats-chips">${chipHTML}</div>
         </div>
       </div>
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Satellites</span>
-        <div class="stats-chips">${chipHTML}</div>
+      <div class="stats-chart-scroll">
+        <div class="stats-chart-wrap" id="stats-chart-wrap">
+          <span class="stats-muted-msg">Computing…</span>
+        </div>
       </div>
+      <div class="stats-legend">${legendHTML}</div>
     </div>
-    <div class="stats-chart-scroll">
-      <div class="stats-chart-wrap" id="stats-chart-wrap">
-        <span class="stats-muted-msg">Computing…</span>
-      </div>
-    </div>
-    <div class="stats-legend">${legendHTML}</div>
-  </div>
 
-  <div class="stats-section">
-    <div class="stats-section-hd">Track Statistics <span class="sts-hd-hint">· click a track row to filter the map</span></div>
-    <div class="stats-ctrls">
-      <div class="stats-ctrl-row">
-        <span class="stats-ctrl-lbl">Sort by</span>
-        <div class="stats-chips">${sortHTML}</div>
+    <div class="stats-section stats-sec-table">
+      <div class="stats-section-hd">Track Statistics <span class="sts-hd-hint">· all acquisitions · click a track row to filter the map</span></div>
+      <div class="stats-ctrls">
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">Sort by</span>
+          <div class="stats-chips">${sortHTML}</div>
+        </div>
       </div>
+      <div class="stats-table-wrap">${buildStatsTableHTML()}</div>
     </div>
-    <div class="stats-table-wrap">${buildStatsTableHTML()}</div>
+
   </div>`;
 }
 
@@ -2629,7 +2687,7 @@ function buildStatsTableHTML() {
       <th>Track</th><th>Dir</th>
       <th class="sts-num">Frames</th>
       <th class="sts-num">Interval</th>
-      <th>Consist.</th>
+      <th title="Acquisition regularity (0–5 dots)">Regularity</th>
       <th>Last · 24mo</th>
     </tr></thead>
     ${bodies}
@@ -2664,7 +2722,7 @@ function renderStatsChart() {
   const activeSats = [...statsState.activeSats];
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
   const GAP = 2;
-  const cH = 120, labH = 22, barH = cH - labH;
+  const cH = statsState.layout === 'chart' ? 200 : 120, labH = 22, barH = cH - labH;
 
   // Fill the container when there are few bars; scroll when many.
   // Subtract padding (14px each side) from available width.
@@ -2816,7 +2874,7 @@ function statsBarClick(event, bucketIdx, satId) {
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = event.clientX + 14;
   let top  = event.clientY - 8;
-  if (left + 220 > vw) left = event.clientX - 234;
+  if (left + 230 > vw) left = event.clientX - 244;
   if (top + 220 > vh) top  = vh - 228;
   popup.style.left = left + 'px';
   popup.style.top  = top  + 'px';
@@ -2835,12 +2893,16 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
     if (dirSel) dirSel.value = dir;
   }
 
+  state.filters.pathMin = '';
+  state.filters.pathMax = '';
+  const pMin = document.getElementById('filter-path-min');
+  const pMax = document.getElementById('filter-path-max');
+  if (pMin) pMin.value = '';
+  if (pMax) pMax.value = '';
   const tn = String(trackNum);
   if (tn && tn !== 'null' && tn !== '') {
     state.filters.pathMin = tn;
     state.filters.pathMax = tn;
-    const pMin = document.getElementById('filter-path-min');
-    const pMax = document.getElementById('filter-path-max');
     if (pMin) pMin.value = tn;
     if (pMax) pMax.value = tn;
   }
@@ -2956,6 +3018,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!panel || !panel.classList.contains('open')) return;
     if (panel.contains(event.target) || toggle?.contains(event.target)) return;
     toggleExportPanel(false);
+  });
+
+  document.addEventListener('click', event => {
+    const statsPanel = document.getElementById('stats-panel');
+    if (!statsPanel || !statsPanel.classList.contains('open')) return;
+    if (statsPanel.contains(event.target)) return;
+    if (event.target.closest('.mob-tab[data-tab="stats"]')) return; // stats tab re-opens, not closes
+    closeStatsPanel();
   });
 
   document.addEventListener('keydown', e => {

@@ -1344,11 +1344,12 @@ header {
     "kpis  kpis"
     "chart table";
 }
-/* layout: chart — full-width tall chart, table below */
+/* layout: chart — full-width tall chart only, table hidden */
 .stats-dash.layout-chart {
   grid-template-columns: 1fr;
-  grid-template-areas: "kpis" "chart" "table";
+  grid-template-areas: "kpis" "chart";
 }
+.stats-dash.layout-chart .stats-sec-table { display: none; }
 
 .stats-kpi-row   { grid-area: kpis; }
 .stats-sec-chart { grid-area: chart; }
@@ -1360,7 +1361,7 @@ header {
 }
 /* in chart-focus, taller chart scroll area */
 .stats-dash.layout-chart .stats-chart-scroll {
-  min-height: 180px;
+  min-height: 320px;
 }
 
 /* ── KPI strip ── */
