@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metalink xmlns="urn:ietf:params:xml:ns:metalink">
-  <!-- generated 2026-04-17T04:43:45Z -->
-  <!-- 18534 scenes -->
+  <!-- generated 2026-04-18T04:26:07Z -->
+  <!-- 18540 scenes -->
+  <file name="S1D_IW_RAW__0SDV_20260417T095956_20260417T100008_002385_003E5E_989D.SAFE.zip">
+    <size>606800000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(5aa5213d-39fc-4d5d-98b7-438032524d97)/$value</url>
+  </file>
+  <file name="S1D_IW_OCN__2SDV_20260417T095955_20260417T100008_002385_003E5E_CD17.SAFE.zip">
+    <size>38300000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(08dbb2ba-322e-4363-a115-818c292fbb3d)/$value</url>
+  </file>
+  <file name="S1D_IW_GRDH_1SDV_20260417T095955_20260417T100008_002385_003E5E_991D.SAFE.zip">
+    <size>897500000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(54c89eed-eec9-40c9-bf2c-89d6bffecc77)/$value</url>
+  </file>
+  <file name="S1D_IW_GRDH_1SDV_20260417T095955_20260417T100008_002385_003E5E_AA6E_COG.SAFE.zip">
+    <size>410100000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(ae81b7e6-c5c8-43bd-86a3-94e756878e9c)/$value</url>
+  </file>
+  <file name="S1D_IW_SLC__1SDV_20260417T095955_20260417T100008_002385_003E5E_96EF.SAFE.zip">
+    <size>3299300000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(b4389761-0f5d-4a0a-b30d-9ad57fbf10e9)/$value</url>
+  </file>
+  <file name="S1A_IW_RAW__0SDV_20260417T095359_20260417T095431_064118_0811A8_EC60.SAFE.zip">
+    <size>1666700000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(ff5f420b-6a26-4b25-9232-40dba40fa2e4)/$value</url>
+  </file>
   <file name="S1A_IW_GRDH_1SDV_20260415T101005_20260415T101030_064089_08109A_82E1.SAFE.zip">
     <size>1721700000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(8a565076-7356-4b9d-bca5-a15a9dbb8c24)/$value</url>
