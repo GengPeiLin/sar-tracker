@@ -2268,6 +2268,8 @@ function openFrameDrawer(clickedFrame) {
 
 const STATS_CELL_STEPS = [1, 2, 3, 5, 7, 14, 30];
 const STATS_CHART_SATS = ['S1A', 'S1C', 'S1D', 'NISAR'];
+const STATS_S1_IDS     = new Set(['S1A', 'S1C', 'S1D']);
+const STATS_S1_TRACKS  = [69, 105, 142, 171];
 const STATS_SAT_DEFAULT_COLORS = {
   S1A: '#29b6f6', S1C: '#ce93d8', S1D: '#4db6ac', NISAR: '#ffb74d',
 };
@@ -2300,7 +2302,8 @@ const statsState = {
   chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
   chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
   cellIdx:    0,
-  activeSats: new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
+  activeSats:   new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
+  activeTracks: new Set([69, 105]),  // T142 & T171 excluded by default
   sortBy:     'lastDate',
   expanded:   new Set(),
   layout:     localStorage.getItem('sar_stats_layout') || 'stack',  // 'stack' | 'split' | 'chart'
@@ -2436,10 +2439,12 @@ function buildChartBuckets() {
   const { start, end } = getChartDateRange();
   const startStr = start.toISOString().slice(0, 10);
   const endStr   = end.toISOString().slice(0, 10);
-  const relevant = frames.filter(f =>
-    f.date && activeSats.has(f.satellite_id) &&
-    f.date.slice(0, 10) >= startStr && f.date.slice(0, 10) < endStr
-  );
+  const relevant = frames.filter(f => {
+    if (!f.date || !activeSats.has(f.satellite_id)) return false;
+    if (f.date.slice(0, 10) < startStr || f.date.slice(0, 10) >= endStr) return false;
+    if (STATS_S1_IDS.has(f.satellite_id) && !statsState.activeTracks.has(f.path_number_norm)) return false;
+    return true;
+  });
   const buckets = [];
   let cursor = new Date(start);
   while (cursor < end) {
@@ -2523,6 +2528,10 @@ function buildStatsPanelHTML() {
     `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
   ).join('');
 
+  const trackChipHTML = STATS_S1_TRACKS.map(t =>
+    `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
+  ).join('');
+
   const legendHTML = STATS_CHART_SATS
     .filter(id => statsState.activeSats.has(id))
     .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${satColors[id]}"></span>${id}</span>`)
@@ -2579,6 +2588,10 @@ function buildStatsPanelHTML() {
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">Satellites</span>
           <div class="stats-chips">${chipHTML}</div>
+        </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">S1 tracks</span>
+          <div class="stats-chips">${trackChipHTML}</div>
         </div>
       </div>
       <div class="stats-chart-scroll">
@@ -2802,6 +2815,14 @@ function statsToggleSat(id) {
     if (statsState.activeSats.size > 1) statsState.activeSats.delete(id);
   } else {
     statsState.activeSats.add(id);
+  }
+  renderStatsPanel();
+}
+function statsToggleTrack(t) {
+  if (statsState.activeTracks.has(t)) {
+    if (statsState.activeTracks.size > 1) statsState.activeTracks.delete(t);
+  } else {
+    statsState.activeTracks.add(t);
   }
   renderStatsPanel();
 }
