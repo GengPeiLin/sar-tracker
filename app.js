@@ -2721,19 +2721,16 @@ function renderStatsChart() {
   }
   const activeSats = [...statsState.activeSats];
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
-  const GAP = 2;
   const cH = statsState.layout === 'chart' ? 200 : 120, labH = 22, barH = cH - labH;
 
-  // Fill the container when there are few bars; scroll when many.
-  // Subtract padding (14px each side) from available width.
+  // Always fit all bars within the container — no horizontal scroll.
+  // Drop inter-bar gaps when bars are dense so every bar stays ≥ 1 px wide.
   const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
-  const minBarW    = 8;
-  const naturalW   = buckets.length * (minBarW + GAP) - GAP;
-  const BAR_W      = naturalW < containerW
-    ? Math.max(minBarW, Math.floor((containerW - GAP * (buckets.length - 1)) / buckets.length))
-    : minBarW;
+  const n   = buckets.length;
+  const GAP = (containerW / n) > 4 ? 2 : 0;
+  const BAR_W = Math.max(1, Math.floor((containerW - GAP * (n - 1)) / n));
   const stride = BAR_W + GAP;
-  const svgW   = buckets.length * stride - GAP;  // no trailing gap
+  const svgW   = n * stride - GAP;  // no trailing gap
 
   // Show a label every N bars so adjacent labels don't overlap.
   // Label width ~30px for "M/DD", ~36px for "Mon'YY".

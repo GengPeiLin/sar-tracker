@@ -1613,11 +1613,10 @@ header {
 
 /* ── chart ── */
 .stats-chart-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   padding: 6px 14px 10px;
 }
-.stats-chart-wrap { display: inline-block; min-width: 100%; }
+.stats-chart-wrap { display: block; }
 .schart-svg { display: block; overflow: visible; }
 .schart-bar { opacity: .88; cursor: pointer; transition: opacity .1s; }
 .schart-bar:hover { opacity: 1; filter: brightness(1.12); }
