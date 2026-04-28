@@ -2304,9 +2304,11 @@ const statsState = {
   cellIdx:    0,
   activeSats:   new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
   activeTracks: new Set([69, 105]),  // T142 & T171 excluded by default
-  sortBy:     'lastDate',
-  expanded:   new Set(),
-  layout:     localStorage.getItem('sar_stats_layout') || 'stack',  // 'stack' | 'split' | 'chart'
+  sortBy:       'lastDate',
+  expanded:     new Set(STATS_CHART_SATS),  // featured sats open by default
+  showInactive: false,
+  activeFilter: null,  // { satId, track, dir } — track row the user last clicked
+  layout:       localStorage.getItem('sar_stats_layout') || 'stack',
 };
 
 function getChartDateRange() {
@@ -2501,6 +2503,13 @@ function renderStatsPanel() {
   });
 }
 
+function fmtMonDay(dateStr) {
+  if (!dateStr) return '—';
+  const p = dateStr.slice(0, 10).split('-');
+  const d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return isNaN(d) ? dateStr.slice(5, 10) : d.toLocaleString('default', { month: 'short', day: 'numeric' });
+}
+
 function buildStatsPanelHTML() {
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
 
@@ -2529,6 +2538,9 @@ function buildStatsPanelHTML() {
   const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Interval'],['name','Name']].map(([v, l]) =>
     `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
   ).join('');
+
+  const af = statsState.activeFilter;
+  const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId} T${af.track} ${af.dir === 'ASCENDING' ? 'ASC' : 'DESC'}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
 
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
@@ -2605,23 +2617,27 @@ function buildStatsPanelHTML() {
     </div>
 
     <div class="stats-section stats-sec-table">
-      <div class="stats-section-hd">Track Statistics <span class="sts-hd-hint">· all acquisitions · click a track row to filter the map</span></div>
+      <div class="stats-section-hd">Track Statistics${activeFilterBadge}</div>
       <div class="stats-ctrls">
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">Sort by</span>
           <div class="stats-chips">${sortHTML}</div>
         </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">Show</span>
+          <div class="stats-chips"><button class="stats-chip${statsState.showInactive ? ' on' : ''}" onclick="statsToggleShowInactive()">No-data sats</button></div>
+        </div>
       </div>
-      <div class="stats-table-wrap">${buildStatsTableHTML()}</div>
+      <div class="stats-cards-wrap">${buildStatsCardsHTML()}</div>
     </div>
 
   </div>`;
 }
 
-function buildStatsTableHTML() {
+function buildStatsCardsHTML() {
   let satStats = buildFrequencyStats();
 
-  // Ensure all chart satellites appear, even if they have no data yet
+  // Ensure chart satellites appear even with no data
   const present = new Set(satStats.map(s => s.satId));
   for (const id of STATS_CHART_SATS) {
     if (!present.has(id)) {
@@ -2632,7 +2648,6 @@ function buildStatsTableHTML() {
   }
 
   satStats = [...satStats].sort((a, b) => {
-    // No-data rows sort last within any sort mode
     if (a.noData !== b.noData) return a.noData ? 1 : -1;
     switch (statsState.sortBy) {
       case 'count':    return b.totalCount - a.totalCount;
@@ -2641,78 +2656,70 @@ function buildStatsTableHTML() {
       default:         return a.satId.localeCompare(b.satId);
     }
   });
-  if (!satStats.length)
-    return `<div class="stats-muted-msg">No data available</div>`;
 
-  const bodies = satStats.map(s => {
+  if (!satStats.length)
+    return `<div class="stats-muted-msg" style="padding:16px">No data available</div>`;
+
+  const satColors = getSatColors();
+  const af = statsState.activeFilter;
+
+  const cards = satStats.map(s => {
+    const dotColor = satColors[s.satId] || platColor(s.satId);
+
     if (s.noData) {
-      const sat = SATS.find(x => x.id === s.satId);
+      if (!statsState.showInactive) return '';
+      const sat  = SATS.find(x => x.id === s.satId);
       const note = sat?.status === 'op' ? 'No acquisitions in database yet' : 'Not yet operational';
-      return `<tbody><tr class="sts-sat-row sts-sat-nodata">
-        <td colspan="6"><div class="sts-row-cell">
-          <span class="sts-expand" style="visibility:hidden">▸</span>
-          <span class="sts-sat-name">${s.satId}</span>
-          <span class="sts-band">${s.band}</span>
-          <span class="sts-dim">${note}</span>
-        </div></td>
-      </tr></tbody>`;
+      return `<div class="trk-card trk-card-nodata" style="--dc:${dotColor}">
+        <div class="trk-card-hdr trk-card-hdr-static">
+          <span class="trk-dot"></span>
+          <span class="trk-sat-id">${s.satId}</span>
+          <span class="trk-band-pill">${s.band}</span>
+          <span class="trk-summary">${note}</span>
+        </div>
+      </div>`;
     }
 
-    const exp      = statsState.expanded.has(s.satId);
-    const gapStr   = s.avgGap  ? `~${s.avgGap.toFixed(1)}d`  : '—';
-    const lastStr  = s.lastDate ? s.lastDate.slice(0, 10)     : '—';
-    const tkCount  = `${s.tracks.length} track${s.tracks.length !== 1 ? 's' : ''}`;
+    const exp     = statsState.expanded.has(s.satId);
+    const gapStr  = s.avgGap ? `~${s.avgGap.toFixed(1)}d` : '—';
+    const lastStr = fmtMonDay(s.lastDate);
+    const summary = `${s.tracks.length} track${s.tracks.length !== 1 ? 's' : ''} · ${s.totalCount.toLocaleString()} fr · ${gapStr} · ${lastStr}`;
 
-    const trackRows = exp ? s.tracks.map(t => {
-      const tNum    = t.track !== null ? String(t.track).padStart(3, '0') : '—';
+    const trackRows = s.tracks.map(t => {
+      const tNum    = t.track !== null ? `T${String(t.track).padStart(3, '0')}` : 'T—';
       const tDirSh  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : t.dir.slice(0, 4);
       const tDirCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
-      const tGap    = t.avgGap   ? `${t.avgGap.toFixed(1)}d`  : '—';
-      const tLast   = t.lastDate ? t.lastDate.slice(5, 10)    : '—';
-      const dots    = buildStatsDots(t.consistency);
+      const tGap    = t.avgGap ? `${t.avgGap.toFixed(1)}d` : '—';
+      const tLast   = fmtMonDay(t.lastDate);
       const spark   = buildSparklineSvg(t.sparkline);
       const tVal    = t.track !== null ? t.track : '';
-      return `<tr class="sts-track-row" onclick="applyStatsTrackFilter('${s.satId}','${tVal}','${t.dir}')">
-        <td class="sts-num">${tNum}</td>
-        <td><span class="sts-tdir ${tDirCls}">${tDirSh}</span></td>
-        <td class="sts-num">${t.count.toLocaleString()}</td>
-        <td class="sts-num">${tGap}</td>
-        <td>${dots}</td>
-        <td><div class="sts-row-cell"><span class="sts-last-date">${tLast}</span>${spark}</div></td>
-      </tr>`;
-    }).join('') : '';
+      const isActive = af && af.satId === s.satId && String(af.track) === String(tVal) && af.dir === t.dir;
+      return `<div class="trk-row${isActive ? ' active' : ''}" onclick="applyStatsTrackFilter('${s.satId}','${tVal}','${t.dir}')">
+        <span class="sts-tdir ${tDirCls}">${tDirSh}</span>
+        <span class="trk-num">${tNum}</span>
+        <div class="trk-spark">${spark}</div>
+        <span class="trk-frames">${t.count.toLocaleString()} fr</span>
+        <span class="trk-intv">${tGap}</span>
+        <span class="trk-last">${tLast}</span>
+        <span class="trk-filter-icon" aria-hidden="true">↗</span>
+      </div>`;
+    }).join('');
 
-    return `<tbody>
-      <tr class="sts-sat-row${exp ? ' exp' : ''}" onclick="statsToggleExpand('${s.satId}')">
-        <td colspan="6">
-          <div class="sts-row-cell">
-            <span class="sts-expand">${exp ? '▾' : '▸'}</span>
-            <span class="sts-sat-name">${s.satId}</span>
-            <span class="sts-band">${s.band}</span>
-            <span class="sts-dim">${tkCount} · ${s.totalCount.toLocaleString()} frames · ${gapStr} avg · last ${lastStr}</span>
-          </div>
-        </td>
-      </tr>
-      ${trackRows}
-    </tbody>`;
+    return `<div class="trk-card${exp ? ' open' : ''}" style="--dc:${dotColor}">
+      <button class="trk-card-hdr" onclick="statsToggleExpand('${s.satId}')">
+        <span class="trk-dot"></span>
+        <span class="trk-sat-id">${s.satId}</span>
+        <span class="trk-band-pill">${s.band}</span>
+        <span class="trk-summary">${summary}</span>
+        <span class="trk-chevron">▸</span>
+      </button>
+      <div class="trk-card-body">${trackRows}</div>
+    </div>`;
   }).join('');
 
-  return `<table class="sts-table">
-    <thead><tr>
-      <th>Track</th><th>Dir</th>
-      <th class="sts-num">Frames</th>
-      <th class="sts-num">Interval</th>
-      <th title="Acquisition regularity (0–5 dots)">Regularity</th>
-      <th>Last · 24mo</th>
-    </tr></thead>
-    ${bodies}
-  </table>`;
+  return `<div class="trk-cards">${cards}</div>`;
 }
 
-function buildStatsDots(n) {
-  return `<div class="sts-dots">${Array.from({ length: 5 }, (_, i) =>
-    `<span class="sts-dot${i < n ? ' on' : ''}"></span>`).join('')}</div>`;
-}
 
 function buildSparklineSvg(data) {
   const max  = Math.max(...data, 1);
@@ -2723,7 +2730,8 @@ function buildSparklineSvg(data) {
     const h = v > 0 ? Math.max(2, Math.round((v / max) * H)) : 0;
     return `<rect x="${i * (bw + gap)}" y="${H - h}" width="${bw}" height="${h}" class="spark-bar"/>`;
   }).join('');
-  return `<svg class="spark-svg" viewBox="0 0 ${data.length * (bw + gap)} ${H}" width="${data.length * (bw + gap)}" height="${H}">${bars}</svg>`;
+  const W = data.length * (bw + gap);
+  return `<svg class="spark-svg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">${bars}</svg>`;
 }
 
 function renderStatsChart() {
@@ -2828,7 +2836,8 @@ function statsToggleTrack(t) {
   }
   renderStatsPanel();
 }
-function statsSetSort(v)  { statsState.sortBy = v; renderStatsPanel(); }
+function statsSetSort(v)         { statsState.sortBy = v; renderStatsPanel(); }
+function statsToggleShowInactive() { statsState.showInactive = !statsState.showInactive; renderStatsPanel(); }
 function statsToggleExpand(satId) {
   statsState.expanded.has(satId) ? statsState.expanded.delete(satId) : statsState.expanded.add(satId);
   renderStatsPanel();
@@ -2927,8 +2936,22 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
     if (pMax) pMax.value = tn;
   }
 
+  statsState.activeFilter = { satId, track: trackNum, dir };
   applyAdvancedFilters();
   closeStatsPanel();
+}
+
+function clearStatsFilter() {
+  statsState.activeFilter = null;
+  ensureAdvancedState();
+  state.filters.satellite = 'ALL';
+  state.filters.direction = 'ALL';
+  state.filters.pathMin   = '';
+  state.filters.pathMax   = '';
+  ['filter-satellite', 'filter-direction'].forEach(id => { const el = document.getElementById(id); if (el) el.value = 'ALL'; });
+  ['filter-path-min',  'filter-path-max' ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  applyAdvancedFilters();
+  renderStatsPanel();
 }
 
 // ── Stats exports ────────────────────────────────────────────────────────────
