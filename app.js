@@ -3043,9 +3043,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', event => {
     const statsPanel = document.getElementById('stats-panel');
     if (!statsPanel || !statsPanel.classList.contains('open')) return;
-    if (statsPanel.contains(event.target)) return;
-    if (event.target.closest('.mob-tab[data-tab="stats"]')) return; // mobile stats tab re-opens, not closes
-    if (event.target.closest('.tab-stats')) return; // desktop stats button re-opens, not closes
+    // Use composedPath() instead of contains(): if a chip's onclick calls renderStatsPanel()
+    // the clicked node is detached before this handler fires, so contains() returns false.
+    if (event.composedPath().includes(statsPanel)) return;
+    if (event.target.closest?.('.mob-tab[data-tab="stats"]')) return;
+    if (event.target.closest?.('.tab-stats')) return;
     closeStatsPanel();
   });
 
