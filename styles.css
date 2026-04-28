@@ -1680,93 +1680,25 @@ header {
 .spark-svg { display: block; }
 .spark-bar { fill: var(--cyan-dim); }
 
-/* ── track stats cards ── */
+/* ── track statistics (flat track-row list) ── */
 .stats-cards-wrap {
   overflow-y: auto;
   max-height: min(520px, 50vh);
   overscroll-behavior: contain;
-  padding: 8px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 0 0 8px;
 }
 .stats-dash.layout-split .stats-cards-wrap { max-height: calc(100vh - 260px); }
 
-.trk-card {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.trk-card-nodata { opacity: .45; }
-
-.trk-card-hdr {
-  width: 100%;
+.trk-flat-list {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  background: var(--surface);
-  border: none;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .1s;
+  flex-direction: column;
 }
-.trk-card-hdr:hover { background: var(--border); }
-.trk-card.open .trk-card-hdr { background: color-mix(in srgb, var(--dc, var(--cyan)) 8%, var(--surface)); }
-.trk-card-hdr-static { cursor: default; }
-.trk-card-hdr-static:hover { background: var(--surface); }
-
-.trk-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--dc, var(--cyan));
-  flex-shrink: 0;
-}
-.trk-sat-id {
-  font-family: var(--mono);
-  font-size: calc(11px + var(--font-bump));
-  font-weight: 600;
-  color: var(--text-hi);
-  white-space: nowrap;
-}
-.trk-band-pill {
-  font-family: var(--mono);
-  font-size: calc(9px + var(--font-bump));
-  padding: 1px 5px;
-  border-radius: 3px;
-  border: 1px solid var(--border2);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.trk-summary {
-  font-family: var(--mono);
-  font-size: calc(9px + var(--font-bump));
-  color: var(--muted);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.trk-chevron {
-  font-size: 10px;
-  color: var(--muted);
-  flex-shrink: 0;
-  transition: transform .15s;
-  display: inline-block;
-}
-.trk-card.open .trk-chevron { transform: rotate(90deg); }
-
-.trk-card-body { display: none; border-top: 1px solid var(--border); }
-.trk-card.open .trk-card-body { display: block; }
 
 .trk-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background .1s;
@@ -1778,10 +1710,30 @@ header {
 .trk-num {
   font-family: var(--mono);
   font-size: calc(11px + var(--font-bump));
+  font-weight: 600;
   color: var(--text-hi);
   min-width: 42px;
   white-space: nowrap;
 }
+
+.trk-pills {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.trk-sat-pill {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump));
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--pc, var(--cyan)) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc, var(--cyan)) 50%, transparent);
+  color: var(--pc, var(--cyan));
+  white-space: nowrap;
+  cursor: default;
+}
+
 .trk-spark {
   flex: 1;
   min-width: 0;
@@ -2163,8 +2115,7 @@ header {
   .stats-section-hd { padding: 8px 10px 6px; }
   .stats-chart-scroll { padding: 4px 10px 8px; }
   .stats-legend { padding: 2px 10px 8px; gap: 10px; }
-  /* cards tighter padding on mobile */
-  .stats-cards-wrap { padding: 6px 10px 12px; max-height: min(360px, 40vh); }
-  .trk-card-hdr, .trk-row { padding: 5px 10px; }
-  .trk-spark { display: none; } /* hide sparklines on narrow screens */
+  .stats-cards-wrap { max-height: min(360px, 40vh); }
+  .trk-row { padding: 5px 10px; }
+  .trk-spark { display: none; }
 }

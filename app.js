@@ -2540,7 +2540,7 @@ function buildStatsPanelHTML() {
   ).join('');
 
   const af = statsState.activeFilter;
-  const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId} T${af.track} ${af.dir === 'ASCENDING' ? 'ASC' : 'DESC'}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
+  const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId ? af.satId + ' ' : ''}T${af.track} ${af.dir === 'ASCENDING' ? 'ASC' : 'DESC'}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
 
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
@@ -2623,10 +2623,6 @@ function buildStatsPanelHTML() {
           <span class="stats-ctrl-lbl">Sort by</span>
           <div class="stats-chips">${sortHTML}</div>
         </div>
-        <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">Show</span>
-          <div class="stats-chips"><button class="stats-chip${statsState.showInactive ? ' on' : ''}" onclick="statsToggleShowInactive()">No-data sats</button></div>
-        </div>
       </div>
       <div class="stats-cards-wrap">${buildStatsCardsHTML()}</div>
     </div>
@@ -2634,90 +2630,91 @@ function buildStatsPanelHTML() {
   </div>`;
 }
 
-function buildStatsCardsHTML() {
-  let satStats = buildFrequencyStats();
+function buildTrackOrientedStats() {
+  const satStats  = buildFrequencyStats();
+  const satColors = getSatColors();
+  const trackMap  = new Map();
 
-  // Ensure chart satellites appear even with no data
-  const present = new Set(satStats.map(s => s.satId));
-  for (const id of STATS_CHART_SATS) {
-    if (!present.has(id)) {
-      const sat = SATS.find(s => s.id === id);
-      satStats.push({ satId: id, band: sat?.band || '?', name: sat?.name || id,
-                      tracks: [], totalCount: 0, lastDate: null, avgGap: null, noData: true });
+  for (const s of satStats) {
+    for (const t of s.tracks) {
+      const key = `${t.track}||${t.dir}`;
+      if (!trackMap.has(key)) {
+        trackMap.set(key, {
+          track: t.track, dir: t.dir,
+          sats: [], totalCount: 0, lastDate: null,
+          sparkline: Array(24).fill(0),
+          _gapW: 0, _gapN: 0,
+        });
+      }
+      const row = trackMap.get(key);
+      row.sats.push({
+        satId: s.satId,
+        color: satColors[s.satId] || platColor(s.satId),
+        count: t.count, lastDate: t.lastDate, avgGap: t.avgGap,
+      });
+      row.totalCount += t.count;
+      if (!row.lastDate || (t.lastDate && t.lastDate > row.lastDate)) row.lastDate = t.lastDate;
+      for (let i = 0; i < 24; i++) row.sparkline[i] += (t.sparkline[i] || 0);
+      if (t.avgGap) { row._gapW += t.avgGap * t.count; row._gapN += t.count; }
     }
   }
 
-  satStats = [...satStats].sort((a, b) => {
-    if (a.noData !== b.noData) return a.noData ? 1 : -1;
+  const rows = [...trackMap.values()].map(row => {
+    row.avgGap = row._gapN > 0 ? row._gapW / row._gapN : null;
+    delete row._gapW; delete row._gapN;
+    return row;
+  });
+
+  rows.sort((a, b) => {
     switch (statsState.sortBy) {
       case 'count':    return b.totalCount - a.totalCount;
       case 'interval': return (a.avgGap || 9999) - (b.avgGap || 9999);
       case 'lastDate': return (b.lastDate || '').localeCompare(a.lastDate || '');
-      default:         return a.satId.localeCompare(b.satId);
+      default: {
+        const da = a.dir === 'ASCENDING' ? 0 : 1, db = b.dir === 'ASCENDING' ? 0 : 1;
+        return da !== db ? da - db : (a.track ?? 9999) - (b.track ?? 9999);
+      }
     }
   });
+  return rows;
+}
 
-  if (!satStats.length)
+function buildStatsCardsHTML() {
+  const rows = buildTrackOrientedStats();
+
+  if (!rows.length)
     return `<div class="stats-muted-msg" style="padding:16px">No data available</div>`;
 
-  const satColors = getSatColors();
   const af = statsState.activeFilter;
 
-  const cards = satStats.map(s => {
-    const dotColor = satColors[s.satId] || platColor(s.satId);
+  const html = rows.map(row => {
+    const tNum    = row.track !== null ? `T${String(row.track).padStart(3, '0')}` : 'T—';
+    const dirSh   = row.dir === 'ASCENDING' ? 'ASC' : row.dir === 'DESCENDING' ? 'DESC' : (row.dir || '').slice(0, 4);
+    const dirCls  = row.dir === 'ASCENDING' ? 'asc' : 'desc';
+    const tVal    = row.track !== null ? row.track : '';
+    const isActive = af && String(af.track) === String(tVal) && af.dir === row.dir;
 
-    if (s.noData) {
-      if (!statsState.showInactive) return '';
-      const sat  = SATS.find(x => x.id === s.satId);
-      const note = sat?.status === 'op' ? 'No acquisitions in database yet' : 'Not yet operational';
-      return `<div class="trk-card trk-card-nodata" style="--dc:${dotColor}">
-        <div class="trk-card-hdr trk-card-hdr-static">
-          <span class="trk-dot"></span>
-          <span class="trk-sat-id">${s.satId}</span>
-          <span class="trk-band-pill">${s.band}</span>
-          <span class="trk-summary">${note}</span>
-        </div>
-      </div>`;
-    }
+    const satPills = row.sats.map(s =>
+      `<span class="trk-sat-pill" style="--pc:${s.color}" title="${s.satId}: ${s.count.toLocaleString()} fr · ${s.avgGap ? `~${s.avgGap.toFixed(1)}d` : '—'} · last ${fmtMonDay(s.lastDate)}">${s.satId}</span>`
+    ).join('');
 
-    const exp     = statsState.expanded.has(s.satId);
-    const gapStr  = s.avgGap ? `~${s.avgGap.toFixed(1)}d` : '—';
-    const lastStr = fmtMonDay(s.lastDate);
-    const summary = `${s.tracks.length} track${s.tracks.length !== 1 ? 's' : ''} · ${s.totalCount.toLocaleString()} fr · ${gapStr} · ${lastStr}`;
+    const spark   = buildSparklineSvg(row.sparkline);
+    const gapStr  = row.avgGap ? `~${row.avgGap.toFixed(1)}d` : '—';
+    const lastStr = fmtMonDay(row.lastDate);
 
-    const trackRows = s.tracks.map(t => {
-      const tNum    = t.track !== null ? `T${String(t.track).padStart(3, '0')}` : 'T—';
-      const tDirSh  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : t.dir.slice(0, 4);
-      const tDirCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
-      const tGap    = t.avgGap ? `${t.avgGap.toFixed(1)}d` : '—';
-      const tLast   = fmtMonDay(t.lastDate);
-      const spark   = buildSparklineSvg(t.sparkline);
-      const tVal    = t.track !== null ? t.track : '';
-      const isActive = af && af.satId === s.satId && String(af.track) === String(tVal) && af.dir === t.dir;
-      return `<div class="trk-row${isActive ? ' active' : ''}" onclick="applyStatsTrackFilter('${s.satId}','${tVal}','${t.dir}')">
-        <span class="sts-tdir ${tDirCls}">${tDirSh}</span>
-        <span class="trk-num">${tNum}</span>
-        <div class="trk-spark">${spark}</div>
-        <span class="trk-frames">${t.count.toLocaleString()} fr</span>
-        <span class="trk-intv">${tGap}</span>
-        <span class="trk-last">${tLast}</span>
-        <span class="trk-filter-icon" aria-hidden="true">↗</span>
-      </div>`;
-    }).join('');
-
-    return `<div class="trk-card${exp ? ' open' : ''}" style="--dc:${dotColor}">
-      <button class="trk-card-hdr" onclick="statsToggleExpand('${s.satId}')">
-        <span class="trk-dot"></span>
-        <span class="trk-sat-id">${s.satId}</span>
-        <span class="trk-band-pill">${s.band}</span>
-        <span class="trk-summary">${summary}</span>
-        <span class="trk-chevron">▸</span>
-      </button>
-      <div class="trk-card-body">${trackRows}</div>
+    return `<div class="trk-row${isActive ? ' active' : ''}" onclick="applyStatsTrackFilter(null,'${tVal}','${row.dir}')">
+      <span class="sts-tdir ${dirCls}">${dirSh}</span>
+      <span class="trk-num">${tNum}</span>
+      <div class="trk-pills">${satPills}</div>
+      <div class="trk-spark">${spark}</div>
+      <span class="trk-frames">${row.totalCount.toLocaleString()} fr</span>
+      <span class="trk-intv">${gapStr}</span>
+      <span class="trk-last">${lastStr}</span>
+      <span class="trk-filter-icon" aria-hidden="true">↗</span>
     </div>`;
   }).join('');
 
-  return `<div class="trk-cards">${cards}</div>`;
+  return `<div class="trk-flat-list">${html}</div>`;
 }
 
 
@@ -2911,10 +2908,11 @@ function statsBarClick(event, bucketIdx, satId) {
 
 function applyStatsTrackFilter(satId, trackNum, dir) {
   ensureAdvancedState();
-  state.filters.satellite = satId;
-  state.selectedSat = SATS.find(s => s.id === satId) || null;
+  const effectiveSat = satId || 'ALL';
+  state.filters.satellite = effectiveSat;
+  state.selectedSat = satId ? (SATS.find(s => s.id === satId) || null) : null;
   const satSel = document.getElementById('filter-satellite');
-  if (satSel) satSel.value = satId;
+  if (satSel) satSel.value = effectiveSat;
 
   if (dir && dir !== 'UNKNOWN') {
     state.filters.direction = dir;
