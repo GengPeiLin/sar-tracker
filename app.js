@@ -3024,7 +3024,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const statsPanel = document.getElementById('stats-panel');
     if (!statsPanel || !statsPanel.classList.contains('open')) return;
     if (statsPanel.contains(event.target)) return;
-    if (event.target.closest('.mob-tab[data-tab="stats"]')) return; // stats tab re-opens, not closes
+    if (event.target.closest('.mob-tab[data-tab="stats"]')) return; // mobile stats tab re-opens, not closes
+    if (event.target.closest('.tab-stats')) return; // desktop stats button re-opens, not closes
     closeStatsPanel();
   });
 
