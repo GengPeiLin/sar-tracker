@@ -2484,7 +2484,9 @@ let _statsChartRO = null;
 function renderStatsPanel() {
   const body = document.getElementById('stats-panel-body');
   if (!body) return;
+  const savedScroll = body.scrollTop;
   body.innerHTML = buildStatsPanelHTML();
+  body.scrollTop = savedScroll;
 
   if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
 
