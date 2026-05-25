@@ -29,7 +29,7 @@
   </div>
   <div class="hdr-controls">
     <div class="control-field">
-      <label>Lang</label>
+      <label data-i18n="lang-label">Lang</label>
       <div class="lang-switch" id="lang-switch" onclick="toggleLang()" role="switch" aria-label="Toggle language">
         <span class="ls-opt ls-en">EN</span>
         <span class="ls-opt ls-zh">中文</span>
@@ -37,7 +37,7 @@
       </div>
     </div>
     <div class="control-field">
-      <label for="theme-select">Theme</label>
+      <label for="theme-select" data-i18n="theme-label">Theme</label>
       <select id="theme-select">
         <option value="soft-slate">Soft Slate</option>
         <option value="night-ops">Night Ops</option>
@@ -46,7 +46,7 @@
       </select>
     </div>
     <div class="control-field">
-      <label>Text Size</label>
+      <label data-i18n="text-size-label">Text Size</label>
       <div class="size-stepper">
           <button class="size-step" id="size-dec" onclick="stepFontSize(-1)">−</button>
         <span class="size-val" id="size-val">4</span>
@@ -55,7 +55,7 @@
     </div>
     <div class="control-field">
       <label aria-hidden="true" class="hdr-tabs-spacer">&nbsp;</label>
-      <button class="tab tab-stats" onclick="openStatsPanel()">Stats</button>
+      <button class="tab tab-stats" onclick="openStatsPanel()" data-i18n="stats-tab">Stats</button>
     </div>
   </div>
   <div id="bg-load-bar" class="bg-load-bar" hidden></div>
@@ -135,12 +135,12 @@
       </details>
       <div class="filter-actions">
         <div class="filter-hl-row">
-          <span class="filter-hl-lbl">Highlight</span>
+          <span class="filter-hl-lbl" data-i18n="highlight-label">Highlight</span>
           <div class="filter-hl-btns" id="hl-btns">
-            <button class="legend-hl-btn" id="hl-ring"  onclick="setHighlightStyle('ring')">Solid</button>
-            <button class="legend-hl-btn" id="hl-dash"  onclick="setHighlightStyle('dash')">Dash</button>
-            <button class="legend-hl-btn" id="hl-color" onclick="setHighlightStyle('color')">Color</button>
-            <button class="legend-hl-btn" id="hl-gold"  onclick="setHighlightStyle('gold')">Gold</button>
+            <button class="legend-hl-btn" id="hl-ring"  onclick="setHighlightStyle('ring')" data-i18n="highlight-solid">Solid</button>
+            <button class="legend-hl-btn" id="hl-dash"  onclick="setHighlightStyle('dash')" data-i18n="highlight-dash">Dash</button>
+            <button class="legend-hl-btn" id="hl-color" onclick="setHighlightStyle('color')" data-i18n="highlight-color">Color</button>
+            <button class="legend-hl-btn" id="hl-gold"  onclick="setHighlightStyle('gold')" data-i18n="highlight-gold">Gold</button>
           </div>
         </div>
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()" data-i18n="reset-filters">Reset Filters</button>
@@ -205,43 +205,43 @@
 <nav class="mob-tabs" id="mob-tabs">
   <button class="mob-tab active" data-tab="map"     onclick="setMobTab('map',this)">
     <span class="mob-tab-icon">◉</span>
-    <span>Map</span>
+    <span data-i18n="map-tab">Map</span>
   </button>
   <button class="mob-tab"        data-tab="list"    onclick="setMobTab('list',this)">
     <span class="mob-tab-icon">☰</span>
-    <span>List</span>
+    <span data-i18n="list-tab">List</span>
   </button>
   <button class="mob-tab"        data-tab="filters" onclick="setMobTab('filters',this)">
     <span class="mob-tab-icon">⚙</span>
-    <span>Filters</span>
+    <span data-i18n="filters-tab">Filters</span>
   </button>
   <button class="mob-tab"        data-tab="stats"   onclick="openStatsPanel()">
     <span class="mob-tab-icon">▤</span>
-    <span>Stats</span>
+    <span data-i18n="stats-tab">Stats</span>
   </button>
 </nav>
 
 <!-- ═══ STATS PANEL ══════════════════════════════════════════════════════════ -->
 <div class="stats-panel" id="stats-panel">
   <div class="stats-panel-hdr">
-    <span class="stats-panel-title">Statistics</span>
+    <span class="stats-panel-title" data-i18n="statistics-title">Statistics</span>
     <div class="stats-layout-sw">
-      <button id="sl-stack" class="sl-btn" onclick="statsSetLayout('stack')" title="Stacked">
+      <button id="sl-stack" class="sl-btn" onclick="statsSetLayout('stack')" title="Stacked" data-i18n-title="layout-stacked">
         <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="16" height="3" rx="1"/><rect x="0" y="5.5" width="16" height="3" rx="1"/><rect x="0" y="11" width="16" height="3" rx="1"/></svg>
       </button>
-      <button id="sl-split" class="sl-btn" onclick="statsSetLayout('split')" title="Side by side">
+      <button id="sl-split" class="sl-btn" onclick="statsSetLayout('split')" title="Side by side" data-i18n-title="layout-side-by-side">
         <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="7" height="14" rx="1"/><rect x="9" y="0" width="7" height="14" rx="1"/></svg>
       </button>
-      <button id="sl-chart" class="sl-btn" onclick="statsSetLayout('chart')" title="Chart focus">
+      <button id="sl-chart" class="sl-btn" onclick="statsSetLayout('chart')" title="Chart focus" data-i18n-title="layout-chart-focus">
         <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="0" width="16" height="8" rx="1"/><rect x="0" y="10" width="16" height="4" rx="1"/></svg>
       </button>
     </div>
     <div class="stats-hdr-export">
-      <span class="stats-footer-grp-lbl">Chart</span>
+      <span class="stats-footer-grp-lbl" data-i18n="chart-label">Chart</span>
       <button class="stats-footer-btn" onclick="statsExportChartSVG()">SVG</button>
       <button class="stats-footer-btn" onclick="statsExportChartCSV()">CSV</button>
       <div class="stats-footer-rule"></div>
-      <span class="stats-footer-grp-lbl">Table</span>
+      <span class="stats-footer-grp-lbl" data-i18n="table-label">Table</span>
       <button class="stats-footer-btn" onclick="statsExportTableCSV()">CSV</button>
     </div>
     <button class="stats-close" onclick="closeStatsPanel()">✕</button>

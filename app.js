@@ -184,6 +184,19 @@ const TRANSLATIONS = {
     'note-formats':'Formats for {sat}: {formats} | frame range {min}-{max} | {extra}',
     'priority-only':'priority tracks only','with-other-tracks':'with other Sentinel-1 Taiwan tracks visible',
     'unknown-granule':'Unknown Granule','unknown-acquisition':'Unknown acquisition time',
+    'lang-label':'Lang','theme-label':'Theme','text-size-label':'Text Size','stats-tab':'Stats',
+    'map-tab':'Map','list-tab':'List','filters-tab':'Filters',
+    'highlight-label':'Highlight','highlight-solid':'Solid','highlight-dash':'Dash','highlight-color':'Color','highlight-gold':'Gold',
+    'statistics-title':'Statistics','layout-stacked':'Stacked','layout-side-by-side':'Side by side','layout-chart-focus':'Chart focus',
+    'chart-label':'Chart','table-label':'Table',
+    'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
+    'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks',
+    'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
+    'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
+    'stats-no-data':'No data available','stats-no-window-data':'No data in this window for the selected satellites',
+    'stats-edit-color':'Edit color','stats-reset-colors':'Reset all to defaults',
+    'stats-frame-unit':'fr','stats-frames-word':'frames','stats-frame-word':'frame','stats-last':'last','stats-no-track-data':'No track data',
     'this-week-map':'THIS WEEK',
   },
   'zh-TW': {
@@ -237,6 +250,19 @@ const TRANSLATIONS = {
     'note-formats':'{sat} 格式：{formats} | 幀號範圍 {min}-{max} | {extra}',
     'priority-only':'僅優先軌跡','with-other-tracks':'含其他 Sentinel-1 台灣軌跡可見',
     'unknown-granule':'未知取像','unknown-acquisition':'未知取像時間',
+    'lang-label':'語言','theme-label':'主題','text-size-label':'文字大小','stats-tab':'統計',
+    'map-tab':'地圖','list-tab':'清單','filters-tab':'篩選',
+    'highlight-label':'醒目標示','highlight-solid':'實線','highlight-dash':'虛線','highlight-color':'顏色','highlight-gold':'金色',
+    'statistics-title':'統計','layout-stacked':'上下排列','layout-side-by-side':'左右並排','layout-chart-focus':'圖表聚焦',
+    'chart-label':'圖表','table-label':'表格',
+    'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
+    'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道',
+    'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
+    'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
+    'stats-no-data':'無可用資料','stats-no-window-data':'此時段內所選衛星無資料',
+    'stats-edit-color':'編輯顏色','stats-reset-colors':'重設為預設顏色',
+    'stats-frame-unit':'幀','stats-frames-word':'幀','stats-frame-word':'幀','stats-last':'最近','stats-no-track-data':'無軌道資料',
     'this-week-map':'本週',
   },
 };
@@ -317,6 +343,13 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+  document.querySelectorAll('input[placeholder="Any"], input[data-i18n-placeholder="any"]').forEach(el => {
+    el.dataset.i18nPlaceholder = 'any';
+    el.placeholder = t('any');
+  });
   // re-render all dynamic UI
   setupReadableUI();
   rebuildDownloadBar();
@@ -327,6 +360,7 @@ function applyI18n() {
   updateFilterHints();
   updateNextExpected();
   renderMobileFeed();
+  if (document.getElementById('stats-panel')?.classList.contains('open')) renderStatsPanel();
 }
 
 // ── Color mapping ─────────────────────────────────────────────────────────
@@ -336,7 +370,6 @@ const SENTINEL_SATELLITES = new Set(['S1A', 'S1B', 'S1C', 'S1D']);
 const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-survey']);
 const FONT_SIZE_STEPS   = [2, 4, 6, 8];
 const FONT_SIZE_OPTIONS = new Set(FONT_SIZE_STEPS.map(String));
-const APP_VERSION = '20260414T000000';
 
 const PLATFORM_COLORS = {
   'S1A':'#00e5ff','S1C':'#ce93d8','S1D':'#4db6ac',
@@ -625,8 +658,8 @@ function setupReadableUI() {
   document.title = 'SAR Tracker';
   const logo = document.querySelector('.hdr-logo');
   if (logo) {
-    logo.innerHTML = `SAR Tracker <span class="hdr-version">${APP_VERSION}</span>`;
-    logo.style.cursor = 'pointer';
+    logo.textContent = 'SAR Tracker';
+    logo.title = 'Cycle title font';
     logo.onclick = cycleTitleFont;
     applyTitleFont();
   }
@@ -1289,7 +1322,8 @@ function updateStats(data = state.baseStats || {}) {
 
   const asf = state.filteredFrames.filter(frame => frame.asf_url).length;
   const cop = state.filteredFrames.filter(frame => frame.copernicus_url || frame.download_url).length;
-  document.getElementById('dl-info').textContent = `${state.filteredFrames.length} frames | ASF ${asf} | Copernicus ${cop}`;
+  const dlInfo = document.getElementById('dl-info');
+  if (dlInfo) dlInfo.textContent = t('n-files-count', { n: state.filteredFrames.length, asf, cop });
   updateNextExpected();
   updateLegend();
   updateDateShortcutState();
@@ -1309,7 +1343,12 @@ function updateLegend() {
   if (!wrap) return;
 
   const hlId = localStorage.getItem('sar_hl_style') || 'ring';
-  const hlLabels = { ring: 'Solid', dash: 'Dash', color: 'Color', gold: 'Gold' };
+  const hlLabels = {
+    ring: t('highlight-solid'),
+    dash: t('highlight-dash'),
+    color: t('highlight-color'),
+    gold: t('highlight-gold'),
+  };
   const hlRow = `<div class="legend-hl-row">${
     Object.keys(HIGHLIGHT_STYLES).map(id =>
       `<button class="legend-hl-btn${hlId === id ? ' on' : ''}" onclick="setHighlightStyle('${id}')">${hlLabels[id]}</button>`
@@ -2507,14 +2546,21 @@ function fmtMonDay(dateStr) {
   if (!dateStr) return '—';
   const p = dateStr.slice(0, 10).split('-');
   const d = new Date(+p[0], +p[1] - 1, +p[2]);
-  return isNaN(d) ? dateStr.slice(5, 10) : d.toLocaleString('default', { month: 'short', day: 'numeric' });
+  const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
+  return isNaN(d) ? dateStr.slice(5, 10) : d.toLocaleString(locale, { month: 'short', day: 'numeric' });
+}
+
+function formatStatsDirectionShort(dir) {
+  if (dir === 'ASCENDING') return state.lang === 'zh-TW' ? '升' : 'ASC';
+  if (dir === 'DESCENDING') return state.lang === 'zh-TW' ? '降' : 'DESC';
+  return (dir || '').slice(0, 4);
 }
 
 function buildStatsPanelHTML() {
   const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
 
-  const presetHTML = [['1mo','1 mo'],['6mo','6 mo'],['1yr','1 yr'],['custom','Custom']].map(([k,l]) =>
-    `<button class="stats-chip${statsState.chartPreset === k ? ' on' : ''}" onclick="statsSetPreset('${k}')">${l}</button>`
+  const presetHTML = [['1mo','stats-preset-1mo'],['6mo','stats-preset-6mo'],['1yr','stats-preset-1yr'],['custom','stats-preset-custom']].map(([k,labelKey]) =>
+    `<button class="stats-chip${statsState.chartPreset === k ? ' on' : ''}" onclick="statsSetPreset('${k}')">${t(labelKey)}</button>`
   ).join('');
 
   const customRowHTML = statsState.chartPreset === 'custom' ? `
@@ -2532,15 +2578,15 @@ function buildStatsPanelHTML() {
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
     const clr = satColors[id] || '#29b6f6';
-    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="Edit color"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
-  }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="Reset all to defaults">↺</button>` : '');
+    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="${t('stats-edit-color')}"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
+  }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="${t('stats-reset-colors')}">↺</button>` : '');
 
-  const sortHTML = [['lastDate','Last Acq'],['count','Frames'],['interval','Interval'],['name','Name']].map(([v, l]) =>
-    `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${l}</button>`
+  const sortHTML = [['lastDate','stats-sort-last-acq'],['count','stats-sort-frames'],['interval','stats-sort-interval'],['name','stats-sort-name']].map(([v, labelKey]) =>
+    `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${t(labelKey)}</button>`
   ).join('');
 
   const af = statsState.activeFilter;
-  const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId ? af.satId + ' ' : ''}T${af.track} ${af.dir === 'ASCENDING' ? 'ASC' : 'DESC'}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
+  const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId ? af.satId + ' ' : ''}T${af.track} ${formatStatsDirectionShort(af.dir)}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
 
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
@@ -2584,43 +2630,43 @@ function buildStatsPanelHTML() {
     </div>
 
     <div class="stats-section stats-sec-chart">
-      <div class="stats-section-hd">Acquisition Frequency Chart <span class="sts-hd-hint">· all acquisitions</span></div>
+      <div class="stats-section-hd">${t('stats-acq-frequency-chart')} <span class="sts-hd-hint">· ${t('stats-all-acquisitions')}</span></div>
       <div class="stats-ctrls">
         <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">Period</span>
+          <span class="stats-ctrl-lbl">${t('stats-period')}</span>
           <div class="stats-chips">${presetHTML}</div>
         </div>
         ${customRowHTML}
         <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">Cell size</span>
+          <span class="stats-ctrl-lbl">${t('stats-cell-size')}</span>
           <div class="stats-stepper">
             <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
-            <span class="sts-val">${cellDays}d</span>
+            <span class="sts-val">${cellDays}${t('stats-day-suffix')}</span>
             <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx + 1})">+</button>
           </div>
         </div>
         <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">Satellites</span>
+          <span class="stats-ctrl-lbl">${t('stats-satellites')}</span>
           <div class="stats-chips">${chipHTML}</div>
         </div>
         <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">S1 tracks</span>
+          <span class="stats-ctrl-lbl">${t('stats-s1-tracks')}</span>
           <div class="stats-chips">${trackChipHTML}</div>
         </div>
       </div>
       <div class="stats-chart-scroll">
         <div class="stats-chart-wrap" id="stats-chart-wrap">
-          <span class="stats-muted-msg">Computing…</span>
+          <span class="stats-muted-msg">${t('stats-computing')}</span>
         </div>
       </div>
       <div class="stats-legend">${legendHTML}</div>
     </div>
 
     <div class="stats-section stats-sec-table">
-      <div class="stats-section-hd">Track Statistics${activeFilterBadge}</div>
+      <div class="stats-section-hd">${t('stats-track-statistics')}${activeFilterBadge}</div>
       <div class="stats-ctrls">
         <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">Sort by</span>
+          <span class="stats-ctrl-lbl">${t('stats-sort-by')}</span>
           <div class="stats-chips">${sortHTML}</div>
         </div>
       </div>
@@ -2683,23 +2729,23 @@ function buildStatsCardsHTML() {
   const rows = buildTrackOrientedStats();
 
   if (!rows.length)
-    return `<div class="stats-muted-msg" style="padding:16px">No data available</div>`;
+    return `<div class="stats-muted-msg" style="padding:16px">${t('stats-no-data')}</div>`;
 
   const af = statsState.activeFilter;
 
   const html = rows.map(row => {
     const tNum    = row.track !== null ? `T${String(row.track).padStart(3, '0')}` : 'T—';
-    const dirSh   = row.dir === 'ASCENDING' ? 'ASC' : row.dir === 'DESCENDING' ? 'DESC' : (row.dir || '').slice(0, 4);
+    const dirSh   = formatStatsDirectionShort(row.dir);
     const dirCls  = row.dir === 'ASCENDING' ? 'asc' : 'desc';
     const tVal    = row.track !== null ? row.track : '';
     const isActive = af && String(af.track) === String(tVal) && af.dir === row.dir;
 
     const satPills = row.sats.map(s =>
-      `<span class="trk-sat-pill" style="--pc:${s.color}" title="${s.satId}: ${s.count.toLocaleString()} fr · ${s.avgGap ? `~${s.avgGap.toFixed(1)}d` : '—'} · last ${fmtMonDay(s.lastDate)}">${s.satId}</span>`
+      `<span class="trk-sat-pill" style="--pc:${s.color}" title="${s.satId}: ${s.count.toLocaleString()} ${t('stats-frame-unit')} · ${s.avgGap ? `~${s.avgGap.toFixed(1)}${t('stats-day-suffix')}` : '—'} · ${t('stats-last')} ${fmtMonDay(s.lastDate)}">${s.satId}</span>`
     ).join('');
 
     const spark   = buildSparklineSvg(row.sparkline);
-    const gapStr  = row.avgGap ? `~${row.avgGap.toFixed(1)}d` : '—';
+    const gapStr  = row.avgGap ? `~${row.avgGap.toFixed(1)}${t('stats-day-suffix')}` : '—';
     const lastStr = fmtMonDay(row.lastDate);
 
     return `<div class="trk-row${isActive ? ' active' : ''}" onclick="applyStatsTrackFilter(null,'${tVal}','${row.dir}')">
@@ -2707,7 +2753,7 @@ function buildStatsCardsHTML() {
       <span class="trk-num">${tNum}</span>
       <div class="trk-pills">${satPills}</div>
       <div class="trk-spark">${spark}</div>
-      <span class="trk-frames">${row.totalCount.toLocaleString()} fr</span>
+      <span class="trk-frames">${row.totalCount.toLocaleString()} ${t('stats-frame-unit')}</span>
       <span class="trk-intv">${gapStr}</span>
       <span class="trk-last">${lastStr}</span>
       <span class="trk-filter-icon" aria-hidden="true">↗</span>
@@ -2736,7 +2782,7 @@ function renderStatsChart() {
   if (!wrap) return;
   const buckets = buildChartBuckets();
   if (!buckets.length || buckets.every(b => b.total === 0)) {
-    wrap.innerHTML = `<span class="stats-muted-msg">No data in this window for the selected satellites</span>`;
+    wrap.innerHTML = `<span class="stats-muted-msg">${t('stats-no-window-data')}</span>`;
     return;
   }
   const activeSats = [...statsState.activeSats];
@@ -2782,8 +2828,9 @@ function renderStatsChart() {
     }
     if (i % labelEvery === 0) {
       const d   = b.start;
+      const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
       const lbl = cellDays >= 28
-        ? `${d.toLocaleString('default', { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
+        ? `${d.toLocaleString(locale, { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
         : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
       labelsSVG += `<text x="${x + BAR_W / 2}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
     }
@@ -2874,13 +2921,13 @@ function statsBarClick(event, bucketIdx, satId) {
   const endLabel = new Date(b.end.getTime() - 86400000).toISOString().slice(0, 10);
   const periodLabel = cellDays === 1 ? b.label : `${b.label} – ${endLabel}`;
 
-  const trackHTML = tracks.map(t => {
-    const dirSh  = t.dir === 'ASCENDING' ? 'ASC' : t.dir === 'DESCENDING' ? 'DESC' : (t.dir || '?').slice(0, 4);
-    const dirCls = t.dir === 'ASCENDING' ? 'asc' : 'desc';
+  const trackHTML = tracks.map(trackInfo => {
+    const dirSh  = formatStatsDirectionShort(trackInfo.dir || '?');
+    const dirCls = trackInfo.dir === 'ASCENDING' ? 'asc' : 'desc';
     return `<div class="scp-track-row">
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
-      <span class="scp-tnum">T${t.track ?? '?'}</span>
-      <span class="scp-tcnt">${t.count} fr</span>
+      <span class="scp-tnum">T${trackInfo.track ?? '?'}</span>
+      <span class="scp-tcnt">${trackInfo.count} ${t('stats-frame-unit')}</span>
     </div>`;
   }).join('');
 
@@ -2892,8 +2939,8 @@ function statsBarClick(event, bucketIdx, satId) {
       <span class="scp-period">${periodLabel}</span>
       <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">✕</button>
     </div>
-    <div class="scp-total">${uniqueCount} frame${uniqueCount !== 1 ? 's' : ''}</div>
-    ${trackHTML || '<div class="scp-empty">No track data</div>'}
+    <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
+    ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
   `;
   popup.hidden = false;
 
