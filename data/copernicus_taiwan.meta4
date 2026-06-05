@@ -1,14 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metalink xmlns="urn:ietf:params:xml:ns:metalink">
-  <!-- generated 2026-06-04T06:30:12Z -->
-  <!-- 18922 scenes -->
-  <file name="S1A_IW_GRDH_1SDV_20260602T101004_20260602T101029_064789_0829CD_C076_COG.SAFE.zip">
-    <size>1272600000</size>
-    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(4b752a8c-be37-48f1-ac88-5df09314cfdb)/$value</url>
+  <!-- generated 2026-06-05T06:14:41Z -->
+  <!-- 18933 scenes -->
+  <file name="S1D_IW_RAW__0SDV_20260604T095959_20260604T100011_003085_005568_8ACB.SAFE.zip">
+    <size>604900000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(94db13cc-23bc-41a6-92a1-8b3880367f65)/$value</url>
+  </file>
+  <file name="S1D_IW_SLC__1SDV_20260604T095958_20260604T100011_003085_005568_B2C3.SAFE.zip">
+    <size>3299300000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(288481ba-f728-4ae6-9050-249a1b753f88)/$value</url>
+  </file>
+  <file name="S1D_IW_GRDH_1SDV_20260604T095958_20260604T100011_003085_005568_1B4D.SAFE.zip">
+    <size>897400000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(1e4cdce7-3468-4f27-ac1b-1ddea78860c5)/$value</url>
+  </file>
+  <file name="S1D_IW_GRDH_1SDV_20260604T095958_20260604T100011_003085_005568_7DF9_COG.SAFE.zip">
+    <size>415800000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(07e63708-6d4b-455c-bc37-bda95e924408)/$value</url>
+  </file>
+  <file name="S1D_IW_OCN__2SDV_20260604T095958_20260604T100011_003085_005568_AF8E.SAFE.zip">
+    <size>38300000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(e5966544-d513-45c6-9cee-b4cba4b9cc59)/$value</url>
+  </file>
+  <file name="S1A_IW_RAW__0SDV_20260604T095357_20260604T095430_064818_082ACB_34B2.SAFE.zip">
+    <size>1703700000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(d9c35c15-8281-49b6-810b-88e726b921a4)/$value</url>
+  </file>
+  <file name="S1C_IW_RAW__0SDV_20260603T095949_20260603T100017_007940_010256_A614.SAFE.zip">
+    <size>1517000000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(ad9286bf-4587-4316-93ce-a10144493e23)/$value</url>
+  </file>
+  <file name="S1C_IW_SLC__1SDV_20260603T095948_20260603T100018_007940_010256_A324.SAFE.zip">
+    <size>8259799999</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(7e64dbae-3db6-432c-8ef9-9ee8a33157e8)/$value</url>
+  </file>
+  <file name="S1C_IW_GRDH_1SDV_20260603T095948_20260603T100018_007940_010256_1041.SAFE.zip">
+    <size>2019400000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(d9f9caa0-a1c3-4fc9-a044-9269c080d5ca)/$value</url>
+  </file>
+  <file name="S1C_IW_OCN__2SDV_20260603T095948_20260603T100018_007940_010256_BE83.SAFE.zip">
+    <size>79800000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(5e26136f-2329-43ba-9f29-8a28a3c0ecc4)/$value</url>
+  </file>
+  <file name="S1C_IW_GRDH_1SDV_20260603T095948_20260603T100018_007940_010256_F38E_COG.SAFE.zip">
+    <size>1048700000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(83191849-07a2-4453-b4a4-8d8b61a30aec)/$value</url>
   </file>
   <file name="S1A_IW_GRDH_1SDV_20260602T101004_20260602T101029_064789_0829CD_688B.SAFE.zip">
     <size>1716400000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(86cc9a91-4d97-41de-9e61-11cead982459)/$value</url>
+  </file>
+  <file name="S1A_IW_GRDH_1SDV_20260602T101004_20260602T101029_064789_0829CD_C076_COG.SAFE.zip">
+    <size>1272600000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(4b752a8c-be37-48f1-ac88-5df09314cfdb)/$value</url>
   </file>
   <file name="S1A_IW_SLC__1SDV_20260602T101002_20260602T101030_064789_0829CD_D13D.SAFE.zip">
     <size>7967200000</size>
@@ -18,6 +62,14 @@
     <size>1685000000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(8784df34-6601-48b3-8bb6-642d50f0dac1)/$value</url>
   </file>
+  <file name="S1A_IW_SLC__1SDV_20260602T100935_20260602T101004_064789_0829CD_DB36.SAFE.zip">
+    <size>8565900000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(e92656be-0f2a-4e05-9726-8140b31f3dfd)/$value</url>
+  </file>
+  <file name="S1A_IW_GRDH_1SDV_20260602T100935_20260602T101004_064789_0829CD_8AA5.SAFE.zip">
+    <size>1993200000</size>
+    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(438cacec-e804-46eb-a0db-f116275c2691)/$value</url>
+  </file>
   <file name="S1A_IW_RAW__0SDV_20260602T100935_20260602T101007_064789_0829CD_911C.SAFE.zip">
     <size>1671500000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(5245526d-8c82-4d27-a885-5e307d963f15)/$value</url>
@@ -26,17 +78,9 @@
     <size>1169500000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(2b069c3b-c55c-4387-bb26-b0f27c55444b)/$value</url>
   </file>
-  <file name="S1A_IW_GRDH_1SDV_20260602T100935_20260602T101004_064789_0829CD_8AA5.SAFE.zip">
-    <size>1993200000</size>
-    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(438cacec-e804-46eb-a0db-f116275c2691)/$value</url>
-  </file>
   <file name="S1A_IW_OCN__2SDV_20260602T100935_20260602T101004_064789_0829CD_6ADC.SAFE.zip">
     <size>63000000</size>
     <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(45910a24-40fd-495e-b49a-61ab76f3d7d6)/$value</url>
-  </file>
-  <file name="S1A_IW_SLC__1SDV_20260602T100935_20260602T101004_064789_0829CD_DB36.SAFE.zip">
-    <size>8565900000</size>
-    <url priority="1">https://zipper.dataspace.copernicus.eu/odata/v1/Products(e92656be-0f2a-4e05-9726-8140b31f3dfd)/$value</url>
   </file>
   <file name="S1A_IW_GRDH_1SDV_20260530T215331_20260530T215356_064752_08287D_25FE.SAFE.zip">
     <size>1722400000</size>
