@@ -785,6 +785,23 @@ function enhanceFrame(frame) {
   const directionNorm = normalizeDirection(frame.direction);
   const pathNumberNorm = getFramePathNumber(frame);
   const frameNumberNorm = normalizeFrameNumber(frame.frame_number);
+
+  // Reconstruct footprint from fp flat array
+  let footprint = frame.footprint;
+  if (frame.fp && Array.isArray(frame.fp)) {
+    const ring = [];
+    for (let i = 0; i < frame.fp.length; i += 2) {
+      ring.push([frame.fp[i], frame.fp[i+1]]);
+    }
+    if (ring.length > 0) {
+      ring.push([ring[0][0], ring[0][1]]);
+    }
+    footprint = {
+      type: 'Polygon',
+      coordinates: [ring]
+    };
+  }
+
   const enriched = {
     ...frame,
     satellite_id: satelliteId,
@@ -795,6 +812,9 @@ function enhanceFrame(frame) {
     path_number_norm: pathNumberNorm,
     frame_number_norm: frameNumberNorm,
     product_type_norm: normalizeProductType(frame),
+    footprint: footprint,
+    copernicus_url: frame.copernicus_url || frame.download_url || '',
+    download_url: frame.download_url || frame.copernicus_url || '',
   };
   const trackLabel = getTrackLabelForFrame(enriched);
   return {

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -49,17 +50,24 @@ def log(message: str) -> None:
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}", flush=True)
 
 
-def http_json(url: str, timeout: int = 60, retries: int = 3) -> dict | None:
+def http_json(url: str, timeout: int = 60, retries: int = 4, backoff_factor: float = 2.0) -> dict | None:
     request = urllib.request.Request(url, headers={"User-Agent": "sar-tracker/3.0"})
     for attempt in range(1, retries + 1):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            log(f"HTTP {exc.code}: {url[:120]}")
-            return None
         except Exception as exc:
-            log(f"Request failed (attempt {attempt}/{retries}): {exc}")
+            if isinstance(exc, urllib.error.HTTPError):
+                log(f"HTTP Error {exc.code} on attempt {attempt}/{retries}: {exc.reason or ''} for {url[:120]}")
+            else:
+                log(f"Request failed on attempt {attempt}/{retries}: {exc}")
+            
+            if attempt == retries:
+                raise exc
+            
+            sleep_time = backoff_factor ** attempt
+            log(f"Waiting {sleep_time}s before retrying...")
+            time.sleep(sleep_time)
     return None
 
 
@@ -506,19 +514,18 @@ def main() -> int:
 
     # Strip fields unused by the frontend and round footprint coordinates
     # to reduce JSON payload size (~30% smaller).
-    _STRIP = {"browse_url", "asf_meta_url"}
+    _STRIP = {"browse_url", "asf_meta_url", "copernicus_url"}
 
     def _slim_frame(f: dict) -> dict:
         out = {k: v for k, v in f.items() if k not in _STRIP}
         fp = out.get("footprint")
-        if fp and fp.get("type") == "Polygon":
-            out["footprint"] = {
-                "type": "Polygon",
-                "coordinates": [
-                    [[round(x, 4), round(y, 4)] for x, y in ring]
-                    for ring in fp["coordinates"]
-                ],
-            }
+        if fp and fp.get("type") == "Polygon" and len(fp.get("coordinates", [])) > 0:
+            ring = fp["coordinates"][0]
+            if len(ring) > 1 and ring[0] == ring[-1]:
+                ring = ring[:-1]
+            out["fp"] = [round(val, 3) for pt in ring for val in pt]
+            if "footprint" in out:
+                del out["footprint"]
         return out
 
     slim_frames = [_slim_frame(f) for f in all_frames]
