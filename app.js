@@ -571,7 +571,7 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC'];
 const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
-  ALL: ['SLC', 'GSLC', 'RSLC'],
+  ALL: ['SLC', 'RSLC'],
   NISAR: ['GSLC', 'RSLC'],
   S1A: ['SLC'],
   S1B: ['SLC'],
