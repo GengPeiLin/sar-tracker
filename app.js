@@ -2475,20 +2475,43 @@ function statsSetLayout(l) {
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
-// Returns a stable key that identifies the spatial frame tile for deduplication.
-// When frame_number is present it's used directly; when absent (Copernicus data),
-// the granule acquisition start time bucketed to 10 s groups product types for the
-// same tile while keeping distinct tiles (which are ≥25 s apart) separate.
-function getAcqFramePosKey(frame) {
+// Parses the first YYYYMMDDTHHMMSS timestamp out of a Sentinel granule name.
+function getGranuleStartMs(granule) {
+  const m = String(granule || '').match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+}
+
+// Builds a Map<frame, tileKey> for frames that lack frame_number_norm.
+// Frames are grouped by (sat, date, path, dir), sorted by granule start time,
+// and split into tiles whenever the gap between consecutive start times exceeds
+// gapMs (default 20 s). Inter-tile gaps for S1 IW are ≥22 s; intra-tile product
+// spread is ≤3 s, so 20 s cleanly separates tiles without bucket-boundary issues.
+function buildTileKeyMap(frames, gapMs = 20000) {
+  const groups = new Map();
+  for (const f of frames) {
+    if (f.frame_number_norm !== null && f.frame_number_norm !== undefined && f.frame_number_norm !== '') continue;
+    const gk = `${f.satellite_id}|${(f.date || '').slice(0, 10)}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}`;
+    if (!groups.has(gk)) groups.set(gk, []);
+    groups.get(gk).push({ ms: getGranuleStartMs(f.granule) ?? 0, f });
+  }
+  const tileKeyMap = new Map();
+  for (const items of groups.values()) {
+    items.sort((a, b) => a.ms - b.ms);
+    let tileId = 0, prevMs = -Infinity;
+    for (const { ms, f } of items) {
+      if (ms - prevMs > gapMs) { tileId++; prevMs = ms; }
+      tileKeyMap.set(f, `t${tileId}`);
+    }
+  }
+  return tileKeyMap;
+}
+
+function getAcqFramePosKey(frame, tileKeyMap) {
   if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
     return String(frame.frame_number_norm);
   }
-  const m = String(frame.granule || '').match(/\d{8}T(\d{4})(\d{2})/);
-  if (m) {
-    const sBucket = Math.floor(parseInt(m[2]) / 10) * 10;
-    return `g${m[1]}${String(sBucket).padStart(2, '0')}`;
-  }
-  return '';
+  return tileKeyMap?.get(frame) ?? '';
 }
 
 function buildFrequencyStats() {
@@ -2571,6 +2594,7 @@ function buildChartBuckets() {
     if (STATS_S1_IDS.has(f.satellite_id) && !statsState.activeTracks.has(f.path_number_norm)) return false;
     return true;
   });
+  const tileKeyMap = buildTileKeyMap(relevant);
   const buckets = [];
   let cursor = new Date(start);
   while (cursor < end) {
@@ -2587,7 +2611,7 @@ function buildChartBuckets() {
       if (d >= bs && d < be) {
         // Deduplicate: same physical acquisition can appear from multiple sources (ASF + Copernicus)
         // and multiple product types. Count each unique frame scene only once.
-        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f)}`;
+        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, tileKeyMap)}`;
         if (!seen.has(acqKey)) {
           seen.add(acqKey);
           counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
@@ -3084,12 +3108,13 @@ function statsBarClick(event, bucketIdx, satId) {
   );
 
   // Deduplicate same as buildChartBuckets: unique frame scene per date/path/dir
+  const barTileKeyMap = buildTileKeyMap(inBucket);
   const seenAcq = new Set();
   const trackMap = new Map();
   let uniqueCount = 0;
   for (const f of inBucket) {
     const d = f.date.slice(0, 10);
-    const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f)}`;
+    const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, barTileKeyMap)}`;
     if (seenAcq.has(acqKey)) continue;
     seenAcq.add(acqKey);
     uniqueCount++;
