@@ -192,6 +192,7 @@ const TRANSLATIONS = {
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
     'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks',
+    'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
     'stats-no-data':'No data available','stats-no-window-data':'No data in this window for the selected satellites',
@@ -258,6 +259,7 @@ const TRANSLATIONS = {
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
     'stats-cell-size':'格距','stats-day-suffix':'天','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道',
+    'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
     'stats-no-data':'無可用資料','stats-no-window-data':'此時段內所選衛星無資料',
@@ -909,7 +911,43 @@ function reconcileFrameMetadata(frames) {
   return frames;
 }
 
-function applyFrameData(data) {
+function getDatasetFreshness(data = {}) {
+  const candidates = [data.query_end, data.last_successful_fetch, data.updated_at];
+  for (const value of candidates) {
+    const ts = Date.parse(value);
+    if (!Number.isNaN(ts)) return ts;
+  }
+  const versionMatch = String(data.version || '').match(/^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?/);
+  if (versionMatch) {
+    const [, y, m, d, hh = '00', mm = '00', ss = '00'] = versionMatch;
+    return Date.UTC(+y, +m - 1, +d, +hh, +mm, +ss);
+  }
+  return 0;
+}
+
+function getDatasetFrameCount(data = {}) {
+  return Number.isFinite(data.total_frames)
+    ? data.total_frames
+    : (Array.isArray(data.taiwan_frames) ? data.taiwan_frames.length : 0);
+}
+
+function shouldApplyFullDataset(data) {
+  if (!Array.isArray(data?.taiwan_frames) || !data.taiwan_frames.length) return false;
+  const current = state.baseStats || {};
+  if (!current.version) return true;
+
+  const incomingFreshness = getDatasetFreshness(data);
+  const currentFreshness = getDatasetFreshness(current);
+  if (incomingFreshness && currentFreshness && incomingFreshness < currentFreshness) {
+    console.warn('[Data] Ignoring older full dataset cache:', data.version, '<', current.version);
+    return false;
+  }
+
+  return getDatasetFrameCount(data) >= getDatasetFrameCount(current) ||
+         data.taiwan_frames.length > (current.taiwan_frames?.length || 0);
+}
+
+function applyFrameData(data, options = {}) {
   if (!Array.isArray(data.taiwan_frames)) return;
   document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
   updateMobDbBadge(data.version);
@@ -920,8 +958,8 @@ function applyFrameData(data) {
   applyTabDateWindow();
   bindAdvancedControls();
   renderSatelliteSelect();
-  renderFormatOptions();
-  resetAdvancedFilters(false);
+  if (options.preserveFilters) renderFormatOptions();
+  else resetAdvancedFilters(false);
   applyAdvancedFilters();
 }
 
@@ -948,7 +986,7 @@ async function loadData() {
   // sar_recent.json is only the last 14 days (~50–200 KB), loads in < 1 s.
   let phase1ok = false;
   try {
-    const res = await fetch('./data/sar_recent.json', { cache: 'default' });
+    const res = await fetch('./data/sar_recent.json', { cache: 'no-cache' });
     if (res.ok) {
       document.getElementById('loading')?.classList.add('gone');
       const data = await res.json();
@@ -968,7 +1006,11 @@ async function loadData() {
     const showBar = pct => { if (bgEl) { bgEl.hidden = false; bgEl.style.width = Math.min(100, pct) + '%'; } };
     const hideBar = ()  => { if (bgEl) { bgEl.style.width = '100%'; bgEl.classList.add('done'); setTimeout(() => { bgEl.hidden = true; bgEl.style.width = '0%'; bgEl.classList.remove('done'); }, 400); } };
     try {
-      const res = await fetch('./data/sar_status.json', { cache: 'default' });
+      const loadedVersion = state.baseStats?.version;
+      const fullUrl = loadedVersion
+        ? `./data/sar_status.json?v=${encodeURIComponent(loadedVersion)}`
+        : './data/sar_status.json';
+      const res = await fetch(fullUrl, { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const contentLength = res.headers.get('content-length');
       const total = contentLength ? parseInt(contentLength, 10) : 0;
@@ -993,10 +1035,11 @@ async function loadData() {
         data = await res.json();
       }
       hideBar();
-      // Only replace if the full set is actually larger (guards against stale cache)
-      if (Array.isArray(data.taiwan_frames) &&
-          data.taiwan_frames.length > (state.rawFrames?.length || 0)) {
-        applyFrameData(data);
+      // Replace the recent bootstrap only with a full dataset that is at least
+      // as fresh as the data already on screen. This avoids cached historical
+      // JSON downgrading Stats after sar_recent.json has updated.
+      if (shouldApplyFullDataset(data)) {
+        applyFrameData(data, { preserveFilters: phase1ok });
       }
     } catch (error) {
       hideBar();
@@ -2363,6 +2406,7 @@ const statsState = {
   cellIdx:    0,
   activeSats:   new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
   activeTracks: new Set([69, 105]),  // T142 & T171 excluded by default
+  pass:         'ALL',
   sortBy:       'lastDate',
   expanded:     new Set(STATS_CHART_SATS),  // featured sats open by default
   showInactive: false,
@@ -2497,12 +2541,14 @@ function buildChartBuckets() {
   const frames    = state.rawFrames || [];
   const cellDays  = STATS_CELL_STEPS[statsState.cellIdx];
   const activeSats = statsState.activeSats;
+  const pass = statsState.pass;
   const { start, end } = getChartDateRange();
   const startStr = start.toISOString().slice(0, 10);
   const endStr   = end.toISOString().slice(0, 10);
   const relevant = frames.filter(f => {
     if (!f.date || !activeSats.has(f.satellite_id)) return false;
     if (f.date.slice(0, 10) < startStr || f.date.slice(0, 10) >= endStr) return false;
+    if (pass !== 'ALL' && f.direction_norm !== pass) return false;
     if (STATS_S1_IDS.has(f.satellite_id) && !statsState.activeTracks.has(f.path_number_norm)) return false;
     return true;
   });
@@ -2605,6 +2651,14 @@ function buildStatsPanelHTML() {
     `<button class="stats-chip${statsState.sortBy === v ? ' on' : ''}" onclick="statsSetSort('${v}')">${t(labelKey)}</button>`
   ).join('');
 
+  const passHTML = [
+    ['ALL', 'stats-pass-all'],
+    ['ASCENDING', 'stats-pass-asc'],
+    ['DESCENDING', 'stats-pass-desc'],
+  ].map(([v, labelKey]) =>
+    `<button class="stats-chip${statsState.pass === v ? ' on' : ''}" onclick="statsSetPass('${v}')">${t(labelKey)}</button>`
+  ).join('');
+
   const af = statsState.activeFilter;
   const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId ? af.satId + ' ' : ''}T${af.track} ${formatStatsDirectionShort(af.dir)}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
 
@@ -2668,6 +2722,10 @@ function buildStatsPanelHTML() {
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">${t('stats-satellites')}</span>
           <div class="stats-chips">${chipHTML}</div>
+        </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">${t('stats-pass')}</span>
+          <div class="stats-chips">${passHTML}</div>
         </div>
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">${t('stats-s1-tracks')}</span>
@@ -2768,7 +2826,7 @@ function buildStatsCardsHTML() {
     const gapStr  = row.avgGap ? `~${row.avgGap.toFixed(1)}${t('stats-day-suffix')}` : '—';
     const lastStr = fmtMonDay(row.lastDate);
 
-    return `<div class="trk-row${isActive ? ' active' : ''}" onclick="applyStatsTrackFilter(null,'${tVal}','${row.dir}')">
+    return `<div class="trk-row${isActive ? ' active' : ''}" onclick="statsTrackInfoClick(event,'${tVal}','${row.dir}')" title="${t('stats-track-statistics')}">
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
       <span class="trk-num">${tNum}</span>
       <div class="trk-pills">${satPills}</div>
@@ -2780,21 +2838,54 @@ function buildStatsCardsHTML() {
     </div>`;
   }).join('');
 
-  return `<div class="trk-flat-list">${html}</div>`;
+  return `<div class="trk-flat-list">${buildTrackStatsAxisHTML()}${html}</div>`;
 }
 
+function buildTrackStatsAxisHTML() {
+  const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
+  const monthLabelForIndex = index => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (23 - index));
+    const mon = d.toLocaleString(locale, { month: 'short' });
+    return `${mon}'${String(d.getFullYear()).slice(2)}`;
+  };
+  const labels = [0, 5, 11, 17, 23].map(monthLabelForIndex);
+  return `<div class="trk-axis-row">
+    <span class="sts-tdir trk-axis-blank"></span>
+    <span class="trk-num trk-axis-blank"></span>
+    <div class="trk-pills trk-axis-blank"></div>
+    <div class="trk-axis-spark" title="Shared x-axis for the 24-month row trends">
+      ${labels.map(label => `<span>${label}</span>`).join('')}
+    </div>
+    <span class="trk-frames trk-axis-metric">${t('stats-sort-frames')}</span>
+    <span class="trk-intv trk-axis-metric">${t('stats-sort-interval')}</span>
+    <span class="trk-last trk-axis-metric">${t('stats-last')}</span>
+    <span class="trk-filter-icon trk-axis-blank"></span>
+  </div>`;
+}
 
 function buildSparklineSvg(data) {
   const max  = Math.max(...data, 1);
   const H    = 18;
   const bw   = 3;
   const gap  = 1;
+  const W = data.length * (bw + gap);
+  const grid = [0, 5, 11, 17, 23].map(i => {
+    const x = i * (bw + gap) + bw / 2;
+    return `<line x1="${x}" y1="0" x2="${x}" y2="${H}" class="spark-grid"/>`;
+  }).join('');
   const bars = data.map((v, i) => {
     const h = v > 0 ? Math.max(2, Math.round((v / max) * H)) : 0;
     return `<rect x="${i * (bw + gap)}" y="${H - h}" width="${bw}" height="${h}" class="spark-bar"/>`;
   }).join('');
-  const W = data.length * (bw + gap);
-  return `<svg class="spark-svg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">${bars}</svg>`;
+  return `<div class="spark-wrap" title="24-month trend; scaled within this row, max ${max}">
+    <svg class="spark-svg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
+      ${grid}
+      <line x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" class="spark-axis"/>
+      ${bars}
+    </svg>
+  </div>`;
 }
 
 function renderStatsChart() {
@@ -2900,11 +2991,62 @@ function statsToggleTrack(t) {
   }
   renderStatsPanel();
 }
+function statsSetPass(pass) {
+  statsState.pass = ['ALL', 'ASCENDING', 'DESCENDING'].includes(pass) ? pass : 'ALL';
+  renderStatsPanel();
+}
 function statsSetSort(v)         { statsState.sortBy = v; renderStatsPanel(); }
 function statsToggleShowInactive() { statsState.showInactive = !statsState.showInactive; renderStatsPanel(); }
 function statsToggleExpand(satId) {
   statsState.expanded.has(satId) ? statsState.expanded.delete(satId) : statsState.expanded.add(satId);
   renderStatsPanel();
+}
+
+function positionStatsPopup(event, popup) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = event.clientX + 14;
+  let top  = event.clientY - 8;
+  if (left + 230 > vw) left = event.clientX - 244;
+  if (top + 220 > vh) top  = vh - 228;
+  popup.style.left = left + 'px';
+  popup.style.top  = Math.max(8, top) + 'px';
+}
+
+function statsTrackInfoClick(event, trackNum, dir) {
+  event?.stopPropagation?.();
+  const rows = buildTrackOrientedStats();
+  const row = rows.find(item =>
+    String(item.track ?? '') === String(trackNum ?? '') &&
+    item.dir === dir
+  );
+  if (!row) return;
+
+  const popup = document.getElementById('schart-popup');
+  if (!popup) return;
+
+  const dirSh = formatStatsDirectionShort(row.dir);
+  const dirCls = row.dir === 'ASCENDING' ? 'asc' : 'desc';
+  const title = row.track !== null ? `T${String(row.track).padStart(3, '0')}` : 'T?';
+  const avgGap = row.avgGap ? `~${row.avgGap.toFixed(1)}${t('stats-day-suffix')}` : '--';
+  const satHTML = row.sats.map(s =>
+    `<div class="scp-track-row">
+      <span class="scp-tnum" style="color:${s.color}">${s.satId}</span>
+      <span class="scp-tcnt">${s.count.toLocaleString()} ${t('stats-frame-unit')}</span>
+    </div>`
+  ).join('');
+
+  popup.innerHTML = `
+    <div class="scp-hdr">
+      <span class="sts-tdir ${dirCls}">${dirSh}</span>
+      <span class="scp-sat">${title}</span>
+      <span class="scp-period">${t('stats-last')} ${fmtMonDay(row.lastDate)}</span>
+      <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">x</button>
+    </div>
+    <div class="scp-total">${row.totalCount.toLocaleString()} ${t('stats-frame-unit')} / ${t('stats-sort-interval')} ${avgGap}</div>
+    ${satHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
+  `;
+  popup.hidden = false;
+  positionStatsPopup(event, popup);
 }
 
 function statsBarClick(event, bucketIdx, satId) {
@@ -2917,7 +3059,9 @@ function statsBarClick(event, bucketIdx, satId) {
   const beDate = b.end.toISOString().slice(0, 10);
   const inBucket = frames.filter(f =>
     f.satellite_id === satId && f.date &&
-    f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate
+    f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate &&
+    (statsState.pass === 'ALL' || f.direction_norm === statsState.pass) &&
+    (!STATS_S1_IDS.has(f.satellite_id) || statsState.activeTracks.has(f.path_number_norm))
   );
 
   // Deduplicate same as buildChartBuckets: unique (date, path, dir, frame_number)
@@ -2963,14 +3107,7 @@ function statsBarClick(event, bucketIdx, satId) {
     ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
   `;
   popup.hidden = false;
-
-  const vw = window.innerWidth, vh = window.innerHeight;
-  let left = event.clientX + 14;
-  let top  = event.clientY - 8;
-  if (left + 230 > vw) left = event.clientX - 244;
-  if (top + 220 > vh) top  = vh - 228;
-  popup.style.left = left + 'px';
-  popup.style.top  = top  + 'px';
+  positionStatsPopup(event, popup);
 }
 
 function applyStatsTrackFilter(satId, trackNum, dir) {
@@ -2978,6 +3115,8 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
   const effectiveSat = satId || 'ALL';
   state.filters.satellite = effectiveSat;
   state.selectedSat = satId ? (SATS.find(s => s.id === satId) || null) : null;
+  state.selectedFrameKey = null;
+  document.getElementById('drawer')?.classList.remove('open');
   const satSel = document.getElementById('filter-satellite');
   if (satSel) satSel.value = effectiveSat;
 
@@ -3002,8 +3141,13 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
   }
 
   statsState.activeFilter = { satId, track: trackNum, dir };
+  setMobTab('map');
   applyAdvancedFilters();
   closeStatsPanel();
+  setTimeout(() => {
+    if (state.map) state.map.invalidateSize();
+    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
+  }, 80);
 }
 
 function clearStatsFilter() {
