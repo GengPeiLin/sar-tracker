@@ -516,19 +516,31 @@ def main() -> int:
     # to reduce JSON payload size (~30% smaller).
     _STRIP = {"browse_url", "asf_meta_url", "copernicus_url"}
 
-    def _slim_frame(f: dict) -> dict:
+    # Centroid latitude bounds for Taiwan-relevant frames.
+    # The search WKT uses intersects, so frames that merely clip the bbox edges
+    # (e.g. T69 F84 at ~27.2°N, T105 F524 at ~20.3°N) are returned by the API
+    # but don't actually cover Taiwan territory. Centroid filter removes them.
+    CENTROID_LAT_MIN = 21.5   # south of Taiwan's southernmost tip (Eluanbi 21.9°N)
+    CENTROID_LAT_MAX = 26.85  # keeps F82/T69 (covers Matsu+northern Taiwan, centroid ~26.6°N);
+                               # drops F83/F84 (centered north of Matsu, centroid ≥27.0°N)
+
+    def _slim_frame(f: dict) -> dict | None:
         out = {k: v for k, v in f.items() if k not in _STRIP}
         fp = out.get("footprint")
         if fp and fp.get("type") == "Polygon" and len(fp.get("coordinates", [])) > 0:
             ring = fp["coordinates"][0]
             if len(ring) > 1 and ring[0] == ring[-1]:
                 ring = ring[:-1]
+            lats = [pt[1] for pt in ring]
+            centroid_lat = sum(lats) / len(lats) if lats else None
+            if centroid_lat is not None and not (CENTROID_LAT_MIN <= centroid_lat <= CENTROID_LAT_MAX):
+                return None
             out["fp"] = [round(val, 3) for pt in ring for val in pt]
             if "footprint" in out:
                 del out["footprint"]
         return out
 
-    slim_frames = [_slim_frame(f) for f in all_frames]
+    slim_frames = [s for f in all_frames if (s := _slim_frame(f)) is not None]
 
     payload = {
         "version": __version__,
