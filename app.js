@@ -1361,6 +1361,9 @@ function applyAdvancedFilters() {
   updateStats();
   updateFilterHints();
   updateDownloadButtons();
+  if (document.getElementById('stats-panel')?.classList.contains('open')) {
+    renderStatsPanel();
+  }
 }
 
 function selectSatellite(sat, row) {
