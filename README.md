@@ -43,7 +43,7 @@ It loads `data/sar_status.json` on startup and renders an interactive Leaflet ma
 - `data/asf_taiwan.meta4` — ASF metalink manifest
 - `data/copernicus_taiwan.meta4` — Copernicus metalink manifest
 
-It queries the ASF Search API and Copernicus OData API for Sentinel-1 and NISAR frames intersecting Taiwan, then merges and deduplicates results. Incremental updates use a configurable overlap window to avoid missing frames near the last-fetch boundary.
+It queries the ASF Search API and Copernicus OData API for Sentinel-1 and NISAR frames intersecting Taiwan, merges and deduplicates results, then applies a centroid latitude filter `[21.5°N, 26.85°N]` to drop frames that merely clip the search bounding box edges (e.g. frames centered north of Matsu or south of Taiwan's southern tip). Incremental updates use a configurable overlap window to avoid missing frames near the last-fetch boundary.
 
 Environment variables:
 
@@ -92,9 +92,14 @@ The sidebar shows SAR satellites grouped by status:
 
 Retired satellites (including Sentinel-1B, retired 2022-08-23) appear in "Other SAR missions" when historical data is in view, never in the featured group.
 
+## Frame Number Display
+
+The detail drawer shows ASF Vertex frame numbers for all Sentinel-1 frames over the four Taiwan priority tracks (T69, T105, T142, T171), including Copernicus-only frames that carry no `frame_number` in their metadata. For those frames, `app.js` derives the frame number by computing the footprint centroid latitude and looking it up against `S1_FRAME_BOUNDS` — a per-track table of centroid-latitude midpoints derived empirically from 7,458 S1D frames that have real ASF frame numbers.
+
 ## Known Limitations
 
 - Some frames are Copernicus-only with no matched ASF record. The merge logic is conservative — it will not link an ASF record from a different acquisition date to fill a missing field.
+- Frame numbers for non-priority tracks (other than T69/T105/T142/T171) fall back to the placeholder if ASF metadata is absent.
 - No automated browser tests. UI changes should be validated manually against the QA checklist below.
 
 ## QA Checklist
@@ -105,9 +110,11 @@ Before shipping a UI change:
 - [ ] Map auto-focuses correctly when filters change
 - [ ] Legend reflects the current visible dataset
 - [ ] Detail drawer wraps long titles and stays readable
+- [ ] Detail drawer shows a real ASF frame number (not a placeholder) for Copernicus S1 frames on T69/T105/T142/T171
 - [ ] A known Copernicus-only frame does not falsely show an ASF link
 - [ ] Export panel opens, closes, and disables correctly
 - [ ] Sentinel-1B does not appear in "Featured open missions"
+- [ ] Acquisition Frequency Chart updates after full dataset loads (Phase 2)
 
 ## License
 
