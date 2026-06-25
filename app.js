@@ -2475,6 +2475,22 @@ function statsSetLayout(l) {
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
+// Returns a stable key that identifies the spatial frame tile for deduplication.
+// When frame_number is present it's used directly; when absent (Copernicus data),
+// the granule acquisition start time bucketed to 10 s groups product types for the
+// same tile while keeping distinct tiles (which are ≥25 s apart) separate.
+function getAcqFramePosKey(frame) {
+  if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
+    return String(frame.frame_number_norm);
+  }
+  const m = String(frame.granule || '').match(/\d{8}T(\d{4})(\d{2})/);
+  if (m) {
+    const sBucket = Math.floor(parseInt(m[2]) / 10) * 10;
+    return `g${m[1]}${String(sBucket).padStart(2, '0')}`;
+  }
+  return '';
+}
+
 function buildFrequencyStats() {
   const frames = state.rawFrames || [];
   const groups = new Map();
@@ -2571,7 +2587,7 @@ function buildChartBuckets() {
       if (d >= bs && d < be) {
         // Deduplicate: same physical acquisition can appear from multiple sources (ASF + Copernicus)
         // and multiple product types. Count each unique frame scene only once.
-        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${f.frame_number_norm ?? ''}`;
+        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f)}`;
         if (!seen.has(acqKey)) {
           seen.add(acqKey);
           counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
@@ -3067,13 +3083,13 @@ function statsBarClick(event, bucketIdx, satId) {
     (!STATS_S1_IDS.has(f.satellite_id) || statsState.activeTracks.has(f.path_number_norm))
   );
 
-  // Deduplicate same as buildChartBuckets: unique (date, path, dir, frame_number)
+  // Deduplicate same as buildChartBuckets: unique frame scene per date/path/dir
   const seenAcq = new Set();
   const trackMap = new Map();
   let uniqueCount = 0;
   for (const f of inBucket) {
     const d = f.date.slice(0, 10);
-    const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${f.frame_number_norm ?? ''}`;
+    const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f)}`;
     if (seenAcq.has(acqKey)) continue;
     seenAcq.add(acqKey);
     uniqueCount++;
