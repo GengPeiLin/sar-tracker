@@ -569,7 +569,7 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
-const DEFAULT_PRODUCT_TYPES = ['SLC', 'GSLC', 'RSLC'];
+const DEFAULT_PRODUCT_TYPES = ['SLC','RSLC'];
 const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
   ALL: ['SLC', 'RSLC'],
   NISAR: ['GSLC', 'RSLC'],
