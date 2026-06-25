@@ -3003,12 +3003,13 @@ function renderStatsChart() {
   const labelW      = cellDays >= 28 ? 36 : 30;
   const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
 
-  let gridSVG = '';
+  let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
   for (const frac of [0.25, 0.5, 0.75, 1.0]) {
-    const y   = (barH - frac * barH).toFixed(1);
-    const cnt = Math.round(frac * maxTotal);
+    const y    = (barH - frac * barH).toFixed(1);
+    const cnt  = Math.round(frac * maxTotal);
+    const lblY = Math.max(9, Number(y) - 2);
     gridSVG += `<line x1="0" y1="${y}" x2="${svgW}" y2="${y}" class="schart-grid"/>`;
-    gridSVG += `<text x="2" y="${(Number(y) - 2).toFixed(1)}" class="schart-glabel">${cnt}</text>`;
+    gridSVG += `<text x="2" y="${lblY.toFixed(1)}" class="schart-glabel">${cnt}</text>`;
   }
 
   const barSatColors = getSatColors();
