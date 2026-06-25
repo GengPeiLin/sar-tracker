@@ -389,6 +389,28 @@ const NISAR_TRACK_COLORS = {
   'DESCENDING|133': '#b388ff',  // lavender — distinct from pink and green
 };
 
+// ASF frame number boundaries for Taiwan Sentinel-1 tracks.
+// Derived from 7,458 S1D frames with real ASF frame numbers in sar_status.json.
+// Each entry: [frameNumber, centroidLatMin, centroidLatMax].
+// Boundaries are midpoints between consecutive observed centroid latitudes.
+const S1_FRAME_BOUNDS = {
+  69:  [[62,-90,20.7440],[63,20.7440,20.9603],[64,20.9603,21.5817],[67,21.5817,22.2996],
+        [68,22.2996,22.5913],[69,22.5913,22.8486],[70,22.8486,23.3083],[72,23.3083,23.7279],
+        [73,23.7279,24.0092],[74,24.0092,24.4004],[75,24.4004,24.6586],[76,24.6586,24.8885],
+        [77,24.8885,25.1634],[78,25.1634,25.4491],[79,25.4491,25.9079],[80,25.9079,26.1423],
+        [81,26.1423,26.3785],[82,26.3785,26.8096],[83,26.8096,27.0914],[84,27.0914,90]],
+  105: [[525,-90,20.2789],[524,20.2789,20.6998],[522,20.6998,21.4530],[519,21.4530,21.8741],
+        [520,21.8741,22.1642],[518,22.1642,22.4710],[517,22.4710,22.6341],[516,22.6341,22.7911],
+        [515,22.7911,23.1575],[514,23.1575,23.7068],[512,23.7068,24.2813],[510,24.2813,24.7382],
+        [509,24.7382,25.1248],[508,25.1248,25.4216],[507,25.4216,25.5620],[506,25.5620,26.2088],
+        [503,26.2088,26.8914],[502,26.8914,27.1265],[501,27.1265,90]],
+  142: [[67,-90,22.7372],[70,22.7372,23.5984],[73,23.5984,24.0831],[74,24.0831,24.4701],
+        [75,24.4701,24.7944],[76,24.7944,25.1725],[78,25.1725,25.5995],[79,25.5995,25.7771],
+        [80,25.7771,26.0988],[81,26.0988,26.6774],[83,26.6774,27.0989],[84,27.0989,90]],
+  171: [[75,-90,24.4291],[74,24.4291,24.9538],[78,24.9538,25.8055],[80,25.8055,26.1989],
+        [81,26.1989,26.5855],[83,26.5855,27.1904],[84,27.1904,27.4528],[85,27.4528,90]],
+};
+
 function platColor(platform) {
   const p = (platform||'').toUpperCase();
   for (const k of Object.keys(PLATFORM_COLORS)) {
@@ -2285,6 +2307,8 @@ function openFrameDrawer(clickedFrame) {
     if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
       return String(frame.frame_number_norm);
     }
+    const asf = lookupAsfFrameNumber(frame);
+    if (asf !== null) return String(asf);
     return frame.asf_url ? t('frame-meta-unavailable') : t('no-asf-metadata');
   };
   const frameCenterLabel = getFrameStatus(primary);
@@ -2512,6 +2536,25 @@ function getAcqFramePosKey(frame, tileKeyMap) {
     return String(frame.frame_number_norm);
   }
   return tileKeyMap?.get(frame) ?? '';
+}
+
+function getFpCentroidLat(fp) {
+  if (!Array.isArray(fp) || fp.length < 8) return null;
+  let sum = 0, n = 0;
+  for (let i = 1; i < fp.length; i += 2) { sum += fp[i]; n++; }
+  return sum / n;
+}
+
+function lookupAsfFrameNumber(frame) {
+  const path = frame.path_number_norm ?? frame.path_number;
+  const bounds = S1_FRAME_BOUNDS[path];
+  if (!bounds) return null;
+  const lat = getFpCentroidLat(frame.fp);
+  if (lat === null) return null;
+  for (const [frameNum, lo, hi] of bounds) {
+    if (lat >= lo && lat < hi) return frameNum;
+  }
+  return null;
 }
 
 function buildFrequencyStats() {
