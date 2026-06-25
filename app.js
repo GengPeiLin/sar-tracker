@@ -2333,13 +2333,15 @@ function openFrameDrawer(clickedFrame) {
   const groups = new Map();
   for (const frame of historyFrames) {
     const info = getFrameAcquisitionInfo(frame);
-    const list = groups.get(info.key) || [];
+    const dateKey = info.key.slice(0, 10);
+    const list = groups.get(dateKey) || [];
     list.push(frame);
-    groups.set(info.key, list);
+    groups.set(dateKey, list);
   }
 
   const cards = [...groups.entries()].map(([groupKey, groupFrames]) => {
-    const heading = getFrameAcquisitionInfo(groupFrames[0]).label;
+    const acqLocale = state?.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
+    const heading = new Date(groupKey + 'T00:00:00Z').toLocaleDateString(acqLocale, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' });
     const groupEntries = mergeFramesForDrawer(groupFrames);
     const body = groupEntries.map(frame => {
       const asfUrl = frame.asf_url || '';
@@ -2376,7 +2378,7 @@ function openFrameDrawer(clickedFrame) {
     }).join('');
 
     return `
-      <details class="d-group-fold"${groupKey === clickedAcquisition.key ? ' open' : ''}>
+      <details class="d-group-fold"${groupKey === clickedAcquisition.key.slice(0, 10) ? ' open' : ''}>
         <summary class="d-group-summary">
           <span class="d-group-head">${escapeHtml(heading)}</span>
           <span class="d-group-meta">${groupEntries.length} file${groupEntries.length === 1 ? '' : 's'}</span>
