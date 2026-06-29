@@ -1907,6 +1907,23 @@ header {
 .scp-tnum { flex: 1; color: var(--text-hi); }
 .scp-tcnt { color: var(--muted); font-size: calc(10px + var(--font-bump)); }
 .scp-empty { padding: 8px 12px; color: var(--muted); font-size: calc(10px + var(--font-bump)); }
+.scp-map-btn {
+  background: none; border: none; color: var(--cyan); cursor: pointer;
+  font-size: 13px; padding: 0 2px; line-height: 1; flex-shrink: 0;
+  opacity: 0.65; transition: opacity 0.15s;
+}
+.scp-map-btn:hover { opacity: 1; }
+.scp-footer {
+  padding: 6px 10px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+}
+.scp-view-all {
+  background: none; border: 1px solid var(--border2); border-radius: 4px;
+  color: var(--cyan); cursor: pointer;
+  font-size: calc(10px + var(--font-bump)); font-family: var(--mono);
+  padding: 3px 8px; opacity: 0.85;
+}
+.scp-view-all:hover { opacity: 1; background: var(--surface); }
 
 /* background history load bar */
 .bg-load-bar {
