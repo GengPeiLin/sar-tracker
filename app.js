@@ -3203,11 +3203,10 @@ function statsBarClick(event, bucketIdx, satId) {
     const dirCls   = trackInfo.dir === 'ASCENDING' ? 'asc' : 'desc';
     const trackArg = trackInfo.track !== null && trackInfo.track !== undefined ? trackInfo.track : 'null';
     const dirArg   = trackInfo.dir ? `'${trackInfo.dir}'` : 'null';
-    return `<div class="scp-track-row">
+    return `<div class="scp-track-row scp-track-link" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',${trackArg},${dirArg})">
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
       <span class="scp-tnum">T${trackInfo.track ?? '?'}</span>
       <span class="scp-tcnt">${trackInfo.count} ${t('stats-frame-unit')}</span>
-      <button class="scp-map-btn" title="${t('stats-view-on-map')}" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',${trackArg},${dirArg})">↗</button>
     </div>`;
   }).join('');
 
@@ -3221,7 +3220,7 @@ function statsBarClick(event, bucketIdx, satId) {
     </div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
     ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
-    <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">↗ ${t('stats-view-on-map')}</div>
+    <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</div>
   `;
   popup.hidden = false;
   positionStatsPopup(event, popup);

@@ -1907,20 +1907,17 @@ header {
 .scp-tnum { flex: 1; color: var(--text-hi); }
 .scp-tcnt { color: var(--muted); font-size: calc(10px + var(--font-bump)); }
 .scp-empty { padding: 8px 12px; color: var(--muted); font-size: calc(10px + var(--font-bump)); }
-.scp-map-btn {
-  background: none; border: none; color: var(--cyan); cursor: pointer;
-  font-size: 13px; padding: 0 2px; line-height: 1; flex-shrink: 0;
-  opacity: 0.65; transition: opacity 0.15s;
-}
-.scp-map-btn:hover { opacity: 1; }
+.scp-track-link { cursor: pointer; transition: background 0.1s; }
+.scp-track-link:hover { background: var(--surface); }
 .scp-view-all-row {
-  display: flex; align-items: center; gap: 6px;
   padding: 5px 12px;
-  color: var(--cyan); font-size: calc(10px + var(--font-bump));
-  cursor: pointer; border-top: 1px solid var(--border);
-  opacity: 0.75; transition: opacity 0.15s, background 0.1s;
+  color: var(--muted); font-size: calc(9px + var(--font-bump));
+  text-align: center; cursor: pointer;
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.04em;
+  transition: color 0.15s, background 0.1s;
 }
-.scp-view-all-row:hover { opacity: 1; background: var(--surface); }
+.scp-view-all-row:hover { color: var(--cyan); background: var(--surface); }
 
 /* background history load bar */
 .bg-load-bar {
