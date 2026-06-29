@@ -3221,9 +3221,7 @@ function statsBarClick(event, bucketIdx, satId) {
     </div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
     ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
-    <div class="scp-footer">
-      <button class="scp-view-all" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</button>
-    </div>
+    <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">↗ ${t('stats-view-on-map')}</div>
   `;
   popup.hidden = false;
   positionStatsPopup(event, popup);
