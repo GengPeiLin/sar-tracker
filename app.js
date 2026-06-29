@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
     'stats-no-data':'No data available','stats-no-window-data':'No data in this window for the selected satellites',
     'stats-edit-color':'Edit color','stats-reset-colors':'Reset all to defaults',
-    'stats-frame-unit':'fr','stats-frames-word':'frames','stats-frame-word':'frame','stats-last':'last','stats-no-track-data':'No track data',
+    'stats-frame-unit':'fr','stats-frames-word':'frames','stats-frame-word':'frame','stats-last':'last','stats-no-track-data':'No track data','stats-view-on-map':'View on map',
     'this-week-map':'THIS WEEK',
   },
   'zh-TW': {
@@ -264,7 +264,7 @@ const TRANSLATIONS = {
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
     'stats-no-data':'無可用資料','stats-no-window-data':'此時段內所選衛星無資料',
     'stats-edit-color':'編輯顏色','stats-reset-colors':'重設為預設顏色',
-    'stats-frame-unit':'幀','stats-frames-word':'幀','stats-frame-word':'幀','stats-last':'最近','stats-no-track-data':'無軌道資料',
+    'stats-frame-unit':'幀','stats-frames-word':'幀','stats-frame-word':'幀','stats-last':'最近','stats-no-track-data':'無軌道資料','stats-view-on-map':'在地圖上顯示',
     'this-week-map':'本週',
   },
 };
@@ -3199,12 +3199,15 @@ function statsBarClick(event, bucketIdx, satId) {
   const periodLabel = cellDays === 1 ? b.label : `${b.label} – ${endLabel}`;
 
   const trackHTML = tracks.map(trackInfo => {
-    const dirSh  = formatStatsDirectionShort(trackInfo.dir || '?');
-    const dirCls = trackInfo.dir === 'ASCENDING' ? 'asc' : 'desc';
+    const dirSh    = formatStatsDirectionShort(trackInfo.dir || '?');
+    const dirCls   = trackInfo.dir === 'ASCENDING' ? 'asc' : 'desc';
+    const trackArg = trackInfo.track !== null && trackInfo.track !== undefined ? trackInfo.track : 'null';
+    const dirArg   = trackInfo.dir ? `'${trackInfo.dir}'` : 'null';
     return `<div class="scp-track-row">
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
       <span class="scp-tnum">T${trackInfo.track ?? '?'}</span>
       <span class="scp-tcnt">${trackInfo.count} ${t('stats-frame-unit')}</span>
+      <button class="scp-map-btn" title="${t('stats-view-on-map')}" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',${trackArg},${dirArg})">↗</button>
     </div>`;
   }).join('');
 
@@ -3218,9 +3221,65 @@ function statsBarClick(event, bucketIdx, satId) {
     </div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
     ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
+    <div class="scp-footer">
+      <button class="scp-view-all" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</button>
+    </div>
   `;
   popup.hidden = false;
   positionStatsPopup(event, popup);
+}
+
+function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
+  ensureAdvancedState();
+
+  // Bucket end is exclusive; compute inclusive end for the date filter
+  const endDate = new Date(beDateExclusive);
+  endDate.setDate(endDate.getDate() - 1);
+  const dateEnd = endDate.toISOString().slice(0, 10);
+
+  // Satellite
+  const effectiveSat = satId || 'ALL';
+  state.filters.satellite = effectiveSat;
+  state.selectedSat = satId ? (SATS.find(s => s.id === satId) || null) : null;
+  state.selectedFrameKey = null;
+  document.getElementById('drawer')?.classList.remove('open');
+  const satSel = document.getElementById('filter-satellite');
+  if (satSel) satSel.value = effectiveSat;
+
+  // Date — pin to exact acquisition date (or range for multi-day bucket)
+  state.filters.dateStart = bsDate;
+  state.filters.dateEnd   = dateEnd;
+  const dStart = document.getElementById('filter-date-start');
+  const dEnd   = document.getElementById('filter-date-end');
+  if (dStart) dStart.value = bsDate;
+  if (dEnd)   dEnd.value   = dateEnd;
+  updateDateShortcutState();
+
+  // Direction
+  state.filters.direction = (dir && dir !== 'UNKNOWN') ? dir : 'ALL';
+  const dirSel = document.getElementById('filter-direction');
+  if (dirSel) dirSel.value = state.filters.direction;
+
+  // Track (only when a specific track row was clicked)
+  state.filters.pathMin = '';
+  state.filters.pathMax = '';
+  const pMin = document.getElementById('filter-path-min');
+  const pMax = document.getElementById('filter-path-max');
+  if (pMin) pMin.value = '';
+  if (pMax) pMax.value = '';
+  const tn = trackNum !== null && trackNum !== undefined ? String(trackNum) : '';
+  if (tn && tn !== 'null') {
+    state.filters.pathMin = tn;
+    state.filters.pathMax = tn;
+    if (pMin) pMin.value = tn;
+    if (pMax) pMax.value = tn;
+  }
+
+  statsState.activeFilter = { satId, track: trackNum ?? null, dir: dir || null };
+  document.getElementById('schart-popup').hidden = true;
+  setMobTab('map');
+  applyAdvancedFilters();
+  closeStatsPanel();
 }
 
 function applyStatsTrackFilter(satId, trackNum, dir) {
