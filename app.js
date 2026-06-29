@@ -2304,11 +2304,13 @@ function openFrameDrawer(clickedFrame) {
     return t('source-none');
   };
   const getFrameStatus = frame => {
+    // Spatial lookup takes priority — fn_norm may be wrong due to reconcileFrameMetadata
+    // propagating a neighbor's frame number within the 120 s match window.
+    const spatial = lookupAsfFrameNumber(frame);
+    if (spatial !== null) return String(spatial);
     if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
       return String(frame.frame_number_norm);
     }
-    const asf = lookupAsfFrameNumber(frame);
-    if (asf !== null) return String(asf);
     return frame.asf_url ? t('frame-meta-unavailable') : t('no-asf-metadata');
   };
   const frameCenterLabel = getFrameStatus(primary);
@@ -2534,6 +2536,11 @@ function buildTileKeyMap(frames, gapMs = 20000) {
 }
 
 function getAcqFramePosKey(frame, tileKeyMap) {
+  // Use spatial lookup for priority tracks: reconcileFrameMetadata can propagate fn_norm
+  // from a neighboring tile within 120 s, causing two spatial tiles to share the same
+  // posKey and collapse into one count. The centroid-lat lookup is always spatially correct.
+  const spatialKey = lookupAsfFrameNumber(frame);
+  if (spatialKey !== null) return String(spatialKey);
   if (frame.frame_number_norm !== null && frame.frame_number_norm !== undefined && frame.frame_number_norm !== '') {
     return String(frame.frame_number_norm);
   }
