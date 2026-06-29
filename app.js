@@ -2988,6 +2988,19 @@ function renderStatsChart() {
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
   const cH = statsState.layout === 'chart' ? 200 : 120, labH = 22, barH = cH - labH;
 
+  // Compute nice integer Y-axis ticks so bar tops land on labelled gridlines.
+  // For small maxTotal (≤5) show every integer; for larger use round steps.
+  const yTicks = (() => {
+    if (maxTotal <= 5) return Array.from({ length: maxTotal }, (_, i) => i + 1);
+    const rough = maxTotal / 4;
+    const step = [1, 2, 5, 10, 20, 25, 50, 100].find(c => c >= rough) ?? 100;
+    const nMax = Math.ceil(maxTotal / step) * step;
+    const out = [];
+    for (let v = step; v <= nMax; v += step) out.push(v);
+    return out;
+  })();
+  const niceMax = yTicks[yTicks.length - 1];
+
   // Always fit all bars within the container — no horizontal scroll.
   // Drop inter-bar gaps when bars are dense so every bar stays ≥ 1 px wide.
   const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
@@ -3004,12 +3017,11 @@ function renderStatsChart() {
   const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
 
   let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
-  for (const frac of [0.25, 0.5, 0.75, 1.0]) {
-    const y    = (barH - frac * barH).toFixed(1);
-    const cnt  = Math.round(frac * maxTotal);
+  for (const tick of yTicks) {
+    const y    = (barH - (tick / niceMax) * barH).toFixed(1);
     const lblY = Math.max(9, Number(y) - 2);
     gridSVG += `<line x1="0" y1="${y}" x2="${svgW}" y2="${y}" class="schart-grid"/>`;
-    gridSVG += `<text x="2" y="${lblY.toFixed(1)}" class="schart-glabel">${cnt}</text>`;
+    gridSVG += `<text x="2" y="${lblY.toFixed(1)}" class="schart-glabel">${tick}</text>`;
   }
 
   const barSatColors = getSatColors();
@@ -3021,7 +3033,7 @@ function renderStatsChart() {
     for (const satId of [...activeSats].reverse()) {
       const cnt = b.counts[satId] || 0;
       if (!cnt) continue;
-      const h = Math.max(1, Math.round((cnt / maxTotal) * barH));
+      const h = Math.max(1, Math.round((cnt / niceMax) * barH));
       stackY -= h;
       const clr = barSatColors[satId] || '#29b6f6';
       barsSVG += `<rect x="${x}" y="${stackY}" width="${BAR_W}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${b.label} · ${satId}: ${cnt}</title></rect>`;
