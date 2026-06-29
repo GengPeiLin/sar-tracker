@@ -1914,9 +1914,11 @@ header {
 .scp-track-link { cursor: pointer; transition: background 0.1s; }
 .scp-track-link:hover { background: var(--surface); }
 .scp-view-all-row {
-  margin: 0 10px 9px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 10px 9px 6px;
   padding: 4px 0;
-  text-align: center;
   font-size: calc(9px + var(--font-bump));
   color: var(--muted);
   border: 1px solid var(--border2);
