@@ -3212,15 +3212,16 @@ function statsBarClick(event, bucketIdx, satId) {
 
   const popup = document.getElementById('schart-popup');
   if (!popup) return;
+  popup.style.setProperty('--scp-accent', clr);
   popup.innerHTML = `
-    <div class="scp-hdr" style="border-left:3px solid ${clr}">
+    <div class="scp-hdr">
       <span class="scp-sat" style="color:${clr}">${satId}</span>
       <span class="scp-period">${periodLabel}</span>
       <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">✕</button>
     </div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
-    ${trackHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
-    <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</div>
+    ${trackHTML ? `<div class="scp-tracks">${trackHTML}</div>` : `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
+    <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">→ ${t('stats-view-on-map')}</div>
   `;
   popup.hidden = false;
   positionStatsPopup(event, popup);
