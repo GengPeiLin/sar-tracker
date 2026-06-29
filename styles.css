@@ -1914,17 +1914,18 @@ header {
 .scp-track-link { cursor: pointer; transition: background 0.1s; }
 .scp-track-link:hover { background: var(--surface); }
 .scp-view-all-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  padding: 6px 12px 8px;
-  color: var(--muted); font-size: calc(10px + var(--font-bump));
+  margin: 0 10px 9px;
+  padding: 4px 0;
+  text-align: center;
+  font-size: calc(9px + var(--font-bump));
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
   cursor: pointer;
-  border-top: 1px solid var(--border);
-  transition: color 0.15s, background 0.1s;
+  letter-spacing: 0.05em;
+  transition: color 0.15s, border-color 0.15s;
 }
-.scp-view-all-row:hover { color: var(--cyan); background: var(--surface); }
+.scp-view-all-row:hover { color: var(--text-hi); border-color: var(--muted); }
 
 /* background history load bar */
 .bg-load-bar {
