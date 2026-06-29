@@ -2644,6 +2644,8 @@ function buildChartBuckets() {
     if (f.date.slice(0, 10) < startStr || f.date.slice(0, 10) >= endStr) return false;
     if (pass !== 'ALL' && f.direction_norm !== pass) return false;
     if (STATS_S1_IDS.has(f.satellite_id) && !statsState.activeTracks.has(f.path_number_norm)) return false;
+    if (STATS_S1_IDS.has(f.satellite_id) && f.product_type_norm !== 'SLC') return false;
+    if (f.satellite_id === 'NISAR' && f.product_type_norm !== 'RSLC') return false;
     return true;
   });
   const tileKeyMap = buildTileKeyMap(relevant);
@@ -3169,7 +3171,9 @@ function statsBarClick(event, bucketIdx, satId) {
     f.satellite_id === satId && f.date &&
     f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate &&
     (statsState.pass === 'ALL' || f.direction_norm === statsState.pass) &&
-    (!STATS_S1_IDS.has(f.satellite_id) || statsState.activeTracks.has(f.path_number_norm))
+    (!STATS_S1_IDS.has(f.satellite_id) || statsState.activeTracks.has(f.path_number_norm)) &&
+    !(STATS_S1_IDS.has(f.satellite_id) && f.product_type_norm !== 'SLC') &&
+    !(f.satellite_id === 'NISAR' && f.product_type_norm !== 'RSLC')
   );
 
   // Deduplicate same as buildChartBuckets: unique frame scene per date/path/dir
