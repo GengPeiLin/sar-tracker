@@ -1,11 +1,11 @@
 {
-  "version": "20260719T051434",
-  "updated_at": "2026-07-19 05:14 UTC",
-  "query_start": "2026-07-16T04:41:12.589419+00:00",
-  "query_end": "2026-07-19T05:14:34.868073+00:00",
+  "version": "20260720T053207",
+  "updated_at": "2026-07-20 05:32 UTC",
+  "query_start": "2026-07-17T05:14:34.868073+00:00",
+  "query_end": "2026-07-20T05:32:07.219431+00:00",
   "days_back": 3,
   "bootstrap_completed": true,
-  "last_successful_fetch": "2026-07-19T05:14:34.868073+00:00",
+  "last_successful_fetch": "2026-07-20T05:32:07.219431+00:00",
   "total_frames": 16830,
   "asf_count": 6260,
   "copernicus_count": 16615,
@@ -16,14 +16,14 @@
     "OTHER_S1"
   ],
   "track_summary": {
+    "OTHER_S1": 4910,
     "D105": 6447,
-    "OTHER_S1": 4906,
     "A69": 7931,
     "NISAR": 228
   },
   "satellite_summary": {
+    "S1D": 257,
     "S1C": 840,
-    "S1D": 253,
     "S1A": 9254,
     "Sentinel-1A": 5630,
     "Sentinel-1D": 3,
