@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -2855,6 +2855,7 @@ const CHART_STYLE_DEFAULTS = {
   gridWidth:     1,  // px
   labelSize:     0,  // px offset applied to axis labels
   barMinWidth:   1,  // px floor so sparse bars stay visible
+  exportScale:   2,  // rasterisation factor for Copy / PNG
 };
 const CHART_STYLE_RANGES = {
   // Above 100% the chart overflows its container and scrolls, which is the
@@ -2874,7 +2875,61 @@ const CHART_STYLE_RANGES = {
   gridWidth:   { min: 0.25, max: 6, step: .25, unit: 'px' },
   labelSize:   { min: -3, max: 12,  step: 1,  unit: 'px' },
   barMinWidth: { min: 1,  max: 24,  step: 1,  unit: 'px' },
+  exportScale: { min: 1,  max: 6,   step: 1,  unit: 'x' },
 };
+
+// Chart colours, kept apart from the numeric style settings because each may
+// be "auto" (follow the theme) rather than an explicit value. An empty string
+// means auto; 'transparent' is only meaningful for the background.
+const CHART_COLOR_KEYS = ['background', 'text', 'grid', 'band'];
+
+function getChartColors() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_colors') || '{}');
+    return Object.fromEntries(CHART_COLOR_KEYS.map(k => [k, saved[k] || '']));
+  } catch { return Object.fromEntries(CHART_COLOR_KEYS.map(k => [k, ''])); }
+}
+
+// Resolve "auto" against the current theme so callers always get a real value.
+function resolveChartColors() {
+  const chosen = getChartColors();
+  const root = getComputedStyle(document.documentElement);
+  const panel = document.querySelector('.stats-panel');
+  const themeBg = panel ? getComputedStyle(panel).backgroundColor : '';
+  return {
+    background: chosen.background || (themeBg && themeBg !== 'rgba(0, 0, 0, 0)' ? themeBg : '#ffffff'),
+    text: chosen.text || root.getPropertyValue('--muted').trim() || '#666',
+    grid: chosen.grid || root.getPropertyValue('--border').trim() || '#999',
+    band: chosen.band || root.getPropertyValue('--text').trim() || '#888',
+    isAuto: chosen,
+  };
+}
+
+// <input type="color"> only accepts #rrggbb, but themes resolve to rgb().
+function rgbToHex(value) {
+  const text = String(value || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(text)) return text;
+  const m = text.match(/rgba?\(([^)]+)\)/i);
+  if (!m) return '#888888';
+  const [r, g, b] = m[1].split(',').map(n => Math.max(0, Math.min(255, Math.round(parseFloat(n)))));
+  return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+
+function statsSetChartColor(key, value) {
+  if (!CHART_COLOR_KEYS.includes(key)) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_colors') || '{}');
+    if (value) saved[key] = value; else delete saved[key];
+    localStorage.setItem('sar_chart_colors', JSON.stringify(saved));
+  } catch {}
+  renderStatsChart();
+  renderStatsStylePanel();
+}
+function statsResetChartColors() {
+  try { localStorage.removeItem('sar_chart_colors'); } catch {}
+  renderStatsChart();
+  renderStatsStylePanel();
+}
 
 function getChartStyle() {
   try {
@@ -2951,6 +3006,29 @@ function renderStatsStylePanel() {
       <input type="color" value="${satColors[id]}" onchange="statsSetSatColor('${id}', this.value)">
     </label>`).join('');
 
+  // Chart colours: each may be "auto" (follow the theme). Background also
+  // supports transparent, which a colour input cannot express.
+  const chartColors = resolveChartColors();
+  const chosen = chartColors.isAuto;
+  const chartColorsCustom = CHART_COLOR_KEYS.some(k => chosen[k]);
+  const colorRows = CHART_COLOR_KEYS.map(key => {
+    const isTransparent = chosen[key] === 'transparent';
+    const shown = isTransparent ? '#ffffff' : chartColors[key];
+    return `
+    <div class="sty-crow">
+      <span class="sty-lbl">${t('color-' + key)}</span>
+      <span class="sty-swatch${isTransparent ? ' is-transparent' : ''}" style="background:${isTransparent ? '' : shown}">
+        <input type="color" value="${rgbToHex(shown)}" onchange="statsSetChartColor('${key}', this.value)">
+      </span>
+      ${key === 'background'
+        ? `<button class="sty-cbtn${isTransparent ? ' on' : ''}" onclick="statsSetChartColor('background', ${isTransparent ? "''" : "'transparent'"})">${t('color-transparent')}</button>`
+        : ''}
+      ${chosen[key]
+        ? `<button class="sty-cbtn" onclick="statsSetChartColor('${key}','')">${t('color-auto')}</button>`
+        : `<span class="sty-cauto">${t('color-auto')}</span>`}
+    </div>`;
+  }).join('');
+
   pop.innerHTML = `
     <div class="sty-sec">
       <div class="sty-sec-hd">
@@ -2958,6 +3036,13 @@ function renderStatsStylePanel() {
         ${colorIsCustom ? `<button class="sty-reset" onclick="statsResetAllColors()">${t('stats-reset')}</button>` : ''}
       </div>
       <div class="sty-colors">${swatches}</div>
+    </div>
+    <div class="sty-sec">
+      <div class="sty-sec-hd">
+        <span>${t('stats-chart-colors')}</span>
+        ${chartColorsCustom ? `<button class="sty-reset" onclick="statsResetChartColors()">${t('stats-reset')}</button>` : ''}
+      </div>
+      ${colorRows}
     </div>
     <div class="sty-sec">
       <div class="sty-sec-hd">
@@ -3725,15 +3810,25 @@ function renderStatsChart() {
     }
   }
 
+  const colors = resolveChartColors();
   const styleVars = [
     `--sc-bar-op:${style.barOpacity / 100}`,
     `--sc-band-op:${style.bandOpacity / 100}`,
     `--sc-grid-op:${style.gridOpacity / 100}`,
     `--sc-grid-w:${style.gridWidth}`,
     `--sc-lbl-bump:${style.labelSize}px`,
+    `--sc-text:${colors.text}`,
+    `--sc-grid-c:${colors.grid}`,
+    `--sc-band-c:${colors.band}`,
   ].join(';');
+  // Draw the background into the chart itself so the on-screen view and the
+  // export are the same image — previously the panel supplied the backdrop and
+  // only the exporter added one.
+  const bgSVG = colors.background === 'transparent'
+    ? ''
+    : `<rect x="0" y="0" width="${svgW}" height="${cH}" fill="${colors.background}"/>`;
   wrap.innerHTML = `<svg class="schart-svg" style="${styleVars}" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
-    ${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}
+    ${bgSVG}${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}
   </svg>`;
 }
 
@@ -4062,13 +4157,13 @@ function serializeChartSVG(svgEl, { background = true, padding = 10 } = {}) {
   outer.setAttribute('width', width + padding * 2);
   outer.setAttribute('height', height + padding * 2);
   outer.setAttribute('viewBox', `0 0 ${width + padding * 2} ${height + padding * 2}`);
-  if (background) {
-    const panel = document.querySelector('.stats-panel');
-    const bg = getComputedStyle(panel || document.body).backgroundColor;
+  const chartColors = resolveChartColors();
+  if (background && chartColors.background !== 'transparent') {
+    // Fills the padding margin too, so the exported image has no halo.
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('width', '100%');
     rect.setAttribute('height', '100%');
-    rect.setAttribute('fill', bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : '#ffffff');
+    rect.setAttribute('fill', chartColors.background);
     outer.appendChild(rect);
   }
   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -4078,7 +4173,7 @@ function serializeChartSVG(svgEl, { background = true, padding = 10 } = {}) {
   return { text: new XMLSerializer().serializeToString(outer), width: width + padding * 2, height: height + padding * 2 };
 }
 
-async function chartToPngBlob(svgEl, scale = 2) {
+async function chartToPngBlob(svgEl, scale = getChartStyle().exportScale) {
   const { text, width, height } = serializeChartSVG(svgEl);
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
   const image = new Image();

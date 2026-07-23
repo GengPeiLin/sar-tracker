@@ -1833,11 +1833,11 @@ header {
    bars belonging to one day, at day+ cells it marks months. Reads as texture,
    not as data — strength is tunable via the appearance panel. */
 .schart-band {
-  fill: var(--text);
+  fill: var(--sc-band-c, var(--text));
   opacity: var(--sc-band-op, .09);
 }
 .schart-grid {
-  stroke: var(--border);
+  stroke: var(--sc-grid-c, var(--border));
   stroke-width: var(--sc-grid-w, 1);
   stroke-dasharray: 3 3;
   opacity: var(--sc-grid-op, .85);
@@ -1847,22 +1847,22 @@ header {
 .schart-daylabel {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 2px + var(--sc-lbl-bump, 0px));
-  fill: var(--text-hi);
+  fill: var(--sc-text, var(--text-hi));
   font-weight: 600;
 }
 .schart-daytick {
-  stroke: var(--border2);
+  stroke: var(--sc-grid-c, var(--border2));
   stroke-width: 1;
 }
 .schart-glabel {
   font-family: var(--mono);
   font-size: calc(9px + var(--sc-lbl-bump, 0px));
-  fill: var(--muted);
+  fill: var(--sc-text, var(--muted));
 }
 .schart-label {
   font-family: var(--mono);
   font-size: calc(9px + var(--sc-lbl-bump, 0px));
-  fill: var(--muted);
+  fill: var(--sc-text, var(--muted));
 }
 
 .stats-muted-msg {
@@ -2475,3 +2475,53 @@ header {
   color: var(--muted);
 }
 .sty-ratio b { color: var(--text-hi); font-weight: 600; }
+
+
+/* Chart colour rows in the appearance popover. */
+.sty-crow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.sty-crow .sty-lbl { flex: 0 0 78px; }
+.sty-swatch {
+  position: relative;
+  width: 26px; height: 18px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+.sty-swatch input[type="color"] {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; border: none; padding: 0; cursor: pointer;
+}
+/* Chequerboard reads as "transparent". */
+.sty-swatch.is-transparent {
+  background-image:
+    linear-gradient(45deg, var(--border) 25%, transparent 25%, transparent 75%, var(--border) 75%),
+    linear-gradient(45deg, var(--border) 25%, transparent 25%, transparent 75%, var(--border) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+.sty-cbtn {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 1px);
+  padding: 2px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sty-cbtn:hover { color: var(--cyan); border-color: var(--cyan); }
+.sty-cbtn.on { color: var(--cyan); border-color: var(--cyan); }
+.sty-cauto {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  color: var(--muted);
+  margin-left: auto;
+}
