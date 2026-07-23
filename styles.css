@@ -1394,13 +1394,20 @@ header {
 .stats-close:hover { color: var(--text-hi); border-color: var(--cyan); }
 
 /* ── Appearance gear + popover ──────────────────────────────────────────── */
+/* Sits at the start of the chart section header, left of the title. */
+.sec-lead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
 .stats-gear {
   background: none;
   border: 1px solid var(--border2);
   color: var(--muted);
   border-radius: 4px;
   padding: 3px 6px;
-  margin-right: 6px;
+  flex: 0 0 auto;
   cursor: pointer;
   line-height: 0;
   transition: color .15s, border-color .15s, transform .25s;
@@ -1413,7 +1420,8 @@ header {
 }
 .stats-style-pop {
   position: absolute;
-  top: 46px; right: 12px;
+  /* left/top are set from the gear's live position by positionStylePopover(). */
+  top: 46px; left: 12px;
   z-index: 20;
   width: min(340px, calc(100vw - 24px));
   max-height: min(70vh, 560px);
