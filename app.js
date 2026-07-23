@@ -3724,7 +3724,17 @@ function renderStatsChart() {
   // right for dense ranges (a year at 1-day cells lost ~20% of the width).
   const rangeStartMs = buckets[0].start.getTime();
   const rangeEndMs   = buckets[buckets.length - 1].end.getTime();
-  const availableW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
+  // Axis labels are centre-anchored, so the first and last overhang the chart
+  // box by roughly half their width. Grow the container's side padding with
+  // the label size, otherwise the end labels are clipped on screen.
+  const sidePad = 14 + Math.max(0, Math.round(style.labelSize * 1.3));
+  const scrollEl = wrap.parentElement;
+  if (scrollEl) {
+    scrollEl.style.paddingLeft = `${sidePad}px`;
+    scrollEl.style.paddingRight = `${sidePad}px`;
+  }
+  // clientWidth includes padding, so subtract it to get the drawable width.
+  const availableW = Math.max(200, (scrollEl?.clientWidth || 600) - sidePad * 2);
   const containerW = Math.max(200, availableW * (style.chartWidth / 100));
   const n      = buckets.length;
   const stride = containerW / n;
@@ -4190,11 +4200,24 @@ function serializeChartSVG(svgEl, { background = true, padding = 10 } = {}) {
     out.removeAttribute('onclick');
   });
 
+  // Size the canvas from the real ink bounds, not the nominal width/height.
+  // Axis labels are centre-anchored, so the first and last overhang the chart
+  // box by half their width — with a fixed padding they were clipped ("/26"
+  // instead of "10/26"). getBBox() reports the union including that overhang.
+  let bounds = null;
+  try { bounds = svgEl.getBBox(); } catch { /* not rendered yet */ }
+  const minX = bounds ? Math.min(0, bounds.x) : 0;
+  const minY = bounds ? Math.min(0, bounds.y) : 0;
+  const maxX = bounds ? Math.max(width,  bounds.x + bounds.width)  : width;
+  const maxY = bounds ? Math.max(height, bounds.y + bounds.height) : height;
+  const outerW = (maxX - minX) + padding * 2;
+  const outerH = (maxY - minY) + padding * 2;
+
   const outer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   outer.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  outer.setAttribute('width', width + padding * 2);
-  outer.setAttribute('height', height + padding * 2);
-  outer.setAttribute('viewBox', `0 0 ${width + padding * 2} ${height + padding * 2}`);
+  outer.setAttribute('width', outerW);
+  outer.setAttribute('height', outerH);
+  outer.setAttribute('viewBox', `0 0 ${outerW} ${outerH}`);
   const chartColors = resolveChartColors();
   if (background && chartColors.background !== 'transparent') {
     // Fills the padding margin too, so the exported image has no halo.
@@ -4205,10 +4228,10 @@ function serializeChartSVG(svgEl, { background = true, padding = 10 } = {}) {
     outer.appendChild(rect);
   }
   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  group.setAttribute('transform', `translate(${padding},${padding})`);
+  group.setAttribute('transform', `translate(${padding - minX},${padding - minY})`);
   group.appendChild(clone);
   outer.appendChild(group);
-  return { text: new XMLSerializer().serializeToString(outer), width: width + padding * 2, height: height + padding * 2 };
+  return { text: new XMLSerializer().serializeToString(outer), width: outerW, height: outerH };
 }
 
 async function chartToPngBlob(svgEl, scale = getChartStyle().exportScale) {
