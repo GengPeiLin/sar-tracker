@@ -135,7 +135,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','tz-note':'Times shown in UTC+8','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','stats-axis-titles':'Axis Titles','axis-x':'X title','axis-y':'Y title','axis-show':'Show','axis-title-x':'Date','axis-title-y':'Acquisitions','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','stats-axis-titles':'Axis Titles','axis-x':'X title','axis-y':'Y title','axis-show':'Show','axis-title-x':'Date (UTC+8)','axis-title-y':'Acquisitions','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -208,7 +208,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','tz-note':'時間以 UTC+8 顯示','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','stats-axis-titles':'座標軸標題','axis-x':'X 標題','axis-y':'Y 標題','axis-show':'顯示','axis-title-x':'日期','axis-title-y':'取像次數','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','stats-axis-titles':'座標軸標題','axis-x':'X 標題','axis-y':'Y 標題','axis-show':'顯示','axis-title-x':'日期（UTC+8）','axis-title-y':'取像次數','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -393,6 +393,51 @@ const PLATFORM_COLORS = {
   'R2':'#ffc107','RCM':'#ffb300',
   '_default':'#ff7043',
 };
+
+// ── Display timezone ────────────────────────────────────────────────────────
+// This dashboard is about Taiwan, so every time is PRESENTED in UTC+8 no
+// matter where the viewer sits. Stored data is never touched: frames keep the
+// exact ISO UTC strings the providers deliver, and nothing here writes back to
+// a frame. These helpers are display-only.
+//
+// Two shapes are needed:
+//   formatDisplayTime() — for text, via Intl with an explicit timeZone.
+//   toDisplayDate()     — a Date whose *local* getters (getHours, getDate, …)
+//                         read the UTC+8 wall clock, for the chart geometry
+//                         that already calls those getters.
+const DISPLAY_TZ = 'Asia/Taipei';
+const DISPLAY_TZ_OFFSET_MIN = 480;   // UTC+8, no DST
+const DISPLAY_TZ_LABEL = 'UTC+8';
+
+function toDisplayDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return date;
+  // Shift so the browser's local getters yield UTC+8 fields. On a UTC+8
+  // machine getTimezoneOffset() is -480, so this is a no-op.
+  return new Date(date.getTime() + (DISPLAY_TZ_OFFSET_MIN + date.getTimezoneOffset()) * 60000);
+}
+
+// Inverse: the real instant for a UTC+8 wall-clock date.
+function fromDisplayParts(year, month, day, hour = 0, minute = 0) {
+  return new Date(Date.UTC(year, month, day, hour, minute) - DISPLAY_TZ_OFFSET_MIN * 60000);
+}
+
+function formatDisplayTime(value, options = {}) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US', {
+    timeZone: DISPLAY_TZ, ...options,
+  });
+}
+
+// YYYY-MM-DD of an instant in UTC+8. Used wherever frames are grouped by day:
+// a descending Taiwan pass at 21:52 UTC is 05:52 the NEXT day locally, so
+// grouping on the raw UTC date would split a night's acquisitions.
+function displayDateKey(value) {
+  const date = toDisplayDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 const NISAR_TRACK_COLORS = {
   'ASCENDING|39':   '#00e676',  // vivid green
@@ -2135,7 +2180,7 @@ async function liveFetchASF() {
       asf_count: state.rawFrames.length,
       copernicus_count: 0,
     };
-    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US');
+    document.getElementById('hdr-time').textContent = 'Live ASF ' + formatDisplayTime(new Date());
     applyTabDateWindow();
     renderSatelliteSelect();
     renderFormatOptions();
@@ -2252,11 +2297,11 @@ function buildFrameMetaRows(frame) {
     if (!value) return '--';
     const date = parseNisarCompactTime(value) || new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US', {
-      timeZone: 'UTC', hour12: false,
+    return formatDisplayTime(date, {
+      hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }) + 'Z';
+    }) + ' ' + DISPLAY_TZ_LABEL;
   };
   return [
     { label: 'Start Time', value: time(pick(frame.date, named.start)) },
@@ -2671,7 +2716,7 @@ function openFrameDrawer(clickedFrame) {
 
   const cards = [...groups.entries()].map(([groupKey, groupFrames]) => {
     const acqLocale = state?.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
-    const heading = new Date(groupKey + 'T00:00:00Z').toLocaleDateString(acqLocale, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' });
+    const heading = new Date(groupKey + 'T00:00:00Z').toLocaleDateString(acqLocale, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' });  // groupKey is already a UTC+8 day key
     const groupEntries = mergeFramesForDrawer(groupFrames);
     const body = groupEntries.map(frame => {
       const asfUrl = frame.asf_url || '';
@@ -2705,7 +2750,7 @@ function openFrameDrawer(clickedFrame) {
                     .filter(Boolean).join(' / ')
                 : `${frame.product_type_norm || 'OCN'} / ${size}`
             )}</span>
-            <span>${escapeHtml(frame.date ? new Date(frame.date).toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US') : '--')}</span>
+            <span>${escapeHtml(frame.date ? formatDisplayTime(frame.date) : '--')}</span>
           </div>
           <div class="d-link-submeta">
             ${escapeHtml(getSourceState(frame))} / path ${escapeHtml(getFramePathNumber(frame) ?? '--')} / frame ${escapeHtml(getFrameStatus(frame))}
@@ -3131,20 +3176,22 @@ const statsState = {
   layout:       localStorage.getItem('sar_stats_layout') || 'stack',
 };
 
+// Range boundaries sit on UTC+8 midnight, so buckets line up with the days
+// the axis labels show regardless of the viewer's own timezone.
 function getChartDateRange() {
-  const now = new Date();
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const today = toDisplayDate(new Date());
+  const end = fromDisplayParts(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   if (statsState.chartPreset === 'custom' && statsState.chartStart && statsState.chartEnd) {
-    const s = new Date(statsState.chartStart);
-    const e = new Date(statsState.chartEnd);
-    if (!isNaN(s) && !isNaN(e) && s < e) {
-      e.setDate(e.getDate() + 1);
-      return { start: s, end: e };
+    const [sy, sm, sd] = statsState.chartStart.split('-').map(Number);
+    const [ey, em, ed] = statsState.chartEnd.split('-').map(Number);
+    if ([sy, sm, sd, ey, em, ed].every(Number.isFinite)) {
+      const s = fromDisplayParts(sy, sm - 1, sd);
+      const e = fromDisplayParts(ey, em - 1, ed + 1);
+      if (s < e) return { start: s, end: e };
     }
   }
-  const start = new Date(end);
   const months = statsState.chartPreset === '1mo' ? 1 : statsState.chartPreset === '1yr' ? 12 : 6;
-  start.setMonth(start.getMonth() - months);
+  const start = fromDisplayParts(today.getFullYear(), today.getMonth() - months, today.getDate() + 1);
   return { start, end };
 }
 
@@ -3265,7 +3312,9 @@ function buildFrequencyStats() {
     const dir   = f.direction_norm  || 'UNKNOWN';
     const key   = `${satId}||${track}||${dir}`;
     if (!groups.has(key)) groups.set(key, { satId, track, dir, dates: new Set() });
-    if (f.date) groups.get(key).dates.add(f.date.slice(0, 10));
+    // Distinct UTC+8 days: a 21:52 UTC descending pass belongs to the next
+    // local day, and splitting it would distort the revisit interval.
+    if (f.date) groups.get(key).dates.add(displayDateKey(f.date));
   }
   const trackStats = [];
   for (const g of groups.values()) {
@@ -3363,7 +3412,7 @@ function buildChartBuckets() {
     // Deduplicate: the same physical acquisition appears from multiple sources
     // (ASF + Copernicus) and multiple product types. Count each scene once.
     // Keyed by day, so sub-day cells still collapse one pass into one count.
-    const acqKey = `${index}|${f.satellite_id}|${f.date.slice(0, 10)}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, tileKeyMap)}`;
+    const acqKey = `${index}|${f.satellite_id}|${displayDateKey(f.date)}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, tileKeyMap)}`;
     if (seen.has(acqKey)) continue;
     seen.add(acqKey);
     const bucket = buckets[index];
@@ -3721,7 +3770,7 @@ function buildSparklineSvg(data) {
 
 // Tooltip label for a bucket — includes the hour once cells are sub-day.
 function statsBucketLabel(bucket, cellHours) {
-  const d = bucket.start;
+  const d = toDisplayDate(bucket.start);
   const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return cellHours < 24
     ? `${day} ${String(d.getHours()).padStart(2, '0')}:00`
@@ -3830,15 +3879,20 @@ function renderStatsChart() {
   // Calendar segments drive both the banding and the date row of the axis.
   const calendarSegments = [];
   {
-    const cursor = new Date(rangeStartMs);
+    // Walk UTC+8 calendar boundaries so bands and date labels agree.
+    const cursor = toDisplayDate(rangeStartMs);
     cursor.setHours(0, 0, 0, 0);
     if (bandUnit === 'month') cursor.setDate(1);
+    const toReal = d => fromDisplayParts(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours());
     // Guard against a pathological range producing a runaway loop.
     for (let guard = 0; cursor.getTime() < rangeEndMs && guard < 2000; guard++) {
       const next = new Date(cursor);
       if (bandUnit === 'day') next.setDate(next.getDate() + 1);
       else next.setMonth(next.getMonth() + 1);
-      calendarSegments.push({ start: cursor.getTime(), end: Math.min(next.getTime(), rangeEndMs) });
+      calendarSegments.push({
+        start: toReal(cursor).getTime(),
+        end: Math.min(toReal(next).getTime(), rangeEndMs),
+      });
       cursor.setTime(next.getTime());
     }
   }
@@ -3884,11 +3938,12 @@ function renderStatsChart() {
     }
     if (twoRowAxis) {
       // Top row: hour only; the date is carried by the row beneath.
-      if (b.start.getHours() % hourStep === 0) {
-        labelsSVG += `<text x="${(x + (stride - GAP) / 2).toFixed(2)}" y="${barH + labelPx * 1.35}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
+      const bStart = toDisplayDate(b.start);
+      if (bStart.getHours() % hourStep === 0) {
+        labelsSVG += `<text x="${(x + (stride - GAP) / 2).toFixed(2)}" y="${barH + labelPx * 1.35}" class="schart-label" text-anchor="middle">${String(bStart.getHours()).padStart(2, '0')}</text>`;
       }
     } else if (i % labelEvery === 0) {
-      const d = b.start;
+      const d = toDisplayDate(b.start);
       const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
       const cx = (x + (stride - GAP) / 2).toFixed(2);
       const lbl = cellHours >= 672
@@ -3906,7 +3961,7 @@ function renderStatsChart() {
       const seg = calendarSegments[si];
       const x0 = Math.max(0, xOfTime(seg.start));
       const x1 = Math.min(svgW, xOfTime(seg.end));
-      const d = new Date(seg.start);
+      const d = toDisplayDate(seg.start);
       const lbl = `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
       labelsSVG += `<text x="${((x0 + x1) / 2).toFixed(2)}" y="${barH + labelPx * 2.8}" class="schart-daylabel" text-anchor="middle">${lbl}</text>`;
       labelsSVG += `<line x1="${x0.toFixed(2)}" y1="${barH}" x2="${x0.toFixed(2)}" y2="${barH + 4}" class="schart-daytick"/>`;
