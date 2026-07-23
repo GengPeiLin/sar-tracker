@@ -22,6 +22,18 @@
   --drawer-divider: rgba(36, 56, 80, 0.8);
   --drawer-asf-bg: rgba(0, 229, 255, 0.1);
   --drawer-cdse-bg: rgba(255, 112, 67, 0.1);
+  /* Map overlays (stat cards, legend) sit on the CartoDB dark_all basemap,
+     which stays dark in every theme — the per-theme filters only nudge
+     brightness. So they keep a fixed dark panel and light text. The themed
+     --text/--muted tokens are tuned for the surrounding UI chrome, which is
+     light in some themes, and become unreadable on this panel. */
+  --ov-bg:      rgba(11, 19, 32, .92);
+  --ov-border:  rgba(122, 146, 173, .45);
+  --ov-text:    #ccd8e4;
+  --ov-text-hi: #f2f7fc;
+  --ov-muted:   #93a7bb;
+  --ov-accent:  #3de8ff;
+  --ov-accent2: #ff8f63;
   --sidebar: 400px;
   --hdr:     52px;
   --mono: 'IBM Plex Mono', monospace;
@@ -750,8 +762,8 @@ header {
   max-width: calc(100% - 428px);
 }
 .stat-card {
-  background: rgba(11,19,32,.9);
-  border: 1px solid var(--border2);
+  background: var(--ov-bg);
+  border: 1px solid var(--ov-border);
   padding: 8px 13px;
   backdrop-filter: blur(6px);
   pointer-events: all;
@@ -760,17 +772,17 @@ header {
   font-family: var(--mono);
   font-size: calc(8px + var(--font-bump) - 2px);
   letter-spacing: 1px;
-  color: var(--muted);
+  color: var(--ov-muted);
   text-transform: uppercase;
 }
 .stat-card .val {
   font-family: var(--mono);
   font-size: calc(22px + var(--font-bump));
   font-weight: 600;
-  color: var(--cyan);
+  color: var(--ov-accent);
   line-height: 1.1;
 }
-.stat-card .val.orange { color: var(--orange); }
+.stat-card .val.orange { color: var(--ov-accent2); }
 .stat-card .val.small  { font-size: calc(13px + var(--font-bump)); padding-top: 4px; }
 
 /* "Latest visible tracks": a compact two-column grid. As a single joined line
@@ -797,17 +809,17 @@ header {
   flex: 0 0 auto;
   border-radius: 1px;
 }
-.nx-trk  { color: var(--text); }
-.nx-date { color: var(--text-hi); font-weight: 600; }
-.nx-empty { color: var(--muted); }
+.nx-trk  { color: var(--ov-text); }
+.nx-date { color: var(--ov-text-hi); font-weight: 600; }
+.nx-empty { color: var(--ov-muted); }
 
 /* legend */
 .map-legend {
   position: absolute;
   bottom: 78px; left: 12px;
   z-index: 1100;
-  background: rgba(11,19,32,.9);
-  border: 1px solid var(--border2);
+  background: var(--ov-bg);
+  border: 1px solid var(--ov-border);
   padding: 10px 14px;
   backdrop-filter: blur(6px);
   min-width: 210px;
@@ -817,7 +829,7 @@ header {
   font-family: var(--mono);
   font-size: calc(8px + var(--font-bump) - 2px);
   letter-spacing: 2px;
-  color: var(--muted);
+  color: var(--ov-muted);
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -845,7 +857,7 @@ header {
 .legend-item span {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
-  color: var(--text);
+  color: var(--ov-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -853,7 +865,8 @@ header {
 .legend-value {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
-  color: var(--muted);
+  color: var(--ov-text-hi);
+  font-weight: 600;
   flex-shrink: 0;
 }
 .legend-hl-row {
@@ -867,24 +880,24 @@ header {
   font-size: calc(8px + var(--font-bump));
   padding: 2px 7px;
   border-radius: 3px;
-  border: 1px solid var(--border2);
+  border: 1px solid var(--ov-border);
   background: transparent;
-  color: var(--muted);
+  color: var(--ov-muted);
   cursor: pointer;
   transition: background .1s, color .1s, border-color .1s;
   letter-spacing: .03em;
 }
 .legend-hl-btn.on {
-  background: color-mix(in srgb, var(--cyan) 14%, transparent);
-  border-color: var(--cyan);
-  color: var(--cyan);
+  background: color-mix(in srgb, var(--ov-accent) 18%, transparent);
+  border-color: var(--ov-accent);
+  color: var(--ov-accent);
 }
-.legend-hl-btn:hover:not(.on) { color: var(--text-hi); border-color: var(--border2); background: var(--border); }
+.legend-hl-btn:hover:not(.on) { color: var(--ov-text-hi); border-color: var(--ov-text); background: rgba(255,255,255,.07); }
 
 .legend-empty {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
-  color: var(--muted);
+  color: var(--ov-muted);
   line-height: 1.5;
 }
 
@@ -893,8 +906,8 @@ header {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   z-index: 1100;
-  background: rgba(11,19,32,.95);
-  border-top: 1px solid var(--border2);
+  background: var(--ov-bg);
+  border-top: 1px solid var(--ov-border);
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -919,9 +932,10 @@ header {
   bottom: calc(100% + 10px);
   width: min(420px, calc(100vw - 32px));
   padding: 12px;
-  border: 1px solid var(--border2);
-  background: rgba(11,19,32,.98);
+  border: 1px solid var(--ov-border);
+  background: var(--ov-bg);
   box-shadow: 0 18px 40px rgba(0,0,0,.24);
+  color: var(--ov-text);
   display: none;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -955,7 +969,7 @@ header {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
   letter-spacing: 1px;
-  color: var(--muted);
+  color: var(--ov-muted);
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -972,9 +986,9 @@ header {
   display: inline-block;
   white-space: nowrap;
 }
-.dl-btn.asf  { border-color: var(--cyan);   color: var(--cyan);   }
+.dl-btn.asf  { border-color: var(--ov-accent); color: var(--ov-accent); }
 .dl-btn.asf:hover  { background: rgba(0,229,255,.12); }
-.dl-btn.cop  { border-color: var(--orange);  color: var(--orange);  }
+.dl-btn.cop  { border-color: var(--ov-accent2); color: var(--ov-accent2); }
 .dl-btn.cop:hover  { background: rgba(255,112,67,.12); }
 .dl-btn.csv  { border-color: var(--muted);   color: var(--muted);   }
 .dl-btn.csv:hover  { border-color: var(--text); color: var(--text); }
@@ -986,7 +1000,7 @@ header {
 .dl-count {
   font-family: var(--mono);
   font-size: calc(11px + var(--font-bump) - 1px);
-  color: var(--green);
+  color: var(--ov-text-hi);
   white-space: nowrap;
 }
 
