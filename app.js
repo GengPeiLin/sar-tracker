@@ -2855,13 +2855,17 @@ const CHART_STYLE_DEFAULTS = {
   barMinWidth:   1,  // px floor so sparse bars stay visible
 };
 const CHART_STYLE_RANGES = {
-  barWidth:    { min: 20, max: 100, step: 5,  unit: '%' },
-  barOpacity:  { min: 20, max: 100, step: 5,  unit: '%' },
-  bandOpacity: { min: 0,  max: 30,  step: 1,  unit: '%' },
+  // Bar width may exceed 100%: on a sparse chart the bucket is far wider than
+  // the data needs, and overlapping bars are a legitimate way to make isolated
+  // acquisitions visible. Bars are centred on their bucket so growing the
+  // width stays symmetric.
+  barWidth:    { min: 10, max: 400, step: 5,  unit: '%' },
+  barOpacity:  { min: 10, max: 100, step: 5,  unit: '%' },
+  bandOpacity: { min: 0,  max: 60,  step: 1,  unit: '%' },
   gridOpacity: { min: 0,  max: 100, step: 5,  unit: '%' },
-  gridWidth:   { min: 0.5, max: 3,  step: .5, unit: 'px' },
-  labelSize:   { min: -2, max: 6,   step: 1,  unit: 'px' },
-  barMinWidth: { min: 1,  max: 6,   step: 1,  unit: 'px' },
+  gridWidth:   { min: 0.25, max: 6, step: .25, unit: 'px' },
+  labelSize:   { min: -3, max: 12,  step: 1,  unit: 'px' },
+  barMinWidth: { min: 1,  max: 24,  step: 1,  unit: 'px' },
 };
 
 function getChartStyle() {
@@ -3577,16 +3581,21 @@ function renderStatsChart() {
   // cells a day is ~7 px, where an hour scale says nothing and the date row is
   // what matters, so fall back to a single row of dates.
   const dayWidthPx = svgW / Math.max(1, (rangeEndMs - rangeStartMs) / 864e5);
-  const twoRowAxis = cellHours < 24 && dayWidthPx >= 40;
-  const labelW     = cellHours >= 672 ? 36 : 30;
+  const twoRowAxis = cellHours < 24 && dayWidthPx >= 40 + style.labelSize * 3;
+  // Estimate the drawn width from the actual font size — a fixed 30px slot
+  // made labels collide as soon as the user raised the label size.
+  const labelPx    = 9 + style.labelSize;
+  const labelChars = cellHours >= 672 ? 6 : 5;
+  const labelW     = Math.ceil(labelPx * 0.62 * labelChars) + 8;
   const labelEvery = Math.max(1, Math.ceil(labelW / stride));
   // Hour row: snap to a clean hour step (a multiple of the cell size) instead
   // of labelling every Nth bucket, which produced arbitrary hours like
   // 00, 13, 02, 15. ~16 px is enough for a two-digit hour.
   const pxPerHour = stride / cellHours;
+  const hourW     = Math.ceil(labelPx * 0.62 * 2) + 6;
   const hourStep  = [1, 2, 3, 4, 6, 8, 12]
     .filter(h => h % cellHours === 0)
-    .find(h => h * pxPerHour >= 16) ?? 12;
+    .find(h => h * pxPerHour >= hourW) ?? 12;
   const labH = twoRowAxis ? 32 : 22;
   const barH = cH - labH;
 
@@ -3644,20 +3653,21 @@ function renderStatsChart() {
       const h = Math.max(1, Math.round((cnt / niceMax) * barH));
       stackY -= h;
       const clr = barSatColors[satId] || '#29b6f6';
-      // Clamp so the final bar cannot spill past the viewBox when the minimum
-      // 1 px width exceeds the stride (a year at 1 h cells).
-      const w = Math.min(BAR_W, svgW - x);
-      barsSVG += `<rect x="${x.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${statsBucketLabel(b, cellHours)} · ${satId}: ${cnt}</title></rect>`;
+      // Centre the bar in its bucket, then clamp to the viewBox so neither an
+      // over-wide bar nor the minimum width spills past the edges.
+      const bx = Math.max(0, Math.min(svgW - 0.5, x + (stride - GAP - BAR_W) / 2));
+      const w  = Math.min(BAR_W, svgW - bx);
+      barsSVG += `<rect x="${bx.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${statsBucketLabel(b, cellHours)} · ${satId}: ${cnt}</title></rect>`;
     }
     if (twoRowAxis) {
       // Top row: hour only; the date is carried by the row beneath.
       if (b.start.getHours() % hourStep === 0) {
-        labelsSVG += `<text x="${(x + BAR_W / 2).toFixed(2)}" y="${cH - 15}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
+        labelsSVG += `<text x="${(x + (stride - GAP) / 2).toFixed(2)}" y="${cH - 15}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
       }
     } else if (i % labelEvery === 0) {
       const d = b.start;
       const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
-      const cx = (x + BAR_W / 2).toFixed(2);
+      const cx = (x + (stride - GAP) / 2).toFixed(2);
       const lbl = cellHours >= 672
         ? `${d.toLocaleString(locale, { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
         : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
@@ -3668,7 +3678,7 @@ function renderStatsChart() {
   // Second axis row: one date centred under each calendar segment, drawn only
   // where the segment is wide enough to hold it.
   if (twoRowAxis) {
-    const segEvery = Math.max(1, Math.ceil(34 / Math.max(1, dayWidthPx)));
+    const segEvery = Math.max(1, Math.ceil((labelW + 4) / Math.max(1, dayWidthPx)));
     for (let si = 0; si < calendarSegments.length; si += segEvery) {
       const seg = calendarSegments[si];
       const x0 = Math.max(0, xOfTime(seg.start));
