@@ -1642,6 +1642,40 @@ header {
   color: var(--text-hi);
   padding: 10px 14px 8px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Per-section copy/export toolbar. */
+.sec-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.sec-tool {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: none;
+  padding: 3px 9px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .12s, border-color .12s, background .12s;
+  min-width: 42px;
+}
+.sec-tool:hover { color: var(--text-hi); border-color: var(--cyan); }
+.sec-tool.ok {
+  color: var(--green);
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 .sts-hd-hint {
   font-size: calc(9px + var(--font-bump));

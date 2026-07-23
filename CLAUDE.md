@@ -112,6 +112,10 @@ The popover lives **outside** `#stats-panel-body`, so `renderStatsPanel()` (whic
 
 **The chart x-axis adapts to available width.** Sub-day cells get two rows — clean hour steps on top (snapped to a multiple of the cell size, not every Nth bucket) and dates beneath — but only when a day is at least 40 px wide. Below that the hour scale is meaningless, so it falls back to a single row of dates. `labH` changes with the mode, so `barH` must be derived after the mode is known.
 
+**Chart export is WYSIWYG by construction.** `serializeChartSVG()` copies the *computed* value of every drawing-related property (`SVG_EXPORT_PROPS`) onto each cloned element instead of re-declaring a stylesheet — the previous approach hardcoded `font-size: 9px` / `stroke-width: 1` and omitted `.schart-band`, so exports silently lost the day banding and every appearance setting. It also wraps the chart with padding and an opaque panel-coloured background, since a transparent PNG makes the bars unreadable on a light backdrop. `chartToPngBlob()` rasterises that at 2x for Copy/PNG.
+
+Copy uses the async clipboard API, which needs a **secure context and a focused document** — it fails with `NotAllowedError: Document is not focused` under automation. Both copy paths therefore fall back to a download rather than just reporting failure.
+
 **Stats counting:** acquisition counts use one canonical product per mission (`STATS_CANONICAL_PRODUCT` — `SLC` for Sentinel-1, `RSLC` for NISAR), because a single overpass ships as several products and counting all of them multiplies each pass. Use `statsIsCanonicalProduct()` / `statsTrackAllowed()` rather than re-inlining the rule; the track chips govern Sentinel-1 only, since NISAR flies its own tracks. Note the stats **table** (`buildFrequencyStats`) counts distinct dates across *all* product types and tracks, so it legitimately lists rare Copernicus-only tracks (T3/T32/T42/T134) that the chart's chips do not offer.
 
 **Stacking contexts:** `header` z-index 200, stats panel fixed z-index 600, `.map-wrap` uses `isolation: isolate` so internal z-index values (map overlays at 1100–1200) don't escape into the page stacking context.

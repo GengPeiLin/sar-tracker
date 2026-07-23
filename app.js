@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -3336,7 +3336,15 @@ function buildStatsPanelHTML() {
     </div>
 
     <div class="stats-section stats-sec-chart">
-      <div class="stats-section-hd">${t('stats-acq-frequency-chart')} <span class="sts-hd-hint">· ${t('stats-all-acquisitions')}</span></div>
+      <div class="stats-section-hd">
+        <span>${t('stats-acq-frequency-chart')} <span class="sts-hd-hint">· ${t('stats-all-acquisitions')}</span></span>
+        <span class="sec-tools">
+          <button class="sec-tool" onclick="statsCopyChartPNG(this)" title="${t('copy-png-title')}">${t('copy-png')}</button>
+          <button class="sec-tool" onclick="statsExportChartPNG(this)">PNG</button>
+          <button class="sec-tool" onclick="statsExportChartSVG(this)">SVG</button>
+          <button class="sec-tool" onclick="statsExportChartCSV(this)">CSV</button>
+        </span>
+      </div>
       <div class="stats-ctrls">
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">${t('stats-period')}</span>
@@ -3377,7 +3385,13 @@ function buildStatsPanelHTML() {
     </div>
 
     <div class="stats-section stats-sec-table">
-      <div class="stats-section-hd">${t('stats-track-statistics')}${activeFilterBadge}</div>
+      <div class="stats-section-hd">
+        <span>${t('stats-track-statistics')}${activeFilterBadge}</span>
+        <span class="sec-tools">
+          <button class="sec-tool" onclick="statsCopyTableTSV(this)" title="${t('copy-tsv-title')}">${t('copy-label')}</button>
+          <button class="sec-tool" onclick="statsExportTableCSV(this)">CSV</button>
+        </span>
+      </div>
       <div class="stats-ctrls">
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">${t('stats-sort-by')}</span>
@@ -3986,44 +4000,167 @@ function clearStatsFilter() {
 
 // ── Stats exports ────────────────────────────────────────────────────────────
 
-function statsExportChartSVG() {
-  const svgEl = document.querySelector('#stats-chart-wrap svg');
-  if (!svgEl) return;
+// ── WYSIWYG chart export ────────────────────────────────────────────────────
+// Serialise a live SVG into a standalone copy that renders identically outside
+// the page. Rather than re-declaring a stylesheet (which drifted from the real
+// styles and silently dropped the day banding and every appearance setting),
+// copy the *computed* value of the properties that affect drawing onto each
+// element. That stays correct no matter how the CSS evolves.
+const SVG_EXPORT_PROPS = [
+  'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-dasharray',
+  'stroke-linecap', 'stroke-linejoin', 'opacity',
+  'font-family', 'font-size', 'font-weight', 'font-style',
+  'letter-spacing', 'text-anchor', 'dominant-baseline',
+];
 
-  // Resolve CSS custom properties so the exported file is self-contained
-  const cs  = getComputedStyle(document.documentElement);
-  const val = name => cs.getPropertyValue(name).trim();
-
+function serializeChartSVG(svgEl, { background = true, padding = 10 } = {}) {
+  const width  = Number(svgEl.getAttribute('width'))  || svgEl.getBoundingClientRect().width;
+  const height = Number(svgEl.getAttribute('height')) || svgEl.getBoundingClientRect().height;
   const clone = svgEl.cloneNode(true);
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
-  // Replace fill="var(--xxx)" with the computed colour
-  clone.querySelectorAll('[fill]').forEach(el => {
-    const fill = el.getAttribute('fill');
-    const m    = fill && fill.match(/var\(--([\w-]+)\)/);
-    if (m) el.setAttribute('fill', val('--' + m[1]) || fill);
+  const source = [svgEl, ...svgEl.querySelectorAll('*')];
+  const target = [clone, ...clone.querySelectorAll('*')];
+  source.forEach((el, index) => {
+    const out = target[index];
+    if (!out || out.nodeType !== 1) return;
+    const computed = getComputedStyle(el);
+    let inline = '';
+    for (const prop of SVG_EXPORT_PROPS) {
+      const value = computed.getPropertyValue(prop);
+      if (value) inline += `${prop}:${value};`;
+    }
+    out.setAttribute('style', inline);
+    // Classes and handlers are meaningless outside the page.
+    out.removeAttribute('class');
+    out.removeAttribute('onclick');
   });
 
-  // Embed resolved styles for text and grid lines
-  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-  styleEl.textContent = [
-    `text { font-family: 'IBM Plex Mono', monospace; font-size: 9px; }`,
-    `.schart-label, .schart-glabel { fill: ${val('--muted')}; }`,
-    `.schart-grid { stroke: ${val('--border')}; stroke-width: 1; stroke-dasharray: 3 3; }`,
-  ].join(' ');
-  clone.insertBefore(styleEl, clone.firstChild);
-
-  const cellTag = statsCellTag();
-  const rangeTag = statsState.chartPreset === 'custom'
-    ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
-  triggerDownload(
-    `sar_chart_${rangeTag}_${cellTag}.svg`,
-    new XMLSerializer().serializeToString(clone),
-    'image/svg+xml'
-  );
+  const outer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  outer.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  outer.setAttribute('width', width + padding * 2);
+  outer.setAttribute('height', height + padding * 2);
+  outer.setAttribute('viewBox', `0 0 ${width + padding * 2} ${height + padding * 2}`);
+  if (background) {
+    const panel = document.querySelector('.stats-panel');
+    const bg = getComputedStyle(panel || document.body).backgroundColor;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', '100%');
+    rect.setAttribute('height', '100%');
+    rect.setAttribute('fill', bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : '#ffffff');
+    outer.appendChild(rect);
+  }
+  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  group.setAttribute('transform', `translate(${padding},${padding})`);
+  group.appendChild(clone);
+  outer.appendChild(group);
+  return { text: new XMLSerializer().serializeToString(outer), width: width + padding * 2, height: height + padding * 2 };
 }
 
-function statsExportChartCSV() {
+async function chartToPngBlob(svgEl, scale = 2) {
+  const { text, width, height } = serializeChartSVG(svgEl);
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error('SVG could not be rasterised'));
+    image.src = url;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.drawImage(image, 0, 0);
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+function statsChartFileTag() {
+  const rangeTag = statsState.chartPreset === 'custom'
+    ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
+  return `${rangeTag}_${statsCellTag()}`;
+}
+
+// Brief inline confirmation on the button that was pressed.
+function flashButton(button, messageKey) {
+  if (!button) return;
+  const original = button.dataset.label || button.textContent;
+  button.dataset.label = original;
+  button.textContent = t(messageKey);
+  button.classList.add('ok');
+  clearTimeout(button._flashTimer);
+  button._flashTimer = setTimeout(() => {
+    button.textContent = button.dataset.label;
+    button.classList.remove('ok');
+  }, 1400);
+}
+
+async function statsCopyChartPNG(button) {
+  const svgEl = document.querySelector('#stats-chart-wrap svg');
+  if (!svgEl) return;
+  try {
+    const blob = await chartToPngBlob(svgEl);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    flashButton(button, 'copied');
+  } catch (error) {
+    console.warn('Copy failed, falling back to download:', error);
+    // Clipboard images need a secure context and permission; fall back so the
+    // action still produces something.
+    statsExportChartPNG(button);
+  }
+}
+
+async function statsExportChartPNG(button) {
+  const svgEl = document.querySelector('#stats-chart-wrap svg');
+  if (!svgEl) return;
+  const blob = await chartToPngBlob(svgEl);
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sar_chart_${statsChartFileTag()}.png`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  flashButton(button, 'saved');
+}
+
+// Track Statistics is a table, so "copy" yields TSV — paste-ready for a
+// spreadsheet, which is what a table is actually wanted for.
+function statsCopyTableTSV(button) {
+  const rows = [['satellite_id', 'band', 'track', 'direction', 'frames',
+                 'avg_interval_days', 'consistency_0_5', 'first_date', 'last_date']];
+  for (const sat of buildFrequencyStats()) {
+    for (const track of sat.tracks) {
+      rows.push([sat.satId, sat.band, track.track ?? '', track.dir, track.count,
+                 track.avgGap ? track.avgGap.toFixed(2) : '', track.consistency,
+                 track.firstDate || '', track.lastDate || '']);
+    }
+  }
+  const tsv = rows.map(r => r.join(String.fromCharCode(9))).join(String.fromCharCode(10));
+  navigator.clipboard.writeText(tsv)
+    .then(() => flashButton(button, 'copied'))
+    .catch(error => {
+      // Clipboard writes need a focused document and a secure context; fall
+      // back to a file so the action still produces something usable.
+      console.warn('Copy failed, falling back to download:', error);
+      statsExportTableCSV(button);
+    });
+}
+
+function statsExportChartSVG(button) {
+  const svgEl = document.querySelector('#stats-chart-wrap svg');
+  if (!svgEl) return;
+  triggerDownload(
+    `sar_chart_${statsChartFileTag()}.svg`,
+    serializeChartSVG(svgEl).text,
+    'image/svg+xml'
+  );
+  flashButton(button, 'saved');
+}
+
+function statsExportChartCSV(button) {
   const buckets = buildChartBuckets();
   if (!buckets.length) return;
   const sats    = [...statsState.activeSats].sort();
@@ -4044,7 +4181,7 @@ function statsExportChartCSV() {
   );
 }
 
-function statsExportTableCSV() {
+function statsExportTableCSV(button) {
   const satStats = buildFrequencyStats();
   const headers  = ['satellite_id', 'band', 'track', 'direction', 'frames',
                     'avg_interval_days', 'consistency_0_5', 'first_date', 'last_date'];
