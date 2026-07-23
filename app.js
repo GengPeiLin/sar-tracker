@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -2815,7 +2815,7 @@ function statsSetSatColor(id, color) {
     saved[id] = color;
     localStorage.setItem('sar_sat_colors', JSON.stringify(saved));
   } catch {}
-  renderStatsPanel();
+  applySatColorChange();
 }
 function statsResetAllColors() {
   try {
@@ -2823,7 +2823,23 @@ function statsResetAllColors() {
     for (const id of STATS_CHART_SATS) delete saved[id];
     localStorage.setItem('sar_sat_colors', JSON.stringify(saved));
   } catch {}
-  renderStatsPanel();
+  applySatColorChange();
+}
+
+// Series colours appear in the chart, the satellite chips and the legend.
+// Refresh the chip colours in place so the panel body (and its scroll) stays.
+function applySatColorChange() {
+  const colors = getSatColors();
+  for (const id of STATS_CHART_SATS) {
+    for (const el of document.querySelectorAll(`[data-sat-color="${id}"]`)) {
+      el.style.background = colors[id];
+    }
+    for (const el of document.querySelectorAll(`[data-sat-chip="${id}"]`)) {
+      el.style.setProperty('--sc', colors[id]);
+    }
+  }
+  renderStatsChart();
+  renderStatsStylePanel();
 }
 
 // ── Chart appearance ────────────────────────────────────────────────────────
@@ -2861,15 +2877,72 @@ function statsSetChartStyle(key, value) {
     saved[key] = Number(value);
     localStorage.setItem('sar_chart_style', JSON.stringify(saved));
   } catch {}
-  renderStatsPanel();
+  // Redraw the chart only. Rebuilding the whole panel would reset its scroll
+  // position and tear down the popover mid-adjustment.
+  renderStatsChart();
+  renderStatsStylePanel();
 }
 function statsResetChartStyle() {
   try { localStorage.removeItem('sar_chart_style'); } catch {}
-  renderStatsPanel();
+  renderStatsChart();
+  renderStatsStylePanel();
 }
-function statsToggleStylePanel() {
+function statsToggleStylePanel(event) {
+  event?.stopPropagation();
   statsState.styleOpen = !statsState.styleOpen;
-  renderStatsPanel();
+  renderStatsStylePanel();
+}
+
+// Appearance popover. Rendered on demand rather than with the panel body so
+// that adjusting a slider does not rebuild (and scroll-reset) the whole panel.
+function renderStatsStylePanel() {
+  const pop = document.getElementById('stats-style-pop');
+  const gear = document.getElementById('stats-gear');
+  if (!pop) return;
+  gear?.classList.toggle('on', statsState.styleOpen);
+  if (!statsState.styleOpen) { pop.hidden = true; pop.innerHTML = ''; return; }
+
+  const style = getChartStyle();
+  const satColors = getSatColors();
+  const styleIsCustom = Object.keys(CHART_STYLE_DEFAULTS)
+    .some(key => style[key] !== CHART_STYLE_DEFAULTS[key]);
+  const colorIsCustom = STATS_CHART_SATS.some(id => {
+    try { return !!JSON.parse(localStorage.getItem('sar_sat_colors') || '{}')[id]; } catch { return false; }
+  });
+
+  const sliders = Object.entries(CHART_STYLE_RANGES).map(([key, range]) => `
+    <div class="sty-row">
+      <span class="sty-lbl">${t('style-' + key)}</span>
+      <input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
+             value="${style[key]}"
+             oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
+             onchange="statsSetChartStyle('${key}', this.value)">
+      <span class="sty-val">${style[key]}${range.unit}</span>
+    </div>`).join('');
+
+  const swatches = STATS_CHART_SATS.map(id => `
+    <label class="sty-color" title="${escapeHtml(id)}">
+      <span class="sty-color-dot" style="background:${satColors[id]}"></span>
+      <span class="sty-color-id">${escapeHtml(id)}</span>
+      <input type="color" value="${satColors[id]}" onchange="statsSetSatColor('${id}', this.value)">
+    </label>`).join('');
+
+  pop.innerHTML = `
+    <div class="sty-sec">
+      <div class="sty-sec-hd">
+        <span>${t('stats-series-colors')}</span>
+        ${colorIsCustom ? `<button class="sty-reset" onclick="statsResetAllColors()">${t('stats-reset')}</button>` : ''}
+      </div>
+      <div class="sty-colors">${swatches}</div>
+    </div>
+    <div class="sty-sec">
+      <div class="sty-sec-hd">
+        <span>${t('stats-appearance')}</span>
+        ${styleIsCustom ? `<button class="sty-reset" onclick="statsResetChartStyle()">${t('stats-reset')}</button>` : ''}
+      </div>
+      ${sliders}
+    </div>`;
+  pop.hidden = false;
 }
 
 const statsState = {
@@ -2923,6 +2996,8 @@ function openStatsPanel() {
   );
 }
 function closeStatsPanel() {
+  statsState.styleOpen = false;
+  renderStatsStylePanel();
   document.getElementById('stats-panel')?.classList.remove('open');
   if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
   // restore active state to the current body tab (or map)
@@ -3189,7 +3264,7 @@ function buildStatsPanelHTML() {
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
     const clr = satColors[id] || '#29b6f6';
-    return `<div class="stats-chip-ctr"><label class="stats-color-dot" style="background:${clr}" title="${t('stats-edit-color')}"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
+    return `<div class="stats-chip-ctr"><label class="stats-color-dot" data-sat-color="${id}" style="background:${clr}" title="${t('stats-edit-color')}"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" data-sat-chip="${id}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
   }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="${t('stats-reset-colors')}">↺</button>` : '');
 
   const sortHTML = [['lastDate','stats-sort-last-acq'],['count','stats-sort-frames'],['interval','stats-sort-interval'],['name','stats-sort-name']].map(([v, labelKey]) =>
@@ -3210,19 +3285,6 @@ function buildStatsPanelHTML() {
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
   ).join('');
-  const chartStyle = getChartStyle();
-  const styleIsCustom = Object.keys(CHART_STYLE_DEFAULTS)
-    .some(key => chartStyle[key] !== CHART_STYLE_DEFAULTS[key]);
-  const styleControlsHTML = Object.entries(CHART_STYLE_RANGES).map(([key, range]) => `
-    <div class="sty-row">
-      <span class="sty-lbl">${t('style-' + key)}</span>
-      <input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
-             value="${chartStyle[key]}"
-             oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
-             onchange="statsSetChartStyle('${key}', this.value)">
-      <span class="sty-val">${chartStyle[key]}${range.unit}</span>
-    </div>`).join('');
-
   const nisarTrackChipHTML = STATS_NISAR_TRACKS.map(track =>
     `<button class="stats-chip${statsState.activeNisarTracks.has(track.key) ? ' on' : ''}" onclick="statsToggleNisarTrack('${track.key}')">${track.key}</button>`
   ).join('');
@@ -3301,14 +3363,6 @@ function buildStatsPanelHTML() {
           <span class="stats-ctrl-lbl">${t('stats-nisar-tracks')}</span>
           <div class="stats-chips">${nisarTrackChipHTML}</div>
         </div>
-        <div class="stats-ctrl-row">
-          <span class="stats-ctrl-lbl">${t('stats-appearance')}</span>
-          <div class="stats-chips">
-            <button class="stats-chip${statsState.styleOpen ? ' on' : ''}" onclick="statsToggleStylePanel()">${statsState.styleOpen ? '−' : '+'} ${t('stats-tune')}</button>
-            ${styleIsCustom ? `<button class="stats-chip stats-chip-reset" onclick="statsResetChartStyle()" title="${t('stats-reset-style')}">↺</button>` : ''}
-          </div>
-        </div>
-        ${statsState.styleOpen ? `<div class="stats-style-panel">${styleControlsHTML}</div>` : ''}
       </div>
       <div class="stats-chart-scroll">
         <div class="stats-chart-wrap" id="stats-chart-wrap">
@@ -4030,6 +4084,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.addEventListener('click', event => {
+    // Close the appearance popover when clicking elsewhere inside the panel.
+    if (statsState.styleOpen) {
+      const path = event.composedPath();
+      const pop = document.getElementById('stats-style-pop');
+      const gear = document.getElementById('stats-gear');
+      if (pop && !path.includes(pop) && !(gear && path.includes(gear))) {
+        statsState.styleOpen = false;
+        renderStatsStylePanel();
+      }
+    }
     const statsPanel = document.getElementById('stats-panel');
     if (!statsPanel || !statsPanel.classList.contains('open')) return;
     // Use composedPath() instead of contains(): if a chip's onclick calls renderStatsPanel()

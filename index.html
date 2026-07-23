@@ -262,9 +262,17 @@
       <span class="stats-footer-grp-lbl" data-i18n="table-label">Table</span>
       <button class="stats-footer-btn" onclick="statsExportTableCSV()">CSV</button>
     </div>
+    <button class="stats-gear" id="stats-gear" onclick="statsToggleStylePanel(event)" title="Appearance" data-i18n-title="stats-appearance">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+        <circle cx="8" cy="8" r="2.4"/>
+        <path d="M8 1.2v1.9M8 12.9v1.9M14.8 8h-1.9M3.1 8H1.2M12.8 3.2l-1.35 1.35M4.55 11.45L3.2 12.8M12.8 12.8l-1.35-1.35M4.55 4.55L3.2 3.2" stroke-linecap="round"/>
+      </svg>
+    </button>
     <button class="stats-close" onclick="closeStatsPanel()">✕</button>
   </div>
   <div class="stats-panel-body" id="stats-panel-body"></div>
+  <!-- Appearance popover, anchored under the gear. -->
+  <div class="stats-style-pop" id="stats-style-pop" hidden></div>
 </div>
 
 <div id="schart-popup" class="schart-popup" hidden></div>
