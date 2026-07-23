@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -2826,7 +2826,54 @@ function statsResetAllColors() {
   renderStatsPanel();
 }
 
+// ── Chart appearance ────────────────────────────────────────────────────────
+// User-tunable drawing parameters, persisted separately from the data filters.
+// Everything here is presentation only; nothing changes what is counted.
+const CHART_STYLE_DEFAULTS = {
+  barWidth:    100,  // % of the space each bucket gets
+  barOpacity:   88,  // %
+  bandOpacity:   9,  // % — day/month banding behind the bars
+  gridOpacity:  85,  // %
+  gridWidth:     1,  // px
+  labelSize:     0,  // px offset applied to axis labels
+  barMinWidth:   1,  // px floor so sparse bars stay visible
+};
+const CHART_STYLE_RANGES = {
+  barWidth:    { min: 20, max: 100, step: 5,  unit: '%' },
+  barOpacity:  { min: 20, max: 100, step: 5,  unit: '%' },
+  bandOpacity: { min: 0,  max: 30,  step: 1,  unit: '%' },
+  gridOpacity: { min: 0,  max: 100, step: 5,  unit: '%' },
+  gridWidth:   { min: 0.5, max: 3,  step: .5, unit: 'px' },
+  labelSize:   { min: -2, max: 6,   step: 1,  unit: 'px' },
+  barMinWidth: { min: 1,  max: 6,   step: 1,  unit: 'px' },
+};
+
+function getChartStyle() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_style') || '{}');
+    return { ...CHART_STYLE_DEFAULTS, ...saved };
+  } catch { return { ...CHART_STYLE_DEFAULTS }; }
+}
+function statsSetChartStyle(key, value) {
+  if (!(key in CHART_STYLE_DEFAULTS)) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_style') || '{}');
+    saved[key] = Number(value);
+    localStorage.setItem('sar_chart_style', JSON.stringify(saved));
+  } catch {}
+  renderStatsPanel();
+}
+function statsResetChartStyle() {
+  try { localStorage.removeItem('sar_chart_style'); } catch {}
+  renderStatsPanel();
+}
+function statsToggleStylePanel() {
+  statsState.styleOpen = !statsState.styleOpen;
+  renderStatsPanel();
+}
+
 const statsState = {
+  styleOpen:    false,
   chartPreset:  '6mo',  // '1mo' | '6mo' | '1yr' | 'custom'
   chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
   chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
@@ -3163,6 +3210,19 @@ function buildStatsPanelHTML() {
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
   ).join('');
+  const chartStyle = getChartStyle();
+  const styleIsCustom = Object.keys(CHART_STYLE_DEFAULTS)
+    .some(key => chartStyle[key] !== CHART_STYLE_DEFAULTS[key]);
+  const styleControlsHTML = Object.entries(CHART_STYLE_RANGES).map(([key, range]) => `
+    <div class="sty-row">
+      <span class="sty-lbl">${t('style-' + key)}</span>
+      <input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
+             value="${chartStyle[key]}"
+             oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
+             onchange="statsSetChartStyle('${key}', this.value)">
+      <span class="sty-val">${chartStyle[key]}${range.unit}</span>
+    </div>`).join('');
+
   const nisarTrackChipHTML = STATS_NISAR_TRACKS.map(track =>
     `<button class="stats-chip${statsState.activeNisarTracks.has(track.key) ? ' on' : ''}" onclick="statsToggleNisarTrack('${track.key}')">${track.key}</button>`
   ).join('');
@@ -3241,6 +3301,14 @@ function buildStatsPanelHTML() {
           <span class="stats-ctrl-lbl">${t('stats-nisar-tracks')}</span>
           <div class="stats-chips">${nisarTrackChipHTML}</div>
         </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">${t('stats-appearance')}</span>
+          <div class="stats-chips">
+            <button class="stats-chip${statsState.styleOpen ? ' on' : ''}" onclick="statsToggleStylePanel()">${statsState.styleOpen ? '−' : '+'} ${t('stats-tune')}</button>
+            ${styleIsCustom ? `<button class="stats-chip stats-chip-reset" onclick="statsResetChartStyle()" title="${t('stats-reset-style')}">↺</button>` : ''}
+          </div>
+        </div>
+        ${statsState.styleOpen ? `<div class="stats-style-panel">${styleControlsHTML}</div>` : ''}
       </div>
       <div class="stats-chart-scroll">
         <div class="stats-chart-wrap" id="stats-chart-wrap">
@@ -3416,8 +3484,11 @@ function renderStatsChart() {
     return;
   }
   const activeSats = [...statsState.activeSats];
+  const style      = getChartStyle();
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
-  const cH = statsState.layout === 'chart' ? 200 : 120, labH = 22, barH = cH - labH;
+  // Sub-day cells use a two-row axis (hour above, date below) and need more
+  // vertical room for it.
+  const cH = statsState.layout === 'chart' ? 200 : 120;
 
   // Compute nice integer Y-axis ticks so bar tops land on labelled gridlines.
   // For small maxTotal (≤5) show every integer; for larger use round steps.
@@ -3436,49 +3507,66 @@ function renderStatsChart() {
   // Use a fractional stride so the bars span the full width: an integer stride
   // truncates up to one pixel per bar, which left a visible empty strip on the
   // right for dense ranges (a year at 1-day cells lost ~20% of the width).
+  const rangeStartMs = buckets[0].start.getTime();
+  const rangeEndMs   = buckets[buckets.length - 1].end.getTime();
   const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
   const n      = buckets.length;
   const stride = containerW / n;
   const GAP    = stride > 4 ? 2 : 0;
-  const BAR_W  = Math.max(1, stride - GAP);
+  // Bar width is user-tunable as a share of the space each bucket gets.
+  const BAR_W  = Math.max(style.barMinWidth, (stride - GAP) * (style.barWidth / 100));
   const svgW   = containerW;
 
-  // Show a label every N bars so adjacent labels don't overlap.
-  // Label width ~30px for "M/DD", ~36px for "Mon'YY", ~46px with a time.
-  const cellHours   = statsCellHours();
-  const labelW      = cellHours >= 672 ? 36 : cellHours < 24 ? 46 : 30;
-  const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
+  const cellHours = statsCellHours();
+  // Sub-day cells get a two-row axis: hours on top, dates underneath. That is
+  // only worth doing when a day is wide enough to read — at six months of 6 h
+  // cells a day is ~7 px, where an hour scale says nothing and the date row is
+  // what matters, so fall back to a single row of dates.
+  const dayWidthPx = svgW / Math.max(1, (rangeEndMs - rangeStartMs) / 864e5);
+  const twoRowAxis = cellHours < 24 && dayWidthPx >= 40;
+  const labelW     = cellHours >= 672 ? 36 : 30;
+  const labelEvery = Math.max(1, Math.ceil(labelW / stride));
+  // Hour row: snap to a clean hour step (a multiple of the cell size) instead
+  // of labelling every Nth bucket, which produced arbitrary hours like
+  // 00, 13, 02, 15. ~16 px is enough for a two-digit hour.
+  const pxPerHour = stride / cellHours;
+  const hourStep  = [1, 2, 3, 4, 6, 8, 12]
+    .filter(h => h % cellHours === 0)
+    .find(h => h * pxPerHour >= 16) ?? 12;
+  const labH = twoRowAxis ? 32 : 22;
+  const barH = cH - labH;
 
   // Low-key calendar banding behind the bars. With sub-day cells several bars
   // belong to one day and there is otherwise nothing separating them; at day+
   // cells the useful unit becomes the month.
   const bandUnit = cellHours < 24 ? 'day' : 'month';
-  const rangeStartMs = buckets[0].start.getTime();
-  const rangeEndMs   = buckets[buckets.length - 1].end.getTime();
   const cellMsForChart = cellHours * 3600e3;
   const xOfTime = ms => ((ms - rangeStartMs) / cellMsForChart) * stride;
-  let bandsSVG = '';
+
+  // Calendar segments drive both the banding and the date row of the axis.
+  const calendarSegments = [];
   {
     const cursor = new Date(rangeStartMs);
     cursor.setHours(0, 0, 0, 0);
     if (bandUnit === 'month') cursor.setDate(1);
-    let band = 0;
-    // Guard against pathological ranges producing a runaway loop.
+    // Guard against a pathological range producing a runaway loop.
     for (let guard = 0; cursor.getTime() < rangeEndMs && guard < 2000; guard++) {
       const next = new Date(cursor);
       if (bandUnit === 'day') next.setDate(next.getDate() + 1);
       else next.setMonth(next.getMonth() + 1);
-      if (band % 2 === 1) {
-        const x0 = Math.max(0, xOfTime(cursor.getTime()));
-        const x1 = Math.min(svgW, xOfTime(Math.min(next.getTime(), rangeEndMs)));
-        if (x1 - x0 > 0.05) {
-          bandsSVG += `<rect x="${x0.toFixed(2)}" y="0" width="${(x1 - x0).toFixed(2)}" height="${barH}" class="schart-band"/>`;
-        }
-      }
+      calendarSegments.push({ start: cursor.getTime(), end: Math.min(next.getTime(), rangeEndMs) });
       cursor.setTime(next.getTime());
-      band++;
     }
   }
+  let bandsSVG = '';
+  calendarSegments.forEach((seg, index) => {
+    if (index % 2 !== 1) return;
+    const x0 = Math.max(0, xOfTime(seg.start));
+    const x1 = Math.min(svgW, xOfTime(seg.end));
+    if (x1 - x0 > 0.05) {
+      bandsSVG += `<rect x="${x0.toFixed(2)}" y="0" width="${(x1 - x0).toFixed(2)}" height="${barH}" class="schart-band"/>`;
+    }
+  });
 
   let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
   for (const tick of yTicks) {
@@ -3507,20 +3595,45 @@ function renderStatsChart() {
       const w = Math.min(BAR_W, svgW - x);
       barsSVG += `<rect x="${x.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${statsBucketLabel(b, cellHours)} · ${satId}: ${cnt}</title></rect>`;
     }
-    if (i % labelEvery === 0) {
-      const d   = b.start;
+    if (twoRowAxis) {
+      // Top row: hour only; the date is carried by the row beneath.
+      if (b.start.getHours() % hourStep === 0) {
+        labelsSVG += `<text x="${(x + BAR_W / 2).toFixed(2)}" y="${cH - 15}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
+      }
+    } else if (i % labelEvery === 0) {
+      const d = b.start;
       const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
+      const cx = (x + BAR_W / 2).toFixed(2);
       const lbl = cellHours >= 672
         ? `${d.toLocaleString(locale, { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
-        : cellHours < 24
-          // Sub-day cells need the time to be readable at all.
-          ? `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}h`
-          : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
-      labelsSVG += `<text x="${(x + BAR_W / 2).toFixed(2)}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
+        : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
+      labelsSVG += `<text x="${cx}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
     }
   }
 
-  wrap.innerHTML = `<svg class="schart-svg" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
+  // Second axis row: one date centred under each calendar segment, drawn only
+  // where the segment is wide enough to hold it.
+  if (twoRowAxis) {
+    const segEvery = Math.max(1, Math.ceil(34 / Math.max(1, dayWidthPx)));
+    for (let si = 0; si < calendarSegments.length; si += segEvery) {
+      const seg = calendarSegments[si];
+      const x0 = Math.max(0, xOfTime(seg.start));
+      const x1 = Math.min(svgW, xOfTime(seg.end));
+      const d = new Date(seg.start);
+      const lbl = `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
+      labelsSVG += `<text x="${((x0 + x1) / 2).toFixed(2)}" y="${cH - 3}" class="schart-daylabel" text-anchor="middle">${lbl}</text>`;
+      labelsSVG += `<line x1="${x0.toFixed(2)}" y1="${cH - 13}" x2="${x0.toFixed(2)}" y2="${(cH - 1).toFixed(2)}" class="schart-daytick"/>`;
+    }
+  }
+
+  const styleVars = [
+    `--sc-bar-op:${style.barOpacity / 100}`,
+    `--sc-band-op:${style.bandOpacity / 100}`,
+    `--sc-grid-op:${style.gridOpacity / 100}`,
+    `--sc-grid-w:${style.gridWidth}`,
+    `--sc-lbl-bump:${style.labelSize}px`,
+  ].join(';');
+  wrap.innerHTML = `<svg class="schart-svg" style="${styleVars}" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
     ${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}
   </svg>`;
 }
