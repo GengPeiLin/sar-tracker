@@ -3052,6 +3052,28 @@ function renderStatsStylePanel() {
       ${sliders}
     </div>`;
   pop.hidden = false;
+  positionStylePopover(pop, gear);
+}
+
+// The gear now sits inside the scrolling panel body, so the popover is placed
+// from the gear's live position each time rather than pinned to a corner.
+function positionStylePopover(pop, gear) {
+  const panel = document.querySelector('.stats-panel');
+  if (!panel || !gear) return;
+  const panelRect = panel.getBoundingClientRect();
+  const gearRect = gear.getBoundingClientRect();
+  const width = pop.offsetWidth || 340;
+  const height = pop.offsetHeight || 400;
+  let left = gearRect.left - panelRect.left;
+  let top  = gearRect.bottom - panelRect.top + 6;
+  // Keep it inside the panel on small viewports.
+  left = Math.max(8, Math.min(left, panelRect.width - width - 8));
+  if (top + height > panelRect.height - 8) {
+    top = Math.max(8, gearRect.top - panelRect.top - height - 6);
+  }
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top  = `${Math.round(top)}px`;
+  pop.style.right = 'auto';
 }
 
 const statsState = {
@@ -3323,11 +3345,19 @@ function renderStatsPanel() {
   const savedScroll = body.scrollTop;
   body.innerHTML = buildStatsPanelHTML();
   body.scrollTop = savedScroll;
+  // The gear lives inside the body, so a rebuild replaces the element. Restore
+  // its active state now rather than in the rAF below: rAF is throttled in
+  // background tabs, which would leave the button out of sync with the popover.
+  document.getElementById('stats-gear')?.classList.toggle('on', statsState.styleOpen);
 
   if (_statsChartRO) { _statsChartRO.disconnect(); _statsChartRO = null; }
 
   requestAnimationFrame(() => {
     renderStatsChart();
+    // Re-anchor once the chart has its final size.
+    if (statsState.styleOpen) {
+      positionStylePopover(document.getElementById('stats-style-pop'), document.getElementById('stats-gear'));
+    }
     const scrollEl = document.querySelector('.stats-chart-scroll');
     if (scrollEl && window.ResizeObserver) {
       let t;
@@ -3442,7 +3472,15 @@ function buildStatsPanelHTML() {
 
     <div class="stats-section stats-sec-chart">
       <div class="stats-section-hd">
-        <span>${t('stats-acq-frequency-chart')} <span class="sts-hd-hint">· ${t('stats-all-acquisitions')}</span></span>
+        <span class="sec-lead">
+          <button class="stats-gear" id="stats-gear" onclick="statsToggleStylePanel(event)" title="${t('stats-appearance')}">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="8" cy="8" r="2.4"/>
+              <path d="M8 1.2v1.9M8 12.9v1.9M14.8 8h-1.9M3.1 8H1.2M12.8 3.2l-1.35 1.35M4.55 11.45L3.2 12.8M12.8 12.8l-1.35-1.35M4.55 4.55L3.2 3.2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <span>${t('stats-acq-frequency-chart')} <span class="sts-hd-hint">· ${t('stats-all-acquisitions')}</span></span>
+        </span>
         <span class="sec-tools">
           <button class="sec-tool" onclick="statsCopyChartPNG(this)" title="${t('copy-png-title')}">${t('copy-png')}</button>
           <button class="sec-tool" onclick="statsExportChartPNG(this)">PNG</button>
