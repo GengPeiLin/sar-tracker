@@ -135,7 +135,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','tz-note':'Times shown in UTC+8','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','tz-label':'Time Zone','tz-taipei':'Taipei','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','stats-axis-titles':'Axis Titles','axis-x':'X title','axis-y':'Y title','axis-show':'Show','axis-title-x':'Date (UTC+8)','axis-title-y':'Acquisitions','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','stats-axis-titles':'Axis Titles','axis-x':'X title','axis-y':'Y title','axis-show':'Show','axis-title-x':'Date','axis-title-y':'Acquisitions','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -208,7 +208,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','tz-note':'時間以 UTC+8 顯示','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','tz-label':'時區','tz-taipei':'臺北','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','stats-axis-titles':'座標軸標題','axis-x':'X 標題','axis-y':'Y 標題','axis-show':'顯示','axis-title-x':'日期（UTC+8）','axis-title-y':'取像次數','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','stats-axis-titles':'座標軸標題','axis-x':'X 標題','axis-y':'Y 標題','axis-show':'顯示','axis-title-x':'日期','axis-title-y':'取像次數','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -360,6 +360,8 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     el.title = t(el.dataset.i18nTitle);
   });
+  // Zone names are translated, so the option list is rebuilt with the language.
+  renderTZSelect();
   document.querySelectorAll('input[placeholder="Any"], input[data-i18n-placeholder="any"]').forEach(el => {
     el.dataset.i18nPlaceholder = 'any';
     el.placeholder = t('any');
@@ -405,38 +407,134 @@ const PLATFORM_COLORS = {
 //   toDisplayDate()     — a Date whose *local* getters (getHours, getDate, …)
 //                         read the UTC+8 wall clock, for the chart geometry
 //                         that already calls those getters.
-const DISPLAY_TZ = 'Asia/Taipei';
-const DISPLAY_TZ_OFFSET_MIN = 480;   // UTC+8, no DST
-const DISPLAY_TZ_LABEL = 'UTC+8';
+// Selectable display timezone. Defaults to UTC+8 (the subject of this
+// dashboard) but the viewer can pick any zone to reason about acquisition
+// times in their own local clock. Stored data is never touched: frames keep
+// the exact ISO UTC strings the providers deliver.
+const DISPLAY_TZ_DEFAULT = 'Asia/Taipei';
+const DISPLAY_TZ_CHOICES = [
+  { id: 'Asia/Taipei',        key: 'tz-taipei' },
+  { id: 'UTC',                key: 'tz-utc' },
+  { id: '__local__',          key: 'tz-local' },
+  { id: 'Asia/Tokyo',         key: 'tz-tokyo' },
+  { id: 'Asia/Singapore',     key: 'tz-singapore' },
+  { id: 'Asia/Kolkata',       key: 'tz-kolkata' },
+  { id: 'Europe/London',      key: 'tz-london' },
+  { id: 'Europe/Berlin',      key: 'tz-berlin' },
+  { id: 'America/New_York',   key: 'tz-newyork' },
+  { id: 'America/Los_Angeles',key: 'tz-losangeles' },
+];
 
+function getDisplayTZ() {
+  try {
+    const saved = localStorage.getItem('sar_display_tz');
+    if (saved === '__local__') return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    if (saved) return saved;
+  } catch {}
+  return DISPLAY_TZ_DEFAULT;
+}
+function getDisplayTZChoice() {
+  try { return localStorage.getItem('sar_display_tz') || DISPLAY_TZ_DEFAULT; }
+  catch { return DISPLAY_TZ_DEFAULT; }
+}
+function setDisplayTZ(value) {
+  try { localStorage.setItem('sar_display_tz', value); } catch {}
+  applyDisplayTZ();
+}
+
+// Offset of a zone at a given instant, in minutes east of UTC. Computed from
+// Intl rather than hardcoded, so zones with DST stay correct year-round.
+function tzOffsetMinutes(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(date).reduce((acc, p) => (acc[p.type] = p.value, acc), {});
+  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day,
+                         +parts.hour % 24, +parts.minute, +parts.second);
+  // Round to whole minutes: formatToParts resolves only to seconds, so the
+  // sub-second remainder of getTime() would otherwise show up as e.g.
+  // "UTC+7:59.994" instead of "UTC+8".
+  return Math.round((asUTC - date.getTime()) / 60000);
+}
+
+// Human label for the current zone, e.g. "UTC+8" / "UTC-4".
+function displayTZLabel(at = new Date()) {
+  const offset = tzOffsetMinutes(at, getDisplayTZ());
+  if (!offset) return 'UTC';
+  const sign = offset > 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  const h = Math.floor(abs / 60), m = abs % 60;
+  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
+}
+
+// A Date whose *local* getters (getHours, getDate, …) read the selected
+// zone's wall clock — for the chart geometry that already calls those getters.
 function toDisplayDate(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return date;
-  // Shift so the browser's local getters yield UTC+8 fields. On a UTC+8
-  // machine getTimezoneOffset() is -480, so this is a no-op.
-  return new Date(date.getTime() + (DISPLAY_TZ_OFFSET_MIN + date.getTimezoneOffset()) * 60000);
+  const offset = tzOffsetMinutes(date, getDisplayTZ());
+  const asUTC = date.getTime() + offset * 60000;
+  return new Date(asUTC + date.getTimezoneOffset() * 60000);
 }
 
-// Inverse: the real instant for a UTC+8 wall-clock date.
+// Inverse: the real instant for wall-clock fields in the selected zone.
 function fromDisplayParts(year, month, day, hour = 0, minute = 0) {
-  return new Date(Date.UTC(year, month, day, hour, minute) - DISPLAY_TZ_OFFSET_MIN * 60000);
+  const guess = Date.UTC(year, month, day, hour, minute);
+  const tz = getDisplayTZ();
+  let offset = tzOffsetMinutes(new Date(guess), tz);
+  let ts = guess - offset * 60000;
+  // One refinement pass covers DST transitions, where the offset at the guess
+  // differs from the offset at the resolved instant.
+  const settled = tzOffsetMinutes(new Date(ts), tz);
+  if (settled !== offset) ts = guess - settled * 60000;
+  return new Date(ts);
 }
 
 function formatDisplayTime(value, options = {}) {
   const date = value instanceof Date ? value : new Date(value);
   if (!value || Number.isNaN(date.getTime())) return '--';
   return date.toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US', {
-    timeZone: DISPLAY_TZ, ...options,
+    timeZone: getDisplayTZ(), ...options,
   });
 }
 
-// YYYY-MM-DD of an instant in UTC+8. Used wherever frames are grouped by day:
-// a descending Taiwan pass at 21:52 UTC is 05:52 the NEXT day locally, so
+// YYYY-MM-DD in the selected zone. Used wherever frames are grouped by day:
+// a descending Taiwan pass at 21:52 UTC is 05:52 the NEXT day in UTC+8, so
 // grouping on the raw UTC date would split a night's acquisitions.
 function displayDateKey(value) {
   const date = toDisplayDate(value);
   if (Number.isNaN(date.getTime())) return '';
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Re-render everything that shows a time after the zone changes.
+function renderTZSelect() {
+  const select = document.getElementById('tz-select');
+  if (!select) return;
+  const current = getDisplayTZChoice();
+  select.innerHTML = DISPLAY_TZ_CHOICES.map(choice => {
+    const zone = choice.id === '__local__'
+      ? (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+      : choice.id;
+    let suffix = '';
+    try {
+      const offset = tzOffsetMinutes(new Date(), zone);
+      const sign = offset >= 0 ? '+' : '-';
+      const abs = Math.abs(offset);
+      suffix = offset === 0 ? ' (UTC)' : ` (UTC${sign}${Math.floor(abs / 60)}${abs % 60 ? ':' + String(abs % 60).padStart(2, '0') : ''})`;
+    } catch {}
+    return `<option value="${choice.id}">${t(choice.key)}${suffix}</option>`;
+  }).join('');
+  select.value = current;
+}
+
+function applyDisplayTZ() {
+  renderTZSelect();
+  const badge = document.getElementById('tz-label');
+  if (badge) badge.textContent = displayTZLabel();
+  if (state.rawFrames?.length) applyAdvancedFilters();
+  if (document.getElementById('stats-panel')?.classList.contains('open')) renderStatsPanel();
 }
 
 const NISAR_TRACK_COLORS = {
@@ -810,6 +908,7 @@ function applyAppearanceSettings() {
 }
 
 function syncAppearanceControls() {
+  renderTZSelect();
   const themeSelect = document.getElementById('theme-select');
   if (themeSelect) themeSelect.value = getThemeValue(state.ui.theme);
   const sizeVal = document.getElementById('size-val');
@@ -2301,7 +2400,7 @@ function buildFrameMetaRows(frame) {
       hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }) + ' ' + DISPLAY_TZ_LABEL;
+    }) + ' ' + displayTZLabel(date);
   };
   return [
     { label: 'Start Time', value: time(pick(frame.date, named.start)) },
@@ -2968,7 +3067,8 @@ function statsAxisTitle(axis) {
     const saved = JSON.parse(localStorage.getItem('sar_chart_titles') || '{}');
     if (saved[axis]) return saved[axis];
   } catch {}
-  return t(axis === 'x' ? 'axis-title-x' : 'axis-title-y');
+  if (axis === 'x') return `${t('axis-title-x')} (${displayTZLabel()})`;
+  return t('axis-title-y');
 }
 function statsSetAxisTitle(axis, value) {
   try {

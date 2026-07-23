@@ -25,7 +25,7 @@
   <span class="mob-db-ts" id="mob-db-ts">—</span>
   <div class="hdr-sep"></div>
   <div class="hdr-status">
-    <b id="hdr-time">—</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE&nbsp;·&nbsp;<span class="hdr-tz" data-i18n="tz-note">Times shown in UTC+8</span>
+    <b id="hdr-time">—</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE
   </div>
   <div class="hdr-controls">
     <div class="control-field">
@@ -44,6 +44,10 @@
         <option value="paper-radar">Paper Radar</option>
         <option value="field-survey">Field Survey</option>
       </select>
+    </div>
+    <div class="control-field">
+      <label for="tz-select" data-i18n="tz-label">Time Zone</label>
+      <select id="tz-select" onchange="setDisplayTZ(this.value)"></select>
     </div>
     <div class="control-field">
       <label data-i18n="text-size-label">Text Size</label>
