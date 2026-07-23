@@ -1694,28 +1694,41 @@ header {
 }
 .stats-chart-wrap { display: block; }
 .schart-svg { display: block; overflow: visible; }
-.schart-bar { opacity: .88; cursor: pointer; transition: opacity .1s; }
+.schart-bar { cursor: pointer; transition: opacity .1s; }
 .schart-bar:hover { opacity: 1; filter: brightness(1.12); }
 /* Alternating calendar band behind the bars: at sub-day cells it groups the
-   bars belonging to one day, at day+ cells it marks months. Deliberately
-   faint — it should read as texture, not as data. */
+   bars belonging to one day, at day+ cells it marks months. Reads as texture,
+   not as data — strength is tunable via the appearance panel. */
 .schart-band {
   fill: var(--text);
-  opacity: .05;
+  opacity: var(--sc-band-op, .09);
 }
 .schart-grid {
   stroke: var(--border);
-  stroke-width: 1;
+  stroke-width: var(--sc-grid-w, 1);
   stroke-dasharray: 3 3;
+  opacity: var(--sc-grid-op, .85);
+}
+.schart-bar { opacity: var(--sc-bar-op, .88); }
+/* Date row of the two-row axis used for sub-day cells. */
+.schart-daylabel {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px + var(--sc-lbl-bump, 0px));
+  fill: var(--text-hi);
+  font-weight: 600;
+}
+.schart-daytick {
+  stroke: var(--border2);
+  stroke-width: 1;
 }
 .schart-glabel {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: calc(9px + var(--sc-lbl-bump, 0px));
   fill: var(--muted);
 }
 .schart-label {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: calc(9px + var(--sc-lbl-bump, 0px));
   fill: var(--muted);
 }
 
@@ -2282,4 +2295,39 @@ header {
   .stats-cards-wrap { max-height: min(360px, 40vh); }
   .trk-row { padding: 5px 10px; }
   .trk-spark { display: none; }
+}
+
+
+/* ── Chart appearance panel ─────────────────────────────────────────────── */
+.stats-style-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px 16px;
+  padding: 10px 0 4px;
+}
+.sty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sty-lbl {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  color: var(--muted);
+  flex: 0 0 84px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.sty-row input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--cyan);
+  height: 16px;
+}
+.sty-val {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  color: var(--text-hi);
+  flex: 0 0 42px;
+  text-align: right;
 }
