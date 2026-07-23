@@ -713,10 +713,14 @@ function ensureAdvancedState() {
     // filter out every NISAR frame (and vice versa).
     formats: new Set(),
     nisarFormats: new Set(),
-    // NISAR-only. Empty Set means "no restriction", matching `formats`.
     nisarCoverage: new Set(),
     nisarBandwidth: new Set(),
+    // Which chip groups have had their defaults applied. Defaults are seeded
+    // exactly once so that deselecting every chip in a group stays deselected
+    // instead of snapping back on.
+    seeded: new Set(),
   };
+  if (!(state.filters.seeded instanceof Set)) state.filters.seeded = new Set();
   for (const key of ['formats', 'nisarFormats', 'nisarCoverage', 'nisarBandwidth']) {
     if (!(state.filters[key] instanceof Set)) {
       state.filters[key] = new Set(state.filters[key] || []);
@@ -1335,11 +1339,16 @@ function renderFormatOptions() {
     return;
   }
 
-  const stillValid = [...state.filters.formats].filter(type => types.includes(type));
-  if (!stillValid.length) {
+  // Seed the defaults once. Re-seeding whenever the set is empty would snap
+  // the chips back on as soon as the user deselected the last one.
+  if (!state.filters.seeded.has('formats')) {
+    state.filters.seeded.add('formats');
     state.filters.formats = new Set(getDefaultFormatsForSatellite(types));
-  } else if (stillValid.length !== state.filters.formats.size) {
-    state.filters.formats = new Set(stillValid);
+  } else {
+    const stillValid = [...state.filters.formats].filter(type => types.includes(type));
+    if (stillValid.length !== state.filters.formats.size) {
+      state.filters.formats = new Set(stillValid);
+    }
   }
 
   wrap.innerHTML = '';
@@ -1379,11 +1388,10 @@ function renderNisarOptions() {
   }
   section.hidden = false;
 
-  // Product types follow the Sentinel-1 convention: an explicit selection
-  // seeded from the per-satellite defaults. Coverage and bandwidth instead
-  // treat "nothing selected" as "no restriction".
   renderNisarFormatChips(pool);
 
+  // Coverage and bandwidth are explicit selections seeded to "everything", so
+  // each chip can be switched off independently — including the last one.
   const groups = [
     { id: 'nisar-coverage-options', key: 'nisarCoverage', get: getNisarCoverage },
     { id: 'nisar-bandwidth-options', key: 'nisarBandwidth', get: getNisarBandwidth },
@@ -1393,21 +1401,21 @@ function renderNisarOptions() {
     if (!wrap) continue;
     const values = [...new Set(pool.map(group.get).filter(Boolean))].sort();
     const selected = state.filters[group.key];
+    if (!state.filters.seeded.has(group.key)) {
+      state.filters.seeded.add(group.key);
+      for (const value of values) selected.add(value);
+    }
     // Drop selections that no longer exist in the pool.
     for (const value of [...selected]) if (!values.includes(value)) selected.delete(value);
     wrap.innerHTML = '';
     for (const value of values) {
       const button = document.createElement('button');
       button.type = 'button';
-      // No selection means no restriction, so render every chip as active.
-      button.className = 'format-chip' + (!selected.size || selected.has(value) ? ' on' : '');
+      button.className = 'format-chip' + (selected.has(value) ? ' on' : '');
       button.textContent = value;
       button.onclick = () => {
-        // First click switches from "all" to just the others.
-        if (!selected.size) for (const other of values) selected.add(other);
-        if (selected.has(value) && selected.size > 1) selected.delete(value);
+        if (selected.has(value)) selected.delete(value);
         else selected.add(value);
-        if (selected.size === values.length) selected.clear();
         renderNisarOptions();
         applyAdvancedFilters();
       };
@@ -1422,12 +1430,15 @@ function renderNisarFormatChips(pool) {
   const wrap = document.getElementById('nisar-format-options');
   if (!wrap) return;
   const types = [...new Set(pool.map(frame => frame.product_type_norm).filter(Boolean))].sort();
-  const selected = state.filters.nisarFormats;
-  const stillValid = [...selected].filter(type => types.includes(type));
-  if (!stillValid.length) {
+  // Seeded once; see renderFormatOptions.
+  if (!state.filters.seeded.has('nisarFormats')) {
+    state.filters.seeded.add('nisarFormats');
     state.filters.nisarFormats = new Set(getDefaultFormatsForSatellite(types));
-  } else if (stillValid.length !== selected.size) {
-    state.filters.nisarFormats = new Set(stillValid);
+  } else {
+    const stillValid = [...state.filters.nisarFormats].filter(type => types.includes(type));
+    if (stillValid.length !== state.filters.nisarFormats.size) {
+      state.filters.nisarFormats = new Set(stillValid);
+    }
   }
   wrap.innerHTML = '';
   for (const type of types) {
@@ -1460,8 +1471,10 @@ function resetAdvancedFilters(apply = true) {
   state.filters.frameMax = '';
   state.filters.dateStart = window.start;
   state.filters.dateEnd = window.end;
-  state.filters.formats = new Set(getDefaultFormatsForSatellite(allTypes));
-  state.filters.nisarFormats.clear();   // reseeded from defaults on next render
+  // Clear the seed markers so every chip group re-applies its defaults.
+  state.filters.seeded.clear();
+  state.filters.formats.clear();
+  state.filters.nisarFormats.clear();
   state.filters.nisarCoverage.clear();
   state.filters.nisarBandwidth.clear();
   state.selectedSat = null;
@@ -1503,14 +1516,18 @@ function frameMatchesAdvancedFilters(frame) {
   // publishes several products per overpass that differ only by frame coverage
   // and bandwidth mode. None of those fields exist for Sentinel-1, and a shared
   // product-type Set would let one mission's selection hide the other entirely.
+  // Every chip group is an explicit selection: deselecting all of them filters
+  // everything out, rather than silently meaning "no restriction".
   if (isNisarFrame(frame)) {
     const { nisarFormats, nisarCoverage, nisarBandwidth } = state.filters;
-    if (nisarFormats.size && !nisarFormats.has(frame.product_type_norm)) return false;
+    if (!nisarFormats.has(frame.product_type_norm)) return false;
+    // A frame is never excluded on a field it does not carry (SME2 has no
+    // range bandwidth, for instance).
     const coverage = getNisarCoverage(frame);
     const bandwidth = getNisarBandwidth(frame);
-    if (nisarCoverage.size && coverage && !nisarCoverage.has(coverage)) return false;
-    if (nisarBandwidth.size && bandwidth && !nisarBandwidth.has(bandwidth)) return false;
-  } else if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) {
+    if (coverage && !nisarCoverage.has(coverage)) return false;
+    if (bandwidth && !nisarBandwidth.has(bandwidth)) return false;
+  } else if (!state.filters.formats.has(frame.product_type_norm)) {
     return false;
   }
 
@@ -1539,7 +1556,7 @@ function getFrameBoundsPreview() {
     if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
     // Per-mission product-type selection, matching frameMatchesAdvancedFilters.
     const formats = isNisarFrame(frame) ? state.filters.nisarFormats : state.filters.formats;
-    if (formats.size && !formats.has(frame.product_type_norm)) return false;
+    if (!formats.has(frame.product_type_norm)) return false;
     return frame.frame_number_norm !== null;
   }).map(frame => frame.frame_number_norm);
 }
@@ -3432,6 +3449,37 @@ function renderStatsChart() {
   const labelW      = cellHours >= 672 ? 36 : cellHours < 24 ? 46 : 30;
   const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
 
+  // Low-key calendar banding behind the bars. With sub-day cells several bars
+  // belong to one day and there is otherwise nothing separating them; at day+
+  // cells the useful unit becomes the month.
+  const bandUnit = cellHours < 24 ? 'day' : 'month';
+  const rangeStartMs = buckets[0].start.getTime();
+  const rangeEndMs   = buckets[buckets.length - 1].end.getTime();
+  const cellMsForChart = cellHours * 3600e3;
+  const xOfTime = ms => ((ms - rangeStartMs) / cellMsForChart) * stride;
+  let bandsSVG = '';
+  {
+    const cursor = new Date(rangeStartMs);
+    cursor.setHours(0, 0, 0, 0);
+    if (bandUnit === 'month') cursor.setDate(1);
+    let band = 0;
+    // Guard against pathological ranges producing a runaway loop.
+    for (let guard = 0; cursor.getTime() < rangeEndMs && guard < 2000; guard++) {
+      const next = new Date(cursor);
+      if (bandUnit === 'day') next.setDate(next.getDate() + 1);
+      else next.setMonth(next.getMonth() + 1);
+      if (band % 2 === 1) {
+        const x0 = Math.max(0, xOfTime(cursor.getTime()));
+        const x1 = Math.min(svgW, xOfTime(Math.min(next.getTime(), rangeEndMs)));
+        if (x1 - x0 > 0.05) {
+          bandsSVG += `<rect x="${x0.toFixed(2)}" y="0" width="${(x1 - x0).toFixed(2)}" height="${barH}" class="schart-band"/>`;
+        }
+      }
+      cursor.setTime(next.getTime());
+      band++;
+    }
+  }
+
   let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
   for (const tick of yTicks) {
     const y = barH - (tick / niceMax) * barH;
@@ -3473,7 +3521,7 @@ function renderStatsChart() {
   }
 
   wrap.innerHTML = `<svg class="schart-svg" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
-    ${gridSVG}${barsSVG}${labelsSVG}
+    ${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}
   </svg>`;
 }
 
@@ -3500,29 +3548,22 @@ function statsSetCellIdx(idx) {
   statsState.cellIdx = Math.max(0, Math.min(STATS_CELL_STEPS.length - 1, idx));
   renderStatsPanel();
 }
+// Every chip may be switched off, including the last one — an empty selection
+// legitimately means "show nothing".
 function statsToggleSat(id) {
-  if (statsState.activeSats.has(id)) {
-    if (statsState.activeSats.size > 1) statsState.activeSats.delete(id);
-  } else {
-    statsState.activeSats.add(id);
-  }
+  if (statsState.activeSats.has(id)) statsState.activeSats.delete(id);
+  else statsState.activeSats.add(id);
   renderStatsPanel();
 }
 function statsToggleTrack(t) {
-  if (statsState.activeTracks.has(t)) {
-    if (statsState.activeTracks.size > 1) statsState.activeTracks.delete(t);
-  } else {
-    statsState.activeTracks.add(t);
-  }
+  if (statsState.activeTracks.has(t)) statsState.activeTracks.delete(t);
+  else statsState.activeTracks.add(t);
   renderStatsPanel();
 }
 function statsToggleNisarTrack(key) {
   const set = statsState.activeNisarTracks;
-  if (set.has(key)) {
-    if (set.size > 1) set.delete(key);
-  } else {
-    set.add(key);
-  }
+  if (set.has(key)) set.delete(key);
+  else set.add(key);
   renderStatsPanel();
 }
 function statsSetPass(pass) {
