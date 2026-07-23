@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','stats-chart-colors':'Chart Colors','stats-axis-titles':'Axis Titles','axis-x':'X title','axis-y':'Y title','axis-show':'Show','axis-title-x':'Date','axis-title-y':'Acquisitions','color-background':'Background','color-text':'Labels','color-grid':'Grid','color-band':'Day shading','color-auto':'Auto','color-transparent':'None','style-exportScale':'Export scale','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','stats-chart-colors':'圖表顏色','stats-axis-titles':'座標軸標題','axis-x':'X 標題','axis-y':'Y 標題','axis-show':'顯示','axis-title-x':'日期','axis-title-y':'取像次數','color-background':'背景','color-text':'標籤','color-grid':'格線','color-band':'日期底色','color-auto':'自動','color-transparent':'無','style-exportScale':'匯出倍率','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -2856,6 +2856,7 @@ const CHART_STYLE_DEFAULTS = {
   labelSize:     0,  // px offset applied to axis labels
   barMinWidth:   1,  // px floor so sparse bars stay visible
   exportScale:   2,  // rasterisation factor for Copy / PNG
+  axisTitles:    1,  // 0/1 — show x/y axis titles
 };
 const CHART_STYLE_RANGES = {
   // Above 100% the chart overflows its container and scrolls, which is the
@@ -2876,6 +2877,7 @@ const CHART_STYLE_RANGES = {
   labelSize:   { min: -3, max: 12,  step: 1,  unit: 'px' },
   barMinWidth: { min: 1,  max: 24,  step: 1,  unit: 'px' },
   exportScale: { min: 1,  max: 6,   step: 1,  unit: 'x' },
+  axisTitles:  { min: 0,  max: 1,   step: 1,  unit: '' },
 };
 
 // Chart colours, kept apart from the numeric style settings because each may
@@ -2913,6 +2915,24 @@ function rgbToHex(value) {
   if (!m) return '#888888';
   const [r, g, b] = m[1].split(',').map(n => Math.max(0, Math.min(255, Math.round(parseFloat(n)))));
   return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+
+// Axis titles: editable, falling back to a sensible default per language.
+function statsAxisTitle(axis) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_titles') || '{}');
+    if (saved[axis]) return saved[axis];
+  } catch {}
+  return t(axis === 'x' ? 'axis-title-x' : 'axis-title-y');
+}
+function statsSetAxisTitle(axis, value) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sar_chart_titles') || '{}');
+    const text = String(value || '').trim();
+    if (text) saved[axis] = text; else delete saved[axis];
+    localStorage.setItem('sar_chart_titles', JSON.stringify(saved));
+  } catch {}
+  renderStatsChart();
 }
 
 function statsSetChartColor(key, value) {
@@ -2988,7 +3008,7 @@ function renderStatsStylePanel() {
       <span>${t('style-ratio')} <b>${ratio.toFixed(2)}:1</b></span>
     </div>` : '';
 
-  const sliders = Object.entries(CHART_STYLE_RANGES).map(([key, range]) => `
+  const sliders = Object.entries(CHART_STYLE_RANGES).filter(([key]) => key !== 'axisTitles').map(([key, range]) => `
     <div class="sty-row">
       <span class="sty-lbl">${t('style-' + key)}</span>
       <input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
@@ -3043,6 +3063,24 @@ function renderStatsStylePanel() {
         ${chartColorsCustom ? `<button class="sty-reset" onclick="statsResetChartColors()">${t('stats-reset')}</button>` : ''}
       </div>
       ${colorRows}
+    </div>
+    <div class="sty-sec">
+      <div class="sty-sec-hd"><span>${t('stats-axis-titles')}</span></div>
+      <div class="sty-crow">
+        <span class="sty-lbl">${t('axis-x')}</span>
+        <input class="sty-text" type="text" value="${escapeHtml(statsAxisTitle('x'))}"
+               onchange="statsSetAxisTitle('x', this.value)">
+      </div>
+      <div class="sty-crow">
+        <span class="sty-lbl">${t('axis-y')}</span>
+        <input class="sty-text" type="text" value="${escapeHtml(statsAxisTitle('y'))}"
+               onchange="statsSetAxisTitle('y', this.value)">
+      </div>
+      <div class="sty-crow">
+        <span class="sty-lbl">${t('axis-show')}</span>
+        <button class="sty-cbtn${style.axisTitles ? ' on' : ''}"
+                onclick="statsSetChartStyle('axisTitles', ${style.axisTitles ? 0 : 1})">${style.axisTitles ? t('color-auto') : t('color-transparent')}</button>
+      </div>
     </div>
     <div class="sty-sec">
       <div class="sty-sec-hd">
@@ -3703,7 +3741,7 @@ function renderStatsChart() {
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
   // Sub-day cells use a two-row axis (hour above, date below) and need more
   // vertical room for it.
-  const cH = Math.round((statsState.layout === 'chart' ? 200 : 120) * (style.chartHeight / 100));
+  const plotH = Math.round((statsState.layout === 'chart' ? 200 : 120) * (style.chartHeight / 100));
 
   // Compute nice integer Y-axis ticks so bar tops land on labelled gridlines.
   // For small maxTotal (≤5) show every integer; for larger use round steps.
@@ -3735,37 +3773,52 @@ function renderStatsChart() {
   }
   // clientWidth includes padding, so subtract it to get the drawable width.
   const availableW = Math.max(200, (scrollEl?.clientWidth || 600) - sidePad * 2);
-  const containerW = Math.max(200, availableW * (style.chartWidth / 100));
-  const n      = buckets.length;
-  const stride = containerW / n;
-  const GAP    = stride > 4 ? 2 : 0;
-  // Bar width is user-tunable as a share of the space each bucket gets.
-  const BAR_W  = Math.max(style.barMinWidth, (stride - GAP) * (style.barWidth / 100));
-  const svgW   = containerW;
+  const svgW = Math.max(200, availableW * (style.chartWidth / 100));
+  const n    = buckets.length;
 
-  const cellHours = statsCellHours();
+  const cellHours  = statsCellHours();
+  const labelPx    = 9 + style.labelSize;
+  const labelChars = cellHours >= 672 ? 6 : 5;
+  // Estimate the drawn width from the actual font size — a fixed 30px slot
+  // made labels collide as soon as the user raised the label size.
+  const labelW     = Math.ceil(labelPx * 0.62 * labelChars) + 8;
+  const totalDays  = Math.max(1, (rangeEndMs - rangeStartMs) / 864e5);
+
   // Sub-day cells get a two-row axis: hours on top, dates underneath. That is
   // only worth doing when a day is wide enough to read — at six months of 6 h
   // cells a day is ~7 px, where an hour scale says nothing and the date row is
-  // what matters, so fall back to a single row of dates.
-  const dayWidthPx = svgW / Math.max(1, (rangeEndMs - rangeStartMs) / 864e5);
-  const twoRowAxis = cellHours < 24 && dayWidthPx >= 40 + style.labelSize * 3;
-  // Estimate the drawn width from the actual font size — a fixed 30px slot
-  // made labels collide as soon as the user raised the label size.
-  const labelPx    = 9 + style.labelSize;
-  const labelChars = cellHours >= 672 ? 6 : 5;
-  const labelW     = Math.ceil(labelPx * 0.62 * labelChars) + 8;
+  // what matters, so fall back to a single row of dates. Estimated against the
+  // full width first, since the margins depend on the answer.
+  const twoRowAxis = cellHours < 24
+    && (svgW - 60) / totalDays >= 40 + style.labelSize * 3;
+
+  // Journal-style margin box: tick labels and axis titles sit OUTSIDE the plot
+  // area, so nothing is drawn over the gridlines.
+  const titleGap = style.axisTitles ? labelPx + 10 : 0;
+  const M = {
+    top:    Math.max(6, Math.round(labelPx * 0.7)),
+    right:  Math.ceil(labelW / 2) + 4,
+    left:   Math.ceil(String(niceMax).length * labelPx * 0.62) + 12 + titleGap,
+    bottom: Math.round(labelPx * 1.45) * (twoRowAxis ? 2 : 1) + 8 + titleGap,
+  };
+  const plotW = Math.max(40, svgW - M.left - M.right);
+  const barH  = plotH;
+  const cH    = plotH + M.top + M.bottom;
+
+  const stride = plotW / n;
+  const GAP    = stride > 4 ? 2 : 0;
+  // Bar width is user-tunable as a share of the space each bucket gets.
+  const BAR_W  = Math.max(style.barMinWidth, (stride - GAP) * (style.barWidth / 100));
+  const dayWidthPx = plotW / totalDays;
   const labelEvery = Math.max(1, Math.ceil(labelW / stride));
   // Hour row: snap to a clean hour step (a multiple of the cell size) instead
   // of labelling every Nth bucket, which produced arbitrary hours like
-  // 00, 13, 02, 15. ~16 px is enough for a two-digit hour.
+  // 00, 13, 02, 15.
   const pxPerHour = stride / cellHours;
   const hourW     = Math.ceil(labelPx * 0.62 * 2) + 6;
   const hourStep  = [1, 2, 3, 4, 6, 8, 12]
     .filter(h => h % cellHours === 0)
     .find(h => h * pxPerHour >= hourW) ?? 12;
-  const labH = twoRowAxis ? 32 : 22;
-  const barH = cH - labH;
 
   // Low-key calendar banding behind the bars. With sub-day cells several bars
   // belong to one day and there is otherwise nothing separating them; at day+
@@ -3799,14 +3852,16 @@ function renderStatsChart() {
     }
   });
 
-  let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
+  // Axis frame: baseline plus the y scale. Tick labels are right-aligned in the
+  // left gutter and vertically centred on their gridline, so they never sit on
+  // top of it — the previous layout drew them inside the plot area.
+  let gridSVG = `<line x1="0" y1="${barH}" x2="${plotW}" y2="${barH}" class="schart-axis"/>`
+              + `<line x1="0" y1="0" x2="0" y2="${barH}" class="schart-axis"/>`;
   for (const tick of yTicks) {
     const y = barH - (tick / niceMax) * barH;
-    // Sit every label just below its gridline. Previously only the top tick
-    // ended up below (it was clamped), leaving the rest above — inconsistent.
-    const lblY = Math.min(barH - 2, y + 9);
-    gridSVG += `<line x1="0" y1="${y.toFixed(1)}" x2="${svgW}" y2="${y.toFixed(1)}" class="schart-grid"/>`;
-    gridSVG += `<text x="2" y="${lblY.toFixed(1)}" class="schart-glabel">${tick}</text>`;
+    gridSVG += `<line x1="0" y1="${y.toFixed(1)}" x2="${plotW}" y2="${y.toFixed(1)}" class="schart-grid"/>`;
+    gridSVG += `<line x1="-4" y1="${y.toFixed(1)}" x2="0" y2="${y.toFixed(1)}" class="schart-axis"/>`;
+    gridSVG += `<text x="-7" y="${y.toFixed(1)}" class="schart-glabel" text-anchor="end" dominant-baseline="central">${tick}</text>`;
   }
 
   const barSatColors = getSatColors();
@@ -3830,7 +3885,7 @@ function renderStatsChart() {
     if (twoRowAxis) {
       // Top row: hour only; the date is carried by the row beneath.
       if (b.start.getHours() % hourStep === 0) {
-        labelsSVG += `<text x="${(x + (stride - GAP) / 2).toFixed(2)}" y="${cH - 15}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
+        labelsSVG += `<text x="${(x + (stride - GAP) / 2).toFixed(2)}" y="${barH + labelPx * 1.35}" class="schart-label" text-anchor="middle">${String(b.start.getHours()).padStart(2, '0')}</text>`;
       }
     } else if (i % labelEvery === 0) {
       const d = b.start;
@@ -3839,7 +3894,7 @@ function renderStatsChart() {
       const lbl = cellHours >= 672
         ? `${d.toLocaleString(locale, { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
         : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
-      labelsSVG += `<text x="${cx}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
+      labelsSVG += `<text x="${cx}" y="${barH + labelPx * 1.35}" class="schart-label" text-anchor="middle">${lbl}</text>`;
     }
   }
 
@@ -3853,8 +3908,8 @@ function renderStatsChart() {
       const x1 = Math.min(svgW, xOfTime(seg.end));
       const d = new Date(seg.start);
       const lbl = `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
-      labelsSVG += `<text x="${((x0 + x1) / 2).toFixed(2)}" y="${cH - 3}" class="schart-daylabel" text-anchor="middle">${lbl}</text>`;
-      labelsSVG += `<line x1="${x0.toFixed(2)}" y1="${cH - 13}" x2="${x0.toFixed(2)}" y2="${(cH - 1).toFixed(2)}" class="schart-daytick"/>`;
+      labelsSVG += `<text x="${((x0 + x1) / 2).toFixed(2)}" y="${barH + labelPx * 2.8}" class="schart-daylabel" text-anchor="middle">${lbl}</text>`;
+      labelsSVG += `<line x1="${x0.toFixed(2)}" y1="${barH}" x2="${x0.toFixed(2)}" y2="${barH + 4}" class="schart-daytick"/>`;
     }
   }
 
@@ -3875,8 +3930,18 @@ function renderStatsChart() {
   const bgSVG = colors.background === 'transparent'
     ? ''
     : `<rect x="0" y="0" width="${svgW}" height="${cH}" fill="${colors.background}"/>`;
+
+  let titlesSVG = '';
+  if (style.axisTitles) {
+    const xMid = M.left + plotW / 2;
+    titlesSVG += `<text x="${xMid.toFixed(1)}" y="${cH - 4}" class="schart-axis-title" text-anchor="middle">${escapeHtml(statsAxisTitle('x'))}</text>`;
+    const yMid = M.top + barH / 2;
+    titlesSVG += `<text x="${(labelPx + 2).toFixed(1)}" y="${yMid.toFixed(1)}" class="schart-axis-title" text-anchor="middle" transform="rotate(-90 ${(labelPx + 2).toFixed(1)} ${yMid.toFixed(1)})">${escapeHtml(statsAxisTitle('y'))}</text>`;
+  }
+
   wrap.innerHTML = `<svg class="schart-svg" style="${styleVars}" width="${svgW}" height="${cH}" viewBox="0 0 ${svgW} ${cH}">
-    ${bgSVG}${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}
+    ${bgSVG}${titlesSVG}
+    <g transform="translate(${M.left},${M.top})">${bandsSVG}${gridSVG}${barsSVG}${labelsSVG}</g>
   </svg>`;
 }
 

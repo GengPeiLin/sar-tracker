@@ -1862,6 +1862,20 @@ header {
   stroke: var(--sc-grid-c, var(--border2));
   stroke-width: 1;
 }
+/* Solid axis frame and ticks, distinct from the dashed interior gridlines. */
+.schart-axis {
+  stroke: var(--sc-grid-c, var(--border2));
+  stroke-width: var(--sc-grid-w, 1);
+  opacity: calc(var(--sc-grid-op, .85) + .15);
+  fill: none;
+}
+.schart-axis-title {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px + var(--sc-lbl-bump, 0px));
+  font-weight: 600;
+  letter-spacing: .04em;
+  fill: var(--sc-text, var(--text-hi));
+}
 .schart-glabel {
   font-family: var(--mono);
   font-size: calc(9px + var(--sc-lbl-bump, 0px));
@@ -2533,3 +2547,17 @@ header {
   color: var(--muted);
   margin-left: auto;
 }
+
+/* Text input for the axis titles. */
+.sty-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  padding: 3px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-hi);
+}
+.sty-text:focus { outline: none; border-color: var(--cyan); }
