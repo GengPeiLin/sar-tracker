@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks','stats-appearance':'Appearance','stats-tune':'Tune','stats-reset-style':'Reset chart appearance','stats-series-colors':'Series Colors','stats-reset':'Reset','copy-png':'Copy','copy-label':'Copy','copied':'Copied','saved':'Saved','copy-failed':'Failed','copy-png-title':'Copy chart to clipboard as PNG','copy-tsv-title':'Copy table to clipboard (paste into a spreadsheet)','style-chartWidth':'Chart width','style-chartHeight':'Chart height','style-size':'Size','style-ratio':'Ratio','style-barWidth':'Bar width','style-barOpacity':'Bar opacity','style-bandOpacity':'Day shading','style-gridOpacity':'Grid opacity','style-gridWidth':'Grid width','style-labelSize':'Label size','style-barMinWidth':'Min bar',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -270,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道','stats-appearance':'外觀','stats-tune':'調整','stats-reset-style':'重設圖表外觀','stats-series-colors':'系列顏色','stats-reset':'重設','copy-png':'複製','copy-label':'複製','copied':'已複製','saved':'已儲存','copy-failed':'失敗','copy-png-title':'以 PNG 複製圖表到剪貼簿','copy-tsv-title':'複製表格到剪貼簿（可貼進試算表）','style-chartWidth':'圖表寬度','style-chartHeight':'圖表高度','style-size':'尺寸','style-ratio':'比例','style-barWidth':'長條寬度','style-barOpacity':'長條透明度','style-bandOpacity':'日期底色','style-gridOpacity':'格線透明度','style-gridWidth':'格線粗細','style-labelSize':'標籤大小','style-barMinWidth':'最小寬度',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -2846,6 +2846,8 @@ function applySatColorChange() {
 // User-tunable drawing parameters, persisted separately from the data filters.
 // Everything here is presentation only; nothing changes what is counted.
 const CHART_STYLE_DEFAULTS = {
+  chartWidth:  100,  // % of the available width; >100% scrolls horizontally
+  chartHeight: 100,  // % of the height the current layout mode implies
   barWidth:    100,  // % of the space each bucket gets
   barOpacity:   88,  // %
   bandOpacity:   9,  // % — day/month banding behind the bars
@@ -2855,6 +2857,12 @@ const CHART_STYLE_DEFAULTS = {
   barMinWidth:   1,  // px floor so sparse bars stay visible
 };
 const CHART_STYLE_RANGES = {
+  // Above 100% the chart overflows its container and scrolls, which is the
+  // only way to give dense ranges (a year at 1 h cells) usable bar spacing.
+  chartWidth:  { min: 100, max: 800, step: 10, unit: '%' },
+  // Scales the layout-derived height rather than replacing it, so the
+  // stacked / split / chart-focus modes keep their relative proportions.
+  chartHeight: { min: 40,  max: 400, step: 10, unit: '%' },
   // Bar width may exceed 100%: on a sparse chart the bucket is far wider than
   // the data needs, and overlapping bars are a legitimate way to make isolated
   // acquisitions visible. Bars are centred on their bucket so growing the
@@ -2914,6 +2922,17 @@ function renderStatsStylePanel() {
     try { return !!JSON.parse(localStorage.getItem('sar_sat_colors') || '{}')[id]; } catch { return false; }
   });
 
+  // Live size readout: the sliders are relative, so show what they resolve to.
+  const liveSvg = document.querySelector('#stats-chart-wrap svg');
+  const sizeW = liveSvg ? Math.round(+liveSvg.getAttribute('width')) : 0;
+  const sizeH = liveSvg ? Math.round(+liveSvg.getAttribute('height')) : 0;
+  const ratio = sizeH ? (sizeW / sizeH) : 0;
+  const ratioHTML = sizeW ? `
+    <div class="sty-ratio">
+      <span>${t('style-size')} <b>${sizeW}&times;${sizeH}</b></span>
+      <span>${t('style-ratio')} <b>${ratio.toFixed(2)}:1</b></span>
+    </div>` : '';
+
   const sliders = Object.entries(CHART_STYLE_RANGES).map(([key, range]) => `
     <div class="sty-row">
       <span class="sty-lbl">${t('style-' + key)}</span>
@@ -2922,7 +2941,8 @@ function renderStatsStylePanel() {
              oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
              onchange="statsSetChartStyle('${key}', this.value)">
       <span class="sty-val">${style[key]}${range.unit}</span>
-    </div>`).join('');
+    </div>
+    ${key === 'chartHeight' ? ratioHTML : ''}`).join('');
 
   const swatches = STATS_CHART_SATS.map(id => `
     <label class="sty-color" title="${escapeHtml(id)}">
@@ -3560,7 +3580,7 @@ function renderStatsChart() {
   const maxTotal   = Math.max(...buckets.map(b => b.total), 1);
   // Sub-day cells use a two-row axis (hour above, date below) and need more
   // vertical room for it.
-  const cH = statsState.layout === 'chart' ? 200 : 120;
+  const cH = Math.round((statsState.layout === 'chart' ? 200 : 120) * (style.chartHeight / 100));
 
   // Compute nice integer Y-axis ticks so bar tops land on labelled gridlines.
   // For small maxTotal (≤5) show every integer; for larger use round steps.
@@ -3581,7 +3601,8 @@ function renderStatsChart() {
   // right for dense ranges (a year at 1-day cells lost ~20% of the width).
   const rangeStartMs = buckets[0].start.getTime();
   const rangeEndMs   = buckets[buckets.length - 1].end.getTime();
-  const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
+  const availableW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
+  const containerW = Math.max(200, availableW * (style.chartWidth / 100));
   const n      = buckets.length;
   const stride = containerW / n;
   const GAP    = stride > 4 ? 2 : 0;

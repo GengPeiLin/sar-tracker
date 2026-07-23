@@ -1813,9 +1813,18 @@ header {
 
 /* ── chart ── */
 .stats-chart-scroll {
-  overflow: hidden;
+  /* Horizontal scroll so a chart wider than its container stays usable;
+     vertical stays clipped so the section never grows a second scrollbar. */
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 6px 14px 10px;
 }
+.stats-chart-scroll::-webkit-scrollbar { height: 8px; }
+.stats-chart-scroll::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 4px;
+}
+.stats-chart-scroll::-webkit-scrollbar-track { background: transparent; }
 .stats-chart-wrap { display: block; }
 .schart-svg { display: block; overflow: visible; }
 .schart-bar { cursor: pointer; transition: opacity .1s; }
@@ -2450,3 +2459,19 @@ header {
   flex: 0 0 42px;
   text-align: right;
 }
+
+
+/* Live size readout under the width/height sliders. */
+.sty-ratio {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 6px;
+  padding: 4px 7px;
+  border: 1px dashed var(--border2);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  color: var(--muted);
+}
+.sty-ratio b { color: var(--text-hi); font-weight: 600; }
