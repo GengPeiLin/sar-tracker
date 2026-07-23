@@ -145,6 +145,12 @@ const TRANSLATIONS = {
     'date-start':'Date Start','date-end':'Date End',
     'track-min':'Track Min','track-max':'Track Max','frame-min':'Frame Min','frame-max':'Frame Max',
     'product-types':'Product Types','loading-types':'Loading...','no-product-types':'No product types in current inventory.',
+    's1-options':'Sentinel-1 Options','nisar-options':'NISAR Options',
+    'frame-coverage':'Frame Coverage','range-bandwidth':'Range Bandwidth',
+    'release-beta':'Beta release (Feb 2026) — uncalibrated, not for quantitative use',
+    'release-provisional':'Provisional release (20 Jul 2026) — calibration still being refined',
+    'release-urgent':'Urgent response product',
+    'n-nisar-frames':'{n} NISAR frames',
     'reset-filters':'Reset Filters','show-same-track':'Show same track in drawer',
     'show-other-tracks':'Show other Taiwan Sentinel-1 tracks',
     'slc-default':'SLC / GSLC / RSLC are selected by default.',
@@ -191,7 +197,7 @@ const TRANSLATIONS = {
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
     'stats-period':'Period','stats-preset-1mo':'1 mo','stats-preset-6mo':'6 mo','stats-preset-1yr':'1 yr','stats-preset-custom':'Custom',
-    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks',
+    'stats-cell-size':'Cell size','stats-day-suffix':'d','stats-hour-suffix':'h','stats-satellites':'Satellites','stats-s1-tracks':'S1 tracks','stats-nisar-tracks':'NISAR tracks',
     'stats-pass':'Pass','stats-pass-all':'All','stats-pass-asc':'ASC','stats-pass-desc':'DESC',
     'stats-computing':'Computing…','stats-track-statistics':'Track Statistics','stats-sort-by':'Sort by',
     'stats-sort-last-acq':'Last Acq','stats-sort-frames':'Frames','stats-sort-interval':'Interval','stats-sort-name':'Name',
@@ -212,6 +218,12 @@ const TRANSLATIONS = {
     'date-start':'開始日期','date-end':'結束日期',
     'track-min':'軌道最小值','track-max':'軌道最大值','frame-min':'幀號最小值','frame-max':'幀號最大值',
     'product-types':'產品類型','loading-types':'載入中...','no-product-types':'目前清單無產品類型。',
+    's1-options':'Sentinel-1 選項','nisar-options':'NISAR 選項',
+    'frame-coverage':'幀涵蓋範圍','range-bandwidth':'距離向頻寬',
+    'release-beta':'Beta 版本（2026 年 2 月）— 未校正，不適用於定量分析',
+    'release-provisional':'Provisional 版本（2026 年 7 月 20 日）— 校正仍在調整中',
+    'release-urgent':'緊急應變產品',
+    'n-nisar-frames':'{n} 個 NISAR 幀',
     'reset-filters':'重設篩選','show-same-track':'抽屜顯示同軌跡',
     'show-other-tracks':'顯示其他台灣 Sentinel-1 軌跡',
     'slc-default':'預設選取 SLC / GSLC / RSLC。',
@@ -258,7 +270,7 @@ const TRANSLATIONS = {
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
     'stats-period':'時段','stats-preset-1mo':'1 個月','stats-preset-6mo':'6 個月','stats-preset-1yr':'1 年','stats-preset-custom':'自訂',
-    'stats-cell-size':'格距','stats-day-suffix':'天','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道',
+    'stats-cell-size':'格距','stats-day-suffix':'天','stats-hour-suffix':'小時','stats-satellites':'衛星','stats-s1-tracks':'S1 軌道','stats-nisar-tracks':'NISAR 軌道',
     'stats-pass':'軌向','stats-pass-all':'全部','stats-pass-asc':'升軌','stats-pass-desc':'降軌',
     'stats-computing':'計算中…','stats-track-statistics':'軌道統計','stats-sort-by':'排序依據',
     'stats-sort-last-acq':'最新取像','stats-sort-frames':'幀數','stats-sort-interval':'間隔','stats-sort-name':'名稱',
@@ -389,6 +401,93 @@ const NISAR_TRACK_COLORS = {
   'DESCENDING|133': '#b388ff',  // lavender — distinct from pink and green
 };
 
+// NISAR granule-name code tables — https://nisar-docs.asf.alaska.edu/naming-conventions/
+// NISAR_IL_PT_PROD_CYL_REL_P_FRM_MODE_POLE_S_Start_End_CRID_A_C_LOC_CTR.EXT
+const NISAR_INSTRUMENT = { L: 'L-SAR', S: 'S-SAR' };
+const NISAR_PROCESSING_TYPE = { PR: 'Production', UR: 'Urgent Response', OD: 'Science On-Demand' };
+const NISAR_DIRECTION = { A: 'Ascending', D: 'Descending' };
+const NISAR_SOURCE = { A: 'Acquired, single mode', M: 'Mixed source/mode' };
+const NISAR_ACCURACY = { P: 'Precise', M: 'Medium', N: 'Near Real-Time', F: 'Forecast' };
+const NISAR_COVERAGE = { F: 'Full', P: 'Partial' };
+const NISAR_LOCATION = { J: 'JPL' };
+// POLE: two 2-char codes, one per band (primary then secondary).
+const NISAR_POL = {
+  SH: 'HH', SV: 'VV',
+  DH: 'HH,HV', DV: 'VV,VH',
+  CL: 'LH,LV', CR: 'RH,RV',
+  QP: 'HH,HV,VV,VH',
+  NA: '--',
+};
+
+// MODE: two 2-char bandwidth codes in MHz, one per band. '00' means the band
+// is absent, so '2005' is a 20 MHz primary plus a 5 MHz secondary -> '20+5'.
+function formatNisarBandwidth(raw) {
+  const text = String(raw || '');
+  if (!/^\d{4}$/.test(text)) return text || '--';
+  const bands = [text.slice(0, 2), text.slice(2)]
+    .map(code => parseInt(code, 10))
+    .filter(mhz => Number.isFinite(mhz) && mhz > 0);
+  // Rendered the way ASF reports rangeBandwidth, e.g. '20+5'.
+  return bands.length ? bands.join('+') : '--';
+}
+
+function isNisarFrame(frame) {
+  return String(frame?.satellite_id || frame?.platform || '').toUpperCase().includes('NISAR')
+    || /^NISAR_/.test(String(frame?.granule || ''));
+}
+
+// Frame coverage and bandwidth come from ASF when available, otherwise from
+// the granule name. Both are NISAR-only concepts.
+function getNisarCoverage(frame) {
+  if (frame?.frame_coverage) return frame.frame_coverage;
+  const parts = String(frame?.granule || '').split('_');
+  return parts.length >= 18 ? (NISAR_COVERAGE[parts[parts.length - 3]] || '') : '';
+}
+
+function getNisarBandwidth(frame) {
+  if (frame?.range_bandwidth) return frame.range_bandwidth;
+  const parts = String(frame?.granule || '').split('_');
+  if (parts.length < 18) return '';
+  return formatNisarBandwidth(parts[parts.length >= 20 ? 9 : 8]);
+}
+
+// NISAR data is published in staged releases, encoded in ASF's collection
+// name (e.g. NISAR_L1_RSLC_BETA_V1 / ..._PROVISIONAL_V1):
+//   BETA        — Feb 2026 release, uncalibrated
+//   PROVISIONAL — 20 Jul 2026 release
+// Read from the data rather than hardcoding dates, so later tiers (e.g. a
+// validated release) surface automatically.
+const NISAR_RELEASES = {
+  BETA: { label: 'BETA', cls: 'beta', key: 'release-beta' },
+  PROVISIONAL: { label: 'PROVISIONAL', cls: 'provisional', key: 'release-provisional' },
+  URGENT: { label: 'URGENT', cls: 'urgent', key: 'release-urgent' },
+};
+
+function getNisarRelease(frame) {
+  const source = `${frame?.collection || ''} ${frame?.granule || ''}`.toUpperCase();
+  for (const code of Object.keys(NISAR_RELEASES)) {
+    if (source.includes(code)) return { code, ...NISAR_RELEASES[code] };
+  }
+  return null;
+}
+
+// Granule names carry times as YYYYMMDDTHHMMSS (UTC).
+function parseNisarCompactTime(text) {
+  const match = String(text || '').match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (!match) return null;
+  const [, y, mo, d, h, mi, s] = match.map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+}
+
+function formatNisarPolarization(raw) {
+  const text = String(raw || '').toUpperCase();
+  const codes = text.length === 4 ? [text.slice(0, 2), text.slice(2)] : [text];
+  const named = codes
+    .filter(code => code && code !== 'NA')
+    .map(code => NISAR_POL[code] || code);
+  return named.length ? named.join(' / ') : '--';
+}
+
 // ASF frame number boundaries for Taiwan Sentinel-1 tracks.
 // Derived from 7,458 S1D frames with real ASF frame numbers in sar_status.json.
 // Each entry: [frameNumber, centroidLatMin, centroidLatMax].
@@ -460,7 +559,11 @@ function getFrameVisualInfo(frame) {
   }
 
   const rawLabel = frame?.track_label || frame?.satellite_name || frame?.platform || frame?.satellite_id || 'Other';
-  const label = rawLabel === 'OTHER_S1' ? 'Other Sentinel-1 tracks' : rawLabel;
+  // Name the mission the way the NISAR entries do, so the legend reads
+  // "S1 A69" / "NISAR D133" rather than a bare track code.
+  const label = rawLabel === 'OTHER_S1'
+    ? 'Other Sentinel-1 tracks'
+    : (rawLabel === 'A69' || rawLabel === 'D105') ? `S1 ${rawLabel}` : rawLabel;
   const color = rawLabel === 'A69'
     ? '#00e5ff'
     : rawLabel === 'D105'
@@ -578,7 +681,7 @@ const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
   S1C: ['SLC'],
   S1D: ['SLC'],
 };
-const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'RAW', 'SSC', 'OCN'];
+const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'L3_SME2', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'SME2', 'RAW', 'SSC', 'OCN', 'ETAD', 'COH12'];
 
 function ensureAdvancedState() {
   state.rawFrames ||= [];
@@ -605,10 +708,19 @@ function ensureAdvancedState() {
     frameMax: '',
     dateStart: '',
     dateEnd: '',
+    // Product types are tracked per mission: the two catalogues share no
+    // product types, so one combined Set would let a Sentinel-1 selection
+    // filter out every NISAR frame (and vice versa).
     formats: new Set(),
+    nisarFormats: new Set(),
+    // NISAR-only. Empty Set means "no restriction", matching `formats`.
+    nisarCoverage: new Set(),
+    nisarBandwidth: new Set(),
   };
-  if (!(state.filters.formats instanceof Set)) {
-    state.filters.formats = new Set(state.filters.formats || []);
+  for (const key of ['formats', 'nisarFormats', 'nisarCoverage', 'nisarBandwidth']) {
+    if (!(state.filters[key] instanceof Set)) {
+      state.filters[key] = new Set(state.filters[key] || []);
+    }
   }
 }
 
@@ -714,8 +826,8 @@ function setupReadableUI() {
   const statsWrap = document.querySelector('.map-stats');
   if (statsWrap && !document.getElementById('st-next')) {
     const card = document.createElement('div');
-    card.className = 'stat-card';
-    card.innerHTML = `<div class="lbl" id="st-next-label">${t('latest-tracks')}</div><div class="val small" id="st-next">${t('need-history')}</div>`;
+    card.className = 'stat-card stat-card--next';
+    card.innerHTML = `<div class="lbl" id="st-next-label">${t('latest-tracks')}</div><div class="val" id="st-next">${t('need-history')}</div>`;
     statsWrap.appendChild(card);
   } else {
     const nextLabel = document.getElementById('st-next-label');
@@ -803,6 +915,30 @@ function getSatForFrame(frame) {
   return SATS.find(sat => satMatchesFrame(sat, frame)) || null;
 }
 
+// Copernicus occasionally reports a footprint as a one-part MultiPolygon.
+// Only Polygon is rendered, so normalise rather than silently dropping the
+// frame from the map while it still counts in filters and stats.
+// NISAR has no sizeMB; it reports a `bytes` map of every delivered file.
+// Use the HDF5 science product, not the browse PNGs.
+function nisarSizeMB(bytes) {
+  if (!bytes || typeof bytes !== 'object') return 0;
+  let best = 0;
+  for (const [name, info] of Object.entries(bytes)) {
+    if (!info || typeof info !== 'object') continue;
+    const isH5 = String(info.format || '').toUpperCase() === 'HDF5' || /\.h5$/i.test(name);
+    if (isH5) best = Math.max(best, Number(info.bytes) || 0);
+  }
+  return +(best / 1e6).toFixed(1);
+}
+
+function normalizeFootprint(geometry) {
+  if (!geometry || geometry.type !== 'MultiPolygon' || !Array.isArray(geometry.coordinates)) return geometry;
+  const parts = geometry.coordinates.filter(part => Array.isArray(part) && part[0]);
+  if (!parts.length) return geometry;
+  const largest = parts.reduce((a, b) => (b[0].length > a[0].length ? b : a));
+  return { type: 'Polygon', coordinates: largest };
+}
+
 function enhanceFrame(frame) {
   const sat = getSatForFrame(frame) || {};
   const satelliteId = sat.id || frame.platform || 'UNKNOWN';
@@ -811,7 +947,7 @@ function enhanceFrame(frame) {
   const frameNumberNorm = normalizeFrameNumber(frame.frame_number);
 
   // Reconstruct footprint from fp flat array
-  let footprint = frame.footprint;
+  let footprint = normalizeFootprint(frame.footprint);
   if (frame.fp && Array.isArray(frame.fp)) {
     const ring = [];
     for (let i = 0; i < frame.fp.length; i += 2) {
@@ -1071,85 +1207,6 @@ async function loadData() {
   })();
 }
 
-async function liveFetchASF() {
-  ensureAdvancedState();
-  const now  = new Date();
-  const wa   = new Date(now - 7 * 24 * 3600 * 1000);
-  const fmt  = d => d.toISOString().replace(/\.\d+Z$/, 'UTC');
-  const WKT  = 'POLYGON((121.5902 25.467,121.209 25.3739,120.8073 25.0382,119.9008 23.7334,119.9935 22.7865,120.5601 21.8426,120.9412 21.7277,122.167 25.0289,121.5902 25.467))';
-
-  const url = 'https://api.daac.asf.alaska.edu/services/search/param?' + new URLSearchParams({
-    intersectsWith: WKT,
-    platform: 'S1A,S1C,S1D,A3,A4,R2,RCM,NISAR',
-    processingLevel: 'SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,RSLC,GSLC,L1_RSLC,L1_GSLC,L2_GCOV,L2_GUNW',
-    start: fmt(wa),
-    end: fmt(now),
-    output: 'geojson',
-    maxresults: 1000,
-  });
-
-  try {
-    const response = await fetch(url);
-    const gj = await response.json();
-
-    const s1Platforms = ['S1A', 'S1C', 'S1D']; // Sentinel-1 platform codes
-
-    const filteredFeatures = (gj.features || []).filter(feature => {
-      const p = feature.properties || {};
-      const platform = (p.platform || '').toUpperCase();
-      if (s1Platforms.includes(platform)) {
-        const pathNumber = String(p.pathNumber);
-        const direction = (p.flightDirection || '').toUpperCase();
-        // Filter Sentinel-1 tracks per requirements (105 = descending, 69 = ascending)
-        return (pathNumber === '105' && direction === 'DESCENDING') ||
-               (pathNumber === '69' && direction === 'ASCENDING');
-      }
-      return true; // Keep non-S1 satellites
-    });
-
-    state.rawFrames = reconcileFrameMetadata(
-      filteredFeatures.map(feature => {
-        const p = feature.properties || {};
-        return enhanceFrame({
-          source: 'ASF',
-          granule: p.sceneName || '',
-          platform: p.platform || '',
-          sensor: p.sensor || '',
-          date: p.startTime || '',
-          stop_time: p.stopTime || '',
-          mode: p.beamModeType || p.beamMode || '',
-          polarization: p.polarization || '',
-          orbit: p.orbit || '',
-          path_number: p.pathNumber || '',
-          frame_number: p.frameNumber || '',
-          direction: p.flightDirection || '',
-          product_type: p.processingLevel || '',
-          processing_level: p.processingLevel || '',
-          footprint: feature.geometry,
-          asf_url: p.url || '',
-          file_size_mb: +(p.sizeMB || 0).toFixed(1),
-        });
-      }).filter(frame => frame.is_open_data)
-    );
-
-    state.baseStats = {
-      total_frames: state.rawFrames.length,
-      query_start: wa.toISOString(),
-      query_end: now.toISOString(),
-      asf_count: state.rawFrames.length,
-      copernicus_count: 0,
-    };
-    document.getElementById('hdr-time').textContent = 'Live ASF ' + new Date().toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US');
-    bindAdvancedControls();
-    renderSatelliteSelect();
-    renderFormatOptions();
-    resetAdvancedFilters(false);
-    applyAdvancedFilters();
-  } catch (error) {
-    document.getElementById('hdr-time').textContent = 'Load failed';
-    console.error('ASF API failed', error);
-  }
-}
 
 function matchesSidebarFilters(sat) {
   ensureAdvancedState();
@@ -1236,10 +1293,19 @@ function renderSatelliteSelect() {
   select.value = state.filters.satellite;
 }
 
+// Frames the product-type chips are drawn from. Honours the band/tab/satellite
+// selection (but not the product-type selection itself, which would make the
+// chips disappear as soon as they were used) so a mission's options section is
+// shown only when that mission can actually appear on the map.
 function getFormatPoolFrames() {
   ensureAdvancedState();
-  if (state.filters.satellite === 'ALL') return state.rawFrames;
-  return state.rawFrames.filter(frame => frame.satellite_id === state.filters.satellite);
+  return state.rawFrames.filter(frame => {
+    if (!frame.is_open_data) return false;
+    if (state.band !== 'ALL' && frame.satellite_band !== state.band) return false;
+    if (state.tab === 'op' && frame.sat_status === 'ret') return false;
+    if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
+    return true;
+  });
 }
 
 function getDefaultFormatsForSatellite(types) {
@@ -1249,17 +1315,23 @@ function getDefaultFormatsForSatellite(types) {
   return defaults.length ? defaults : types;
 }
 
+// Sentinel-1 product types. NISAR's live in renderNisarOptions so a selection
+// in one mission never hides the other.
 function renderFormatOptions() {
   ensureAdvancedState();
   const wrap = document.getElementById('format-options');
   const summary = document.getElementById('product-summary');
+  const section = document.getElementById('product-section');
   if (!wrap) return;
 
-  const types = [...new Set(getFormatPoolFrames().map(frame => frame.product_type_norm).filter(Boolean))].sort();
+  const pool = getFormatPoolFrames().filter(frame => !isNisarFrame(frame));
+  const types = [...new Set(pool.map(frame => frame.product_type_norm).filter(Boolean))].sort();
+  if (section) section.hidden = !types.length;
   if (!types.length) {
     wrap.innerHTML = '<span class="filter-note">No product types in current inventory.</span>';
     state.filters.formats = new Set();
     if (summary) summary.textContent = '0 visible';
+    renderNisarOptions();
     return;
   }
 
@@ -1285,6 +1357,93 @@ function renderFormatOptions() {
     wrap.appendChild(button);
   }
   if (summary) summary.textContent = `${state.filters.formats.size} selected · ${types.length} visible`;
+  renderNisarOptions();
+}
+
+// NISAR delivers several products for one overpass that differ only in frame
+// coverage (Full / Partial) and bandwidth mode. Sentinel-1 has no equivalent,
+// so this section is rendered only when NISAR frames are in the pool.
+function renderNisarOptions() {
+  ensureAdvancedState();
+  const section = document.getElementById('nisar-section');
+  if (!section) return;
+
+  const pool = getFormatPoolFrames().filter(isNisarFrame);
+  if (!pool.length) {
+    section.hidden = true;
+    // Drop stale selections so hidden chips cannot filter the map.
+    state.filters.nisarFormats.clear();
+    state.filters.nisarCoverage.clear();
+    state.filters.nisarBandwidth.clear();
+    return;
+  }
+  section.hidden = false;
+
+  // Product types follow the Sentinel-1 convention: an explicit selection
+  // seeded from the per-satellite defaults. Coverage and bandwidth instead
+  // treat "nothing selected" as "no restriction".
+  renderNisarFormatChips(pool);
+
+  const groups = [
+    { id: 'nisar-coverage-options', key: 'nisarCoverage', get: getNisarCoverage },
+    { id: 'nisar-bandwidth-options', key: 'nisarBandwidth', get: getNisarBandwidth },
+  ];
+  for (const group of groups) {
+    const wrap = document.getElementById(group.id);
+    if (!wrap) continue;
+    const values = [...new Set(pool.map(group.get).filter(Boolean))].sort();
+    const selected = state.filters[group.key];
+    // Drop selections that no longer exist in the pool.
+    for (const value of [...selected]) if (!values.includes(value)) selected.delete(value);
+    wrap.innerHTML = '';
+    for (const value of values) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      // No selection means no restriction, so render every chip as active.
+      button.className = 'format-chip' + (!selected.size || selected.has(value) ? ' on' : '');
+      button.textContent = value;
+      button.onclick = () => {
+        // First click switches from "all" to just the others.
+        if (!selected.size) for (const other of values) selected.add(other);
+        if (selected.has(value) && selected.size > 1) selected.delete(value);
+        else selected.add(value);
+        if (selected.size === values.length) selected.clear();
+        renderNisarOptions();
+        applyAdvancedFilters();
+      };
+      wrap.appendChild(button);
+    }
+  }
+  const summary = document.getElementById('nisar-summary');
+  if (summary) summary.textContent = t('n-nisar-frames', { n: pool.length });
+}
+
+function renderNisarFormatChips(pool) {
+  const wrap = document.getElementById('nisar-format-options');
+  if (!wrap) return;
+  const types = [...new Set(pool.map(frame => frame.product_type_norm).filter(Boolean))].sort();
+  const selected = state.filters.nisarFormats;
+  const stillValid = [...selected].filter(type => types.includes(type));
+  if (!stillValid.length) {
+    state.filters.nisarFormats = new Set(getDefaultFormatsForSatellite(types));
+  } else if (stillValid.length !== selected.size) {
+    state.filters.nisarFormats = new Set(stillValid);
+  }
+  wrap.innerHTML = '';
+  for (const type of types) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'format-chip' + (state.filters.nisarFormats.has(type) ? ' on' : '');
+    button.textContent = type;
+    button.onclick = () => {
+      const set = state.filters.nisarFormats;
+      if (set.has(type)) set.delete(type);
+      else set.add(type);
+      renderNisarOptions();
+      applyAdvancedFilters();
+    };
+    wrap.appendChild(button);
+  }
 }
 
 function resetAdvancedFilters(apply = true) {
@@ -1302,6 +1461,9 @@ function resetAdvancedFilters(apply = true) {
   state.filters.dateStart = window.start;
   state.filters.dateEnd = window.end;
   state.filters.formats = new Set(getDefaultFormatsForSatellite(allTypes));
+  state.filters.nisarFormats.clear();   // reseeded from defaults on next render
+  state.filters.nisarCoverage.clear();
+  state.filters.nisarBandwidth.clear();
   state.selectedSat = null;
 
   const satSel = document.getElementById('filter-satellite');
@@ -1337,7 +1499,20 @@ function frameMatchesAdvancedFilters(frame) {
   if (state.tab === 'op' && frame.sat_status === 'ret') return false;
   if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
   if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
-  if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) return false;
+  // Each mission carries its own product-type selection; NISAR additionally
+  // publishes several products per overpass that differ only by frame coverage
+  // and bandwidth mode. None of those fields exist for Sentinel-1, and a shared
+  // product-type Set would let one mission's selection hide the other entirely.
+  if (isNisarFrame(frame)) {
+    const { nisarFormats, nisarCoverage, nisarBandwidth } = state.filters;
+    if (nisarFormats.size && !nisarFormats.has(frame.product_type_norm)) return false;
+    const coverage = getNisarCoverage(frame);
+    const bandwidth = getNisarBandwidth(frame);
+    if (nisarCoverage.size && coverage && !nisarCoverage.has(coverage)) return false;
+    if (nisarBandwidth.size && bandwidth && !nisarBandwidth.has(bandwidth)) return false;
+  } else if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) {
+    return false;
+  }
 
   const pathMinVal = normalizeFrameNumber(state.filters.pathMin);
   const pathMaxVal = normalizeFrameNumber(state.filters.pathMax);
@@ -1362,7 +1537,9 @@ function getFrameBoundsPreview() {
     if (state.tab === 'op' && frame.sat_status === 'ret') return false;
     if (state.filters.satellite !== 'ALL' && frame.satellite_id !== state.filters.satellite) return false;
     if (state.filters.direction !== 'ALL' && frame.direction_norm !== state.filters.direction) return false;
-    if (state.filters.formats.size && !state.filters.formats.has(frame.product_type_norm)) return false;
+    // Per-mission product-type selection, matching frameMatchesAdvancedFilters.
+    const formats = isNisarFrame(frame) ? state.filters.nisarFormats : state.filters.formats;
+    if (formats.size && !formats.has(frame.product_type_norm)) return false;
     return frame.frame_number_norm !== null;
   }).map(frame => frame.frame_number_norm);
 }
@@ -1403,9 +1580,16 @@ function updateStats(data = state.baseStats || {}) {
   document.getElementById('st-frames').textContent = state.filteredFrames.length;
   document.getElementById('st-sats').textContent = new Set(state.filteredFrames.map(frame => frame.satellite_id)).size;
 
-  const start = new Date(data.query_start || Date.now() - 7 * 864e5);
-  const end = new Date(data.query_end || Date.now());
-  const fmt = value => `${value.getMonth()+1}/${value.getDate()}`;
+  // The window the user is actually looking at — the active date filter —
+  // not the span of the whole database. Falls back to the data range when no
+  // date filter is set. Sits next to the other two filter-driven counters.
+  const filterStart = parseDateInputValue(state.filters.dateStart);
+  const filterEnd = parseDateInputValue(state.filters.dateEnd);
+  const start = filterStart || new Date(data.query_start || Date.now() - 7 * 864e5);
+  const end = filterEnd || new Date(data.query_end || Date.now());
+  // A bare M/D is ambiguous once the range crosses a year boundary.
+  const withYear = start.getFullYear() !== end.getFullYear();
+  const fmt = value => (withYear ? `${value.getFullYear()}/` : '') + `${value.getMonth()+1}/${value.getDate()}`;
   document.getElementById('st-period').textContent = `${fmt(start)} - ${fmt(end)}`;
 
   const asf = state.filteredFrames.filter(frame => frame.asf_url).length;
@@ -1573,7 +1757,9 @@ function updateFilterHints() {
   frameMax.placeholder = String(max);
   const extra = t(state.filters.showOtherSentinelTracks ? 'with-other-tracks' : 'priority-only');
   const satLabel = state.filters.satellite === 'ALL' ? 'Sentinel-1 + NISAR' : state.filters.satellite;
-  note.textContent = t('note-formats', { sat: satLabel, formats: [...state.filters.formats].join(', ') || 'none', min, max, extra });
+  // Both missions' selections, since product types are now tracked separately.
+  const selectedFormats = [...state.filters.formats, ...state.filters.nisarFormats];
+  note.textContent = t('note-formats', { sat: satLabel, formats: selectedFormats.join(', ') || 'none', min, max, extra });
 }
 
 function openDrawer(sat, row, thisWeek) {
@@ -1890,6 +2076,11 @@ async function liveFetchASF() {
     const payload = await response.json();
     state.rawFrames = (payload.features || []).map(feature => {
       const p = feature.properties || {};
+      const list = value => (Array.isArray(value) ? value.filter(Boolean).join(',') : (value || ''));
+      // NISAR leaves polarization/beamModeType/sizeMB null and publishes its
+      // own fields instead — mirror process_nisar_feature() in fetch_sar_data.py.
+      const isNisar = String(p.platform || p.sceneName || '').toUpperCase().includes('NISAR');
+      const mainPol = list(p.mainBandPolarization);
       return enhanceFrame({
         source: 'ASF',
         granule: p.sceneName || '',
@@ -1898,7 +2089,7 @@ async function liveFetchASF() {
         date: p.startTime || '',
         stop_time: p.stopTime || '',
         mode: p.beamModeType || p.beamMode || '',
-        polarization: p.polarization || '',
+        polarization: isNisar ? mainPol : (p.polarization || ''),
         orbit: p.orbit || '',
         path_number: p.pathNumber || '',
         frame_number: p.frameNumber || '',
@@ -1907,7 +2098,15 @@ async function liveFetchASF() {
         processing_level: p.processingLevel || '',
         footprint: feature.geometry,
         asf_url: p.url || '',
-        file_size_mb: +(p.sizeMB || 0).toFixed(1),
+        file_size_mb: isNisar ? nisarSizeMB(p.bytes) : +(p.sizeMB || 0).toFixed(1),
+        ...(isNisar ? {
+          frame_coverage: p.frameCoverage || '',
+          main_polarization: mainPol,
+          side_polarization: list(p.sideBandPolarization),
+          range_bandwidth: list(p.rangeBandwidth),
+          crid: p.crid || '',
+          collection: p.collectionName || '',
+        } : {}),
       });
     }).filter(frame => frame.is_open_data);
     rebuildFrameCaches();
@@ -1994,6 +2193,68 @@ function getFrameAcquisitionInfo(frame) {
   return { key, startMs, stopMs, label };
 }
 
+// Pull NISAR's own fields out of a granule name. Used as a fallback for
+// catalog records stored before the NISAR-specific metadata was captured.
+// The five trailing fields (CRID, accuracy, coverage, location, counter) are
+// anchored to the end, which is layout-independent — GUNW pair products carry
+// an extra cycle and an extra date pair in the middle.
+function parseNisarGranuleFields(granule) {
+  const parts = String(granule || '').trim().split('_');
+  if (parts[0] !== 'NISAR' || parts.length < 18) return {};
+  const isPair = parts.length >= 20;
+  const modeIndex = isPair ? 9 : 8;
+  const pole = String(parts[modeIndex + 1] || '');
+  const tail = parts.length;
+  return {
+    track: parts[5],
+    frame: parts[7],
+    direction: (NISAR_DIRECTION[parts[6]] || parts[6] || '').toUpperCase(),
+    range_bandwidth: formatNisarBandwidth(parts[modeIndex]),
+    main_polarization: NISAR_POL[pole.slice(0, 2)] || pole.slice(0, 2),
+    side_polarization: NISAR_POL[pole.slice(2)] || pole.slice(2),
+    start: parts[11],
+    stop: isPair ? parts[14] : parts[12],
+    crid: parts[tail - 5],
+    frame_coverage: NISAR_COVERAGE[parts[tail - 3]] || parts[tail - 3],
+  };
+}
+
+// NISAR publishes a different metadata scheme from Sentinel-1 — frame
+// coverage, per-band polarizations, range bandwidth and a CRID, with none of
+// S1's beam mode / single polarization fields. Show NISAR's own fields rather
+// than forcing them into the Sentinel-1 shape.
+function buildFrameMetaRows(frame) {
+  const granule = frame?.granule || '';
+  if (!/^NISAR_/.test(String(granule))) return parseGranuleMetadata(granule);
+
+  const named = parseNisarGranuleFields(granule);
+  // Prefer values ASF supplied; fall back to the granule name.
+  const pick = (...values) => values.find(value => value !== undefined && value !== null && value !== '') || '--';
+  // UTC, 24-hour, matching how ASF presents NISAR acquisition times.
+  const time = value => {
+    if (!value) return '--';
+    const date = parseNisarCompactTime(value) || new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US', {
+      timeZone: 'UTC', hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }) + 'Z';
+  };
+  return [
+    { label: 'Start Time', value: time(pick(frame.date, named.start)) },
+    { label: 'Stop Time', value: time(pick(frame.stop_time, named.stop)) },
+    { label: 'Track', value: pick(getFramePathNumber(frame), named.track) },
+    { label: 'Frame', value: pick(frame.frame_number_norm, frame.frame_number, named.frame) },
+    { label: 'Flight Direction', value: pick(frame.direction_norm, frame.direction, named.direction) },
+    { label: 'Frame Coverage', value: pick(frame.frame_coverage, named.frame_coverage) },
+    { label: 'Main Polarization', value: pick(frame.main_polarization, named.main_polarization) },
+    { label: 'Side Polarization', value: pick(frame.side_polarization, named.side_polarization) },
+    { label: 'Range Bandwidth', value: pick(frame.range_bandwidth, named.range_bandwidth) },
+    { label: 'CRID', value: pick(frame.crid, named.crid) },
+  ];
+}
+
 function parseGranuleMetadata(granule) {
   const text = String(granule || '').replace(/\.SAFE$/i, '').trim();
   if (!text) return [];
@@ -2017,26 +2278,50 @@ function parseGranuleMetadata(granule) {
 
   if (/^NISAR_/.test(text)) {
     const parts = text.split('_');
-    const start = parts[10] || '';
-    const stop = parts[11] || '';
-    return [
-      { label: 'Mission', value: parts[0] || '--' },
-      { label: 'Level', value: parts[1] || '--' },
-      { label: 'Instrument', value: parts[2] || '--' },
-      { label: 'Product', value: parts[3] || '--' },
-      { label: 'Release', value: parts[4] || '--' },
-      { label: 'Orbit', value: parts[5] || '--' },
-      { label: 'Direction', value: parts[6] || '--' },
-      { label: 'Track', value: parts[7] || '--' },
-      { label: 'Frame Group', value: parts[8] || '--' },
-      { label: 'Pol', value: parts[9] || '--' },
-      { label: 'Start', value: start || '--' },
-      { label: 'Stop', value: stop || '--' },
-      { label: 'Build', value: parts[12] || '--' },
-      { label: 'Mode', value: parts[13] || '--' },
-      { label: 'Provider', value: parts[14] || '--' },
-      { label: 'Version', value: parts[15] || '--' },
+    // NISAR granules use two layouts. Interferograms (GUNW) describe a pair of
+    // acquisitions, so they carry an extra cycle number and a second date pair:
+    //   standard (18): ..frame_frameGroup_pol_procType_start_end_crid_..
+    //   GUNW     (20): ..frame_secCycle_frameGroup_pol_refStart_refEnd_secStart_secEnd_crid_..
+    // Field positions verified against ASF metadata: parts[5] is the track
+    // (relative orbit) and parts[7] the frame -- not the other way round.
+    const isPair = parts.length >= 20;
+    const v = index => parts[index] || '--';
+    const decode = (map, raw) => (map[raw] ? `${raw} (${map[raw]})` : raw || '--');
+    const instrument = (parts[1] || '').slice(0, 1);
+    const level = (parts[1] || '').slice(1);
+    const rows = [
+      { label: 'Mission', value: v(0) },
+      { label: 'Beam Mode', value: decode(NISAR_INSTRUMENT, instrument) },
+      { label: 'Level', value: level || '--' },
+      { label: 'Processing Type', value: decode(NISAR_PROCESSING_TYPE, v(2)) },
+      { label: 'Product', value: v(3) },
+      { label: 'Cycle', value: v(4) },
+      { label: 'Track', value: v(5) },
+      { label: 'Direction', value: decode(NISAR_DIRECTION, v(6)) },
+      { label: 'Frame', value: v(7) },
     ];
+    // Index of the first field after the frame number, which is where the
+    // two layouts diverge.
+    let i = 8;
+    if (isPair) rows.push({ label: 'Secondary Cycle', value: v(i++) });
+    rows.push({ label: 'Range Bandwidth', value: formatNisarBandwidth(v(i++)) });
+    rows.push({ label: 'Polarization', value: formatNisarPolarization(v(i++)) });
+    if (!isPair) rows.push({ label: 'Source', value: decode(NISAR_SOURCE, v(i++)) });
+    if (isPair) {
+      rows.push({ label: 'Ref Start', value: v(i++) });
+      rows.push({ label: 'Ref Stop', value: v(i++) });
+      rows.push({ label: 'Sec Start', value: v(i++) });
+      rows.push({ label: 'Sec Stop', value: v(i++) });
+    } else {
+      rows.push({ label: 'Start', value: v(i++) });
+      rows.push({ label: 'Stop', value: v(i++) });
+    }
+    rows.push({ label: 'CRID', value: v(i++) });
+    rows.push({ label: 'Accuracy', value: decode(NISAR_ACCURACY, v(i++)) });
+    rows.push({ label: 'Coverage', value: decode(NISAR_COVERAGE, v(i++)) });
+    rows.push({ label: 'Location', value: decode(NISAR_LOCATION, v(i++)) });
+    rows.push({ label: 'Counter', value: v(i++) });
+    return rows;
   }
 
   return [{ label: 'Granule', value: text }];
@@ -2053,6 +2338,15 @@ function formatDateInputValue(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// Inverse of formatDateInputValue. Built from parts rather than new Date(str)
+// because 'YYYY-MM-DD' parses as UTC midnight and can shift a day west of UTC.
+function parseDateInputValue(text) {
+  const parts = String(text || '').split('-').map(Number);
+  if (parts.length !== 3 || !parts.every(Number.isFinite)) return null;
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+  return Number.isFinite(date.getTime()) ? date : null;
 }
 
 function getDefaultWeekWindow() {
@@ -2146,8 +2440,9 @@ function computeNextExpected() {
     if (!current || String(frame.date || '') > String(current.date || ''))
       groups.set(visual.label, frame);
   }
-  const preferredOrder = ['A69', 'D105', 'NISAR A39', 'NISAR A111', 'NISAR D61', 'NISAR D133'];
-  const lines = [...groups.entries()]
+  // Must match the labels from getFrameVisualInfo.
+  const preferredOrder = ['S1 A69', 'S1 D105', 'NISAR A39', 'NISAR A111', 'NISAR D61', 'NISAR D133'];
+  const items = [...groups.entries()]
     .sort((a, b) => {
       const ai = preferredOrder.indexOf(a[0]);
       const bi = preferredOrder.indexOf(b[0]);
@@ -2155,9 +2450,16 @@ function computeNextExpected() {
       return a[0].localeCompare(b[0]);
     })
     .slice(0, 6)
-    .map(([label, frame]) => { const d = new Date(frame.date); return `${label} ${d.getMonth()+1}/${d.getDate()}`; });
-  const key = lines.some(l => l.startsWith('NISAR')) ? 'latest-visible' : 'latest-a69-d105';
-  return { key, label: t(key), value: lines.length ? lines.join(' | ') : t('need-history') };
+    .map(([label, frame]) => {
+      const d = new Date(frame.date);
+      return { label, date: `${d.getMonth() + 1}/${d.getDate()}`, color: getFrameVisualInfo(frame).color };
+    });
+  const key = items.some(item => item.label.startsWith('NISAR')) ? 'latest-visible' : 'latest-a69-d105';
+  return {
+    key, label: t(key), items,
+    // Plain-text form, still used by the Stats panel KPI.
+    value: items.length ? items.map(i => `${i.label} ${i.date}`).join(' | ') : t('need-history'),
+  };
 }
 
 function updateNextExpected() {
@@ -2166,7 +2468,16 @@ function updateNextExpected() {
   if (!el) return;
   const result = computeNextExpected();
   if (labelEl) { labelEl.dataset.latestKey = result.key; labelEl.textContent = result.label; }
-  el.textContent = result.value;
+  // Rendered as a compact wrapping grid rather than one long line — joined
+  // with ' | ' it stretched the card across the map and hid the frames.
+  el.innerHTML = result.items.length
+    ? result.items.map(item => `
+        <span class="nx-item">
+          <i class="nx-dot" style="background:${item.color}"></i>
+          <span class="nx-trk">${escapeHtml(item.label)}</span>
+          <span class="nx-date">${escapeHtml(item.date)}</span>
+        </span>`).join('')
+    : `<span class="nx-empty">${escapeHtml(t('need-history'))}</span>`;
 }
 
 function renderFrames() {
@@ -2177,7 +2488,7 @@ function renderFrames() {
   const seenKeys = new Set();
 
   for (const frame of state.filteredFrames) {
-    const geom = frame.footprint;
+    const geom = normalizeFootprint(frame.footprint);
     if (!geom || geom.type !== 'Polygon' || !Array.isArray(geom.coordinates)) continue;
 
     const key = getFrameKey(frame);
@@ -2349,7 +2660,7 @@ function openFrameDrawer(clickedFrame) {
       const asfUrl = frame.asf_url || '';
       const cdseUrl = frame.copernicus_url || frame.download_url || '';
       const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
-      const granuleMeta = parseGranuleMetadata(frame.granule)
+      const granuleMeta = buildFrameMetaRows(frame)
         .map(item => `<div class="d-link-meta-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`)
         .join('');
       const actions = [
@@ -2360,10 +2671,23 @@ function openFrameDrawer(clickedFrame) {
       return `
         <div class="d-link-card">
           <div class="d-link-title">
-            ${escapeHtml(frame.granule || 'Unknown Granule')}
+            ${escapeHtml(frame.granule || 'Unknown Granule')}${(() => {
+              // Release-tier sticker; NISAR only.
+              const release = getNisarRelease(frame);
+              return release
+                ? `<span class="rel-badge rel-${release.cls}" title="${escapeHtml(t(release.key))}">${escapeHtml(release.label)}</span>`
+                : '';
+            })()}
           </div>
           <div class="d-link-top">
-            <span>${escapeHtml(frame.product_type_norm || 'OCN')} / ${escapeHtml(size)}</span>
+            <span>${escapeHtml(
+              // NISAR ships several products per overpass differing only in
+              // coverage and bandwidth; without them the cards look identical.
+              isNisarFrame(frame)
+                ? [frame.product_type_norm, getNisarCoverage(frame), getNisarBandwidth(frame), size]
+                    .filter(Boolean).join(' / ')
+                : `${frame.product_type_norm || 'OCN'} / ${size}`
+            )}</span>
             <span>${escapeHtml(frame.date ? new Date(frame.date).toLocaleString(state.lang === 'zh-TW' ? 'zh-TW' : 'en-US') : '--')}</span>
           </div>
           <div class="d-link-submeta">
@@ -2399,13 +2723,68 @@ function openFrameDrawer(clickedFrame) {
 // STATS PANEL
 // ═══════════════════════════════════════════════════════════════════════════
 
-const STATS_CELL_STEPS = [1, 2, 3, 5, 7, 14, 30];
+// Cell sizes in HOURS, so the chart can resolve individual passes (Sentinel-1
+// and NISAR cross Taiwan at fixed times of day) as well as long-term cadence.
+const STATS_CELL_STEPS = [1, 3, 6, 12, 24, 48, 72, 120, 168, 336, 720];
+const STATS_CELL_DEFAULT_IDX = STATS_CELL_STEPS.indexOf(24);   // 1 day
+
+function statsCellHours() {
+  return STATS_CELL_STEPS[statsState.cellIdx] ?? 24;
+}
+// Filename-safe cell size, e.g. '6h' / '1d'.
+function statsCellTag() {
+  const hours = statsCellHours();
+  return hours < 24 ? `${hours}h` : `${hours / 24}d`;
+}
+function formatCellSize(hours) {
+  return hours < 24 ? `${hours}${t('stats-hour-suffix')}` : `${hours / 24}${t('stats-day-suffix')}`;
+}
 const STATS_CHART_SATS = ['S1A', 'S1C', 'S1D', 'NISAR'];
 const STATS_S1_IDS     = new Set(['S1A', 'S1C', 'S1D']);
-const STATS_S1_TRACKS  = [69, 105, 142, 171];
+// Only the two priority Taiwan tracks are charted; T142/T171 clip the area
+// and were dropped from the stats controls.
+const STATS_S1_TRACKS  = [69, 105];
+// NISAR flies its own Taiwan tracks and gets its own chips, keyed by
+// direction+path so ascending and descending stay distinct.
+const STATS_NISAR_TRACKS = [
+  { key: 'A39',  path: 39,  dir: 'ASCENDING'  },
+  { key: 'A111', path: 111, dir: 'ASCENDING'  },
+  { key: 'D61',  path: 61,  dir: 'DESCENDING' },
+  { key: 'D133', path: 133, dir: 'DESCENDING' },
+];
+
+function nisarTrackKey(frame) {
+  const dir = frame?.direction_norm || frame?.direction || '';
+  const prefix = dir === 'ASCENDING' ? 'A' : dir === 'DESCENDING' ? 'D' : '?';
+  return `${prefix}${frame?.path_number_norm ?? ''}`;
+}
 const STATS_SAT_DEFAULT_COLORS = {
   S1A: '#29b6f6', S1C: '#ce93d8', S1D: '#4db6ac', NISAR: '#ffb74d',
 };
+
+// Acquisition counts use ONE canonical product per mission. A single overpass
+// is delivered as several products -- NISAR ships RSLC + GSLC + GCOV + SME2
+// (+ GUNW pairs), Sentinel-1 ships SLC + GRD + RAW + OCN + ETAD -- so counting
+// every product type would multiply each pass.
+// Verified against the current catalog: RSLC covers all 35 NISAR acquisitions,
+// SLC covers 1082 of 1088 Sentinel-1 ones.
+const STATS_CANONICAL_PRODUCT = { S1A: 'SLC', S1C: 'SLC', S1D: 'SLC', NISAR: 'RSLC' };
+
+function statsIsCanonicalProduct(frame) {
+  const wanted = STATS_CANONICAL_PRODUCT[frame.satellite_id];
+  return !wanted || frame.product_type_norm === wanted;
+}
+
+// Track chips only govern Sentinel-1; NISAR flies its own Taiwan tracks
+// (39/111 ascending, 61/133 descending) and is never filtered by them.
+function statsTrackAllowed(frame) {
+  const satId = String(frame.satellite_id || '');
+  if (satId === 'NISAR') return statsState.activeNisarTracks.has(nisarTrackKey(frame));
+  // Every Sentinel-1 platform, not just the charted ones — retired S1B also
+  // appears in the track table and must honour the same track selection.
+  if (/^S1/.test(satId)) return statsState.activeTracks.has(frame.path_number_norm);
+  return true;
+}
 
 function getSatColors() {
   try {
@@ -2434,9 +2813,10 @@ const statsState = {
   chartPreset:  '6mo',  // '1mo' | '6mo' | '1yr' | 'custom'
   chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
   chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
-  cellIdx:    0,
+  cellIdx:    STATS_CELL_DEFAULT_IDX,
   activeSats:   new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
-  activeTracks: new Set([69, 105]),  // T142 & T171 excluded by default
+  activeTracks: new Set(STATS_S1_TRACKS),
+  activeNisarTracks: new Set(STATS_NISAR_TRACKS.map(track => track.key)),
   pass:         'ALL',
   sortBy:       'lastDate',
   expanded:     new Set(STATS_CHART_SATS),  // featured sats open by default
@@ -2570,6 +2950,8 @@ function buildFrequencyStats() {
   const frames = state.rawFrames || [];
   const groups = new Map();
   for (const f of frames) {
+    // Same track selection as the chart, so the two panels agree.
+    if (!statsTrackAllowed(f)) continue;
     const satId = f.satellite_id || 'UNKNOWN';
     const track = f.path_number_norm ?? null;
     const dir   = f.direction_norm  || 'UNKNOWN';
@@ -2632,51 +3014,53 @@ function buildFrequencyStats() {
 }
 
 function buildChartBuckets() {
-  const frames    = state.rawFrames || [];
-  const cellDays  = STATS_CELL_STEPS[statsState.cellIdx];
+  const frames     = state.rawFrames || [];
+  const cellMs     = statsCellHours() * 3600e3;
   const activeSats = statsState.activeSats;
   const pass = statsState.pass;
   const { start, end } = getChartDateRange();
-  const startStr = start.toISOString().slice(0, 10);
-  const endStr   = end.toISOString().slice(0, 10);
+  const startMs = start.getTime();
+  const endMs   = end.getTime();
   const relevant = frames.filter(f => {
     if (!f.date || !activeSats.has(f.satellite_id)) return false;
-    if (f.date.slice(0, 10) < startStr || f.date.slice(0, 10) >= endStr) return false;
+    const t = Date.parse(f.date);
+    if (!Number.isFinite(t) || t < startMs || t >= endMs) return false;
     if (pass !== 'ALL' && f.direction_norm !== pass) return false;
-    if (STATS_S1_IDS.has(f.satellite_id) && !statsState.activeTracks.has(f.path_number_norm)) return false;
-    if (STATS_S1_IDS.has(f.satellite_id) && f.product_type_norm !== 'SLC') return false;
-    if (f.satellite_id === 'NISAR' && f.product_type_norm !== 'RSLC') return false;
+    if (!statsTrackAllowed(f)) return false;
+    if (!statsIsCanonicalProduct(f)) return false;
     return true;
   });
   const tileKeyMap = buildTileKeyMap(relevant);
-  const buckets = [];
-  let cursor = new Date(start);
-  while (cursor < end) {
-    const bEnd = new Date(cursor);
-    bEnd.setDate(bEnd.getDate() + cellDays);
-    if (bEnd > end) bEnd.setTime(end.getTime());
-    const bs = cursor.toISOString().slice(0, 10);
-    const be = bEnd.toISOString().slice(0, 10);
+
+  const count = Math.max(1, Math.ceil((endMs - startMs) / cellMs));
+  const buckets = Array.from({ length: count }, (_, i) => {
+    const bStart = new Date(startMs + i * cellMs);
     const counts = {};
     for (const id of activeSats) counts[id] = 0;
-    const seen = new Set();
-    for (const f of relevant) {
-      const d = f.date.slice(0, 10);
-      if (d >= bs && d < be) {
-        // Deduplicate: same physical acquisition can appear from multiple sources (ASF + Copernicus)
-        // and multiple product types. Count each unique frame scene only once.
-        const acqKey = `${f.satellite_id}|${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, tileKeyMap)}`;
-        if (!seen.has(acqKey)) {
-          seen.add(acqKey);
-          counts[f.satellite_id] = (counts[f.satellite_id] || 0) + 1;
-        }
-      }
-    }
-    buckets.push({
-      label: bs, start: new Date(cursor), end: new Date(bEnd),
-      counts, total: Object.values(counts).reduce((a, b) => a + b, 0),
-    });
-    cursor = new Date(bEnd);
+    return {
+      label: bStart.toISOString().slice(0, 10),
+      start: bStart,
+      end: new Date(Math.min(startMs + (i + 1) * cellMs, endMs)),
+      counts, total: 0,
+    };
+  });
+
+  // Assign each frame to its bucket in one pass. Bucketing every frame against
+  // every bucket is far too slow once cells are hour-sized (a year at 1 h is
+  // ~8 800 buckets).
+  const seen = new Set();
+  for (const f of relevant) {
+    const index = Math.floor((Date.parse(f.date) - startMs) / cellMs);
+    if (index < 0 || index >= count) continue;
+    // Deduplicate: the same physical acquisition appears from multiple sources
+    // (ASF + Copernicus) and multiple product types. Count each scene once.
+    // Keyed by day, so sub-day cells still collapse one pass into one count.
+    const acqKey = `${index}|${f.satellite_id}|${f.date.slice(0, 10)}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, tileKeyMap)}`;
+    if (seen.has(acqKey)) continue;
+    seen.add(acqKey);
+    const bucket = buckets[index];
+    bucket.counts[f.satellite_id] = (bucket.counts[f.satellite_id] || 0) + 1;
+    bucket.total += 1;
   }
   return buckets;
 }
@@ -2720,7 +3104,7 @@ function formatStatsDirectionShort(dir) {
 }
 
 function buildStatsPanelHTML() {
-  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const cellHours = statsCellHours();
 
   const presetHTML = [['1mo','stats-preset-1mo'],['6mo','stats-preset-6mo'],['1yr','stats-preset-1yr'],['custom','stats-preset-custom']].map(([k,labelKey]) =>
     `<button class="stats-chip${statsState.chartPreset === k ? ' on' : ''}" onclick="statsSetPreset('${k}')">${t(labelKey)}</button>`
@@ -2762,6 +3146,9 @@ function buildStatsPanelHTML() {
   const trackChipHTML = STATS_S1_TRACKS.map(t =>
     `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
   ).join('');
+  const nisarTrackChipHTML = STATS_NISAR_TRACKS.map(track =>
+    `<button class="stats-chip${statsState.activeNisarTracks.has(track.key) ? ' on' : ''}" onclick="statsToggleNisarTrack('${track.key}')">${track.key}</button>`
+  ).join('');
 
   const legendHTML = STATS_CHART_SATS
     .filter(id => statsState.activeSats.has(id))
@@ -2771,9 +3158,14 @@ function buildStatsPanelHTML() {
   // KPI values — computed fresh each render from current state
   const data    = state.baseStats || {};
   const frames  = state.filteredFrames || [];
-  const fmtD    = v => `${v.getMonth()+1}/${v.getDate()}`;
-  const qStart  = new Date(data.query_start || Date.now() - 7*864e5);
-  const qEnd    = new Date(data.query_end   || Date.now());
+  // Same window the header KPI shows: the active date filter, not the whole
+  // database span.
+  const qStart  = parseDateInputValue(state.filters?.dateStart)
+    || new Date(data.query_start || Date.now() - 7*864e5);
+  const qEnd    = parseDateInputValue(state.filters?.dateEnd)
+    || new Date(data.query_end || Date.now());
+  const qSpansYears = qStart.getFullYear() !== qEnd.getFullYear();
+  const fmtD    = v => (qSpansYears ? `${v.getFullYear()}/` : '') + `${v.getMonth()+1}/${v.getDate()}`;
   const next    = computeNextExpected();
   const kpiHTML = `
     <div class="stats-kpi-card">
@@ -2812,7 +3204,7 @@ function buildStatsPanelHTML() {
           <span class="stats-ctrl-lbl">${t('stats-cell-size')}</span>
           <div class="stats-stepper">
             <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx - 1})">−</button>
-            <span class="sts-val">${cellDays}${t('stats-day-suffix')}</span>
+            <span class="sts-val">${formatCellSize(cellHours)}</span>
             <button class="sts-btn" onclick="statsSetCellIdx(${statsState.cellIdx + 1})">+</button>
           </div>
         </div>
@@ -2827,6 +3219,10 @@ function buildStatsPanelHTML() {
         <div class="stats-ctrl-row">
           <span class="stats-ctrl-lbl">${t('stats-s1-tracks')}</span>
           <div class="stats-chips">${trackChipHTML}</div>
+        </div>
+        <div class="stats-ctrl-row">
+          <span class="stats-ctrl-lbl">${t('stats-nisar-tracks')}</span>
+          <div class="stats-chips">${nisarTrackChipHTML}</div>
         </div>
       </div>
       <div class="stats-chart-scroll">
@@ -2985,6 +3381,15 @@ function buildSparklineSvg(data) {
   </div>`;
 }
 
+// Tooltip label for a bucket — includes the hour once cells are sub-day.
+function statsBucketLabel(bucket, cellHours) {
+  const d = bucket.start;
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return cellHours < 24
+    ? `${day} ${String(d.getHours()).padStart(2, '0')}:00`
+    : day;
+}
+
 function renderStatsChart() {
   const wrap = document.getElementById('stats-chart-wrap');
   if (!wrap) return;
@@ -3011,25 +3416,29 @@ function renderStatsChart() {
   const niceMax = yTicks[yTicks.length - 1];
 
   // Always fit all bars within the container — no horizontal scroll.
-  // Drop inter-bar gaps when bars are dense so every bar stays ≥ 1 px wide.
+  // Use a fractional stride so the bars span the full width: an integer stride
+  // truncates up to one pixel per bar, which left a visible empty strip on the
+  // right for dense ranges (a year at 1-day cells lost ~20% of the width).
   const containerW = Math.max(200, (wrap.parentElement?.clientWidth || 600) - 28);
-  const n   = buckets.length;
-  const GAP = (containerW / n) > 4 ? 2 : 0;
-  const BAR_W = Math.max(1, Math.floor((containerW - GAP * (n - 1)) / n));
-  const stride = BAR_W + GAP;
-  const svgW   = n * stride - GAP;  // no trailing gap
+  const n      = buckets.length;
+  const stride = containerW / n;
+  const GAP    = stride > 4 ? 2 : 0;
+  const BAR_W  = Math.max(1, stride - GAP);
+  const svgW   = containerW;
 
   // Show a label every N bars so adjacent labels don't overlap.
-  // Label width ~30px for "M/DD", ~36px for "Mon'YY".
-  const cellDays    = STATS_CELL_STEPS[statsState.cellIdx];
-  const labelW      = cellDays >= 28 ? 36 : 30;
+  // Label width ~30px for "M/DD", ~36px for "Mon'YY", ~46px with a time.
+  const cellHours   = statsCellHours();
+  const labelW      = cellHours >= 672 ? 36 : cellHours < 24 ? 46 : 30;
   const labelEvery  = Math.max(1, Math.ceil(labelW / stride));
 
   let gridSVG = `<line x1="0" y1="${barH}" x2="${svgW}" y2="${barH}" class="schart-grid" stroke-dasharray="none"/>`;
   for (const tick of yTicks) {
-    const y    = (barH - (tick / niceMax) * barH).toFixed(1);
-    const lblY = Math.max(9, Number(y) - 2);
-    gridSVG += `<line x1="0" y1="${y}" x2="${svgW}" y2="${y}" class="schart-grid"/>`;
+    const y = barH - (tick / niceMax) * barH;
+    // Sit every label just below its gridline. Previously only the top tick
+    // ended up below (it was clamped), leaving the rest above — inconsistent.
+    const lblY = Math.min(barH - 2, y + 9);
+    gridSVG += `<line x1="0" y1="${y.toFixed(1)}" x2="${svgW}" y2="${y.toFixed(1)}" class="schart-grid"/>`;
     gridSVG += `<text x="2" y="${lblY.toFixed(1)}" class="schart-glabel">${tick}</text>`;
   }
 
@@ -3045,15 +3454,21 @@ function renderStatsChart() {
       const h = Math.max(1, Math.round((cnt / niceMax) * barH));
       stackY -= h;
       const clr = barSatColors[satId] || '#29b6f6';
-      barsSVG += `<rect x="${x}" y="${stackY}" width="${BAR_W}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${b.label} · ${satId}: ${cnt}</title></rect>`;
+      // Clamp so the final bar cannot spill past the viewBox when the minimum
+      // 1 px width exceeds the stride (a year at 1 h cells).
+      const w = Math.min(BAR_W, svgW - x);
+      barsSVG += `<rect x="${x.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${statsBucketLabel(b, cellHours)} · ${satId}: ${cnt}</title></rect>`;
     }
     if (i % labelEvery === 0) {
       const d   = b.start;
       const locale = state.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
-      const lbl = cellDays >= 28
+      const lbl = cellHours >= 672
         ? `${d.toLocaleString(locale, { month: 'short' })}'${String(d.getFullYear()).slice(2)}`
-        : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
-      labelsSVG += `<text x="${x + BAR_W / 2}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
+        : cellHours < 24
+          // Sub-day cells need the time to be readable at all.
+          ? `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}h`
+          : `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
+      labelsSVG += `<text x="${(x + BAR_W / 2).toFixed(2)}" y="${cH - 4}" class="schart-label" text-anchor="middle">${lbl}</text>`;
     }
   }
 
@@ -3098,6 +3513,15 @@ function statsToggleTrack(t) {
     if (statsState.activeTracks.size > 1) statsState.activeTracks.delete(t);
   } else {
     statsState.activeTracks.add(t);
+  }
+  renderStatsPanel();
+}
+function statsToggleNisarTrack(key) {
+  const set = statsState.activeNisarTracks;
+  if (set.has(key)) {
+    if (set.size > 1) set.delete(key);
+  } else {
+    set.add(key);
   }
   renderStatsPanel();
 }
@@ -3167,13 +3591,15 @@ function statsBarClick(event, bucketIdx, satId) {
   const frames = state.rawFrames || [];
   const bsDate = b.start.toISOString().slice(0, 10);
   const beDate = b.end.toISOString().slice(0, 10);
+  // Compare timestamps, not date strings: a sub-day cell starts and ends on the
+  // same calendar day, so a string range would match nothing.
+  const bsMs = b.start.getTime();
+  const beMs = b.end.getTime();
   const inBucket = frames.filter(f =>
     f.satellite_id === satId && f.date &&
-    f.date.slice(0, 10) >= bsDate && f.date.slice(0, 10) < beDate &&
+    Date.parse(f.date) >= bsMs && Date.parse(f.date) < beMs &&
     (statsState.pass === 'ALL' || f.direction_norm === statsState.pass) &&
-    (!STATS_S1_IDS.has(f.satellite_id) || statsState.activeTracks.has(f.path_number_norm)) &&
-    !(STATS_S1_IDS.has(f.satellite_id) && f.product_type_norm !== 'SLC') &&
-    !(f.satellite_id === 'NISAR' && f.product_type_norm !== 'RSLC')
+    statsTrackAllowed(f) && statsIsCanonicalProduct(f)
   );
 
   // Deduplicate same as buildChartBuckets: unique frame scene per date/path/dir
@@ -3194,9 +3620,12 @@ function statsBarClick(event, bucketIdx, satId) {
   const tracks = [...trackMap.values()].sort((a, c) => c.count - a.count);
 
   const clr = getSatColors()[satId] || '#29b6f6';
-  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const cellHours = statsCellHours();
+  // Sub-day cells describe a single instant range; day+ cells span dates.
   const endLabel = new Date(b.end.getTime() - 86400000).toISOString().slice(0, 10);
-  const periodLabel = cellDays === 1 ? b.label : `${b.label} – ${endLabel}`;
+  const periodLabel = cellHours <= 24
+    ? statsBucketLabel(b, cellHours)
+    : `${b.label} – ${endLabel}`;
 
   const trackHTML = tracks.map(trackInfo => {
     const dirSh    = formatStatsDirectionShort(trackInfo.dir || '?');
@@ -3230,10 +3659,14 @@ function statsBarClick(event, bucketIdx, satId) {
 function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
   ensureAdvancedState();
 
-  // Bucket end is exclusive; compute inclusive end for the date filter
+  // Bucket end is exclusive; compute inclusive end for the date filter.
+  // A sub-day cell begins and ends on the same day, so never step back past
+  // the start or the resulting range would be empty.
   const endDate = new Date(beDateExclusive);
   endDate.setDate(endDate.getDate() - 1);
-  const dateEnd = endDate.toISOString().slice(0, 10);
+  const dateEnd = endDate.toISOString().slice(0, 10) < bsDate
+    ? bsDate
+    : endDate.toISOString().slice(0, 10);
 
   // Satellite
   const effectiveSat = satId || 'ALL';
@@ -3362,11 +3795,11 @@ function statsExportChartSVG() {
   ].join(' ');
   clone.insertBefore(styleEl, clone.firstChild);
 
-  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const cellTag = statsCellTag();
   const rangeTag = statsState.chartPreset === 'custom'
     ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
   triggerDownload(
-    `sar_chart_${rangeTag}_${cellDays}d.svg`,
+    `sar_chart_${rangeTag}_${cellTag}.svg`,
     new XMLSerializer().serializeToString(clone),
     'image/svg+xml'
   );
@@ -3383,11 +3816,11 @@ function statsExportChartCSV() {
     ...sats.map(id => b.counts[id] || 0),
     b.total,
   ]);
-  const cellDays = STATS_CELL_STEPS[statsState.cellIdx];
+  const cellTag = statsCellTag();
   const rangeTag2 = statsState.chartPreset === 'custom'
     ? `${statsState.chartStart}_${statsState.chartEnd}` : statsState.chartPreset;
   triggerDownload(
-    `sar_chart_${rangeTag2}_${cellDays}d.csv`,
+    `sar_chart_${rangeTag2}_${cellTag}.csv`,
     '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n'),
     'text/csv;charset=utf-8'
   );
