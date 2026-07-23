@@ -1393,6 +1393,96 @@ header {
 }
 .stats-close:hover { color: var(--text-hi); border-color: var(--cyan); }
 
+/* ── Appearance gear + popover ──────────────────────────────────────────── */
+.stats-gear {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 3px 6px;
+  margin-right: 6px;
+  cursor: pointer;
+  line-height: 0;
+  transition: color .15s, border-color .15s, transform .25s;
+}
+.stats-gear:hover { color: var(--text-hi); border-color: var(--cyan); }
+.stats-gear.on {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  transform: rotate(60deg);
+}
+.stats-style-pop {
+  position: absolute;
+  top: 46px; right: 12px;
+  z-index: 20;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+.sty-sec + .sty-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.sty-sec-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sty-reset {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 1px);
+  padding: 2px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sty-reset:hover { color: var(--cyan); border-color: var(--cyan); }
+.sty-colors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 6px;
+}
+.sty-color {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+}
+.sty-color:hover { border-color: var(--border2); }
+.sty-color-dot { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; }
+.sty-color-id {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  color: var(--text);
+}
+/* The native swatch is unstyleable across browsers; cover it and drive the
+   dot instead, so the row reads consistently. */
+.sty-color input[type="color"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
 .stats-panel-body {
   flex: 1;
   overflow-y: auto;
@@ -2299,22 +2389,17 @@ header {
 
 
 /* ── Chart appearance panel ─────────────────────────────────────────────── */
-.stats-style-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 6px 16px;
-  padding: 10px 0 4px;
-}
 .sty-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 2px 0;
 }
 .sty-lbl {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 2px);
   color: var(--muted);
-  flex: 0 0 84px;
+  flex: 0 0 78px;
   text-transform: uppercase;
   letter-spacing: .5px;
 }
