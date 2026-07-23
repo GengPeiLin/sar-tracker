@@ -454,6 +454,16 @@ header {
   flex-wrap: wrap;
   gap: 6px;
 }
+/* Sub-heading above a chip row inside a filter section (NISAR options). */
+.filter-sub-lbl {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 8px 0 5px;
+}
+.filter-sub-lbl:first-child { margin-top: 0; }
 .format-chip {
   font-family: var(--mono);
   font-size: calc(9px + var(--font-bump) - 1px);
@@ -762,6 +772,34 @@ header {
 }
 .stat-card .val.orange { color: var(--orange); }
 .stat-card .val.small  { font-size: calc(13px + var(--font-bump)); padding-top: 4px; }
+
+/* "Latest visible tracks": a compact two-column grid. As a single joined line
+   it grew with every visible track and stretched across the map, covering the
+   frames it describes. */
+.stat-card--next { max-width: 290px; }
+.stat-card--next .val {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 2px 12px;
+  justify-content: start;
+  padding-top: 5px;
+  font-size: calc(11px + var(--font-bump) - 1px);
+  line-height: 1.5;
+}
+.nx-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.nx-dot {
+  width: 7px; height: 7px;
+  flex: 0 0 auto;
+  border-radius: 1px;
+}
+.nx-trk  { color: var(--text); }
+.nx-date { color: var(--text-hi); font-weight: 600; }
+.nx-empty { color: var(--muted); }
 
 /* legend */
 .map-legend {
@@ -1077,6 +1115,31 @@ header {
   margin-bottom: 8px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+/* NISAR release-tier sticker, shown beside the granule name. */
+.rel-badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  font-weight: 700;
+  letter-spacing: .8px;
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: help;
+}
+/* Beta data is uncalibrated — flag it more loudly than provisional. */
+.rel-badge.rel-beta        { color: var(--amber); }
+.rel-badge.rel-provisional { color: var(--cyan); }
+.rel-badge.rel-urgent      { color: var(--orange); }
+/* Tint derived from the badge colour so it follows every theme's palette
+   (themes remap --amber/--cyan and switch between dark and light cards). */
+@supports (background: color-mix(in srgb, red 10%, transparent)) {
+  .rel-badge { background: color-mix(in srgb, currentColor 12%, transparent); }
 }
 .d-link-top {
   display: flex;
@@ -1992,10 +2055,14 @@ header {
   .map-stats {
     flex-wrap: wrap;
   }
+  /* Stacked (vertical) layout: keep the legend a compact box tucked into the
+     bottom-left corner of the map rather than stretching the full width. */
   .map-legend {
     left: 12px;
-    right: 12px;
-    max-width: none;
+    right: auto;
+    width: max-content;
+    min-width: 0;
+    max-width: min(320px, calc(100% - 24px));
   }
   .export-panel {
     left: 12px;

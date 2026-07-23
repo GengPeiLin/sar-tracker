@@ -124,13 +124,31 @@
           <input class="filter-input" id="filter-frame-max" type="number" inputmode="numeric" placeholder="Any">
         </label>
       </div>
+      <!-- Product types are split per mission: the two catalogues share no
+           product types and each mission carries its own extra fields. Each
+           section hides itself when that mission has no frames in the pool. -->
       <details class="filter-section" id="product-section" open>
         <summary>
-          <span data-i18n="product-types">Product Types</span>
+          <span data-i18n="s1-options">Sentinel-1 Options</span>
           <span class="filter-section-meta" id="product-summary">Loading...</span>
         </summary>
         <div class="filter-section-body">
+          <div class="filter-sub-lbl" data-i18n="product-types">Product Types</div>
           <div class="format-options" id="format-options"></div>
+        </div>
+      </details>
+      <details class="filter-section" id="nisar-section" open hidden>
+        <summary>
+          <span data-i18n="nisar-options">NISAR Options</span>
+          <span class="filter-section-meta" id="nisar-summary"></span>
+        </summary>
+        <div class="filter-section-body">
+          <div class="filter-sub-lbl" data-i18n="product-types">Product Types</div>
+          <div class="format-options" id="nisar-format-options"></div>
+          <div class="filter-sub-lbl" data-i18n="frame-coverage">Frame Coverage</div>
+          <div class="format-options" id="nisar-coverage-options"></div>
+          <div class="filter-sub-lbl" data-i18n="range-bandwidth">Range Bandwidth</div>
+          <div class="format-options" id="nisar-bandwidth-options"></div>
         </div>
       </details>
       <div class="filter-actions">
