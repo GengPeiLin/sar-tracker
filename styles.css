@@ -2561,3 +2561,6 @@ header {
   color: var(--text-hi);
 }
 .sty-text:focus { outline: none; border-color: var(--cyan); }
+
+/* Timezone note in the header: all displayed times are UTC+8. */
+.hdr-tz { color: var(--cyan-dim); letter-spacing: .02em; }
