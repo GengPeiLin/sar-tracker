@@ -1056,9 +1056,15 @@ def main() -> int:
         "taiwan_frames": slim_frames,
     }
 
-    json_text = json.dumps(payload, ensure_ascii=False, indent=2)
-    JSON_FILE.write_text(json_text, encoding="utf-8")
+    # Written compact, like every other output here. Pretty-printing cost 29%
+    # of the file (16.3 MB -> 11.5 MB) and 528k newlines for a file nothing
+    # reads by eye: the browser parses it and the file is regenerated wholesale
+    # each day, so the indentation was never seen by a human but was committed
+    # daily and served on every load. The per-mission catalogs under
+    # data/catalog/ stay pretty-printed — they are gitignored, never served,
+    # and are read by hand when debugging a fetch.
     compact = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    JSON_FILE.write_text(compact, encoding="utf-8")
     JS_FILE.write_text(f"window.__SAR_DATA={compact};\n", encoding="utf-8")
 
     # Recent file: last 14 days only — loaded first for fast initial display
