@@ -31,7 +31,7 @@ jobs:
           sed -i "s|styles\.css\"|styles.css?v=$VER\"|g"                index.html
           sed -i "s|src=\"app\.js\"|src=\"app.js?v=$VER\"|g"            index.html
           sed -i "s|sar_recent\.json|sar_recent.json?v=$VER|g"          app.js
-          sed -i "s|sar_status\.json|sar_status.json?v=$VER|g"          app.js
+          sed -i "s|sar_status\.js|sar_status.js?v=$VER|g"              app.js
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
