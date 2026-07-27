@@ -906,6 +906,15 @@ def mission_window(mission: str, catalog: dict, bootstrap: bool, now: datetime) 
             return max(requested, earliest)
         except ValueError:
             raise ValueError(f"BACKFILL_FROM must be an ISO date, got {BACKFILL_FROM!r}")
+    # NISAR products are published with long, irregular latency: the beta tier
+    # (Feb 2026) and the provisional tier (20 Jul 2026) each backfilled products
+    # whose *acquisition* dates lie months in the past. ASF's start/end filter on
+    # acquisition time, so an incremental window keyed on the fetch watermark can
+    # never pick up newly-published historical acquisitions. NISAR's per-request
+    # latency is window-independent (see fetch_asf_nisar_frames), so always rescan
+    # the whole period; merge_frames dedupes the overlap.
+    if mission == "nisar":
+        return earliest
     try:
         watermark = datetime.fromisoformat(catalog.get("last_successful_fetch"))
     except Exception:
