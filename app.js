@@ -536,7 +536,12 @@ function applyDisplayTZ() {
   const badge = document.getElementById('tz-label');
   if (badge) badge.textContent = displayTZLabel();
   if (state.rawFrames?.length) applyAdvancedFilters();
-  if (document.getElementById('stats-panel')?.classList.contains('open')) renderStatsPanel();
+  if (document.getElementById('stats-panel')?.classList.contains('open')) {
+    renderStatsPanel();
+    // The open bar popup lives outside the panel body, so renderStatsPanel
+    // leaves it untouched — relabel its times for the new zone in place.
+    refreshStatsBucketPopup();
+  }
 }
 
 const NISAR_TRACK_COLORS = {
@@ -3337,6 +3342,7 @@ const statsState = {
   expanded:     new Set(STATS_CHART_SATS),  // featured sats open by default
   showInactive: false,
   activeFilter: null,  // { satId, track, dir } — track row the user last clicked
+  openBucket:   null,  // { startMs, endMs, satId } — bar popup window, for TZ relabel
   layout:       localStorage.getItem('sar_stats_layout') || 'stack',
 };
 
@@ -4242,19 +4248,37 @@ function statsTrackInfoClick(event, trackNum, dir) {
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
       <span class="scp-sat">${title}</span>
       <span class="scp-period">${t('stats-last')} ${fmtMonDay(row.lastDate)}</span>
-      <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">x</button>
+      <button class="scp-close" onclick="closeStatsBucketPopup()">x</button>
     </div>
     <div class="scp-total">${row.totalCount.toLocaleString()} ${t('stats-frame-unit')} / ${t('stats-sort-interval')} ${avgGap}</div>
     ${satHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
   `;
   popup.hidden = false;
+  // This popup shares #schart-popup with the bar popup; drop any stored bar
+  // window so a timezone change doesn't rebuild it as a bar card underneath.
+  statsState.openBucket = null;
   positionStatsPopup(event, popup);
 }
 
 function statsBarClick(event, bucketIdx, satId) {
-  const buckets = buildChartBuckets();
-  const b = buckets[bucketIdx];
+  const b = buildChartBuckets()[bucketIdx];
   if (!b) return;
+  if (buildStatsBucketPopup(b.start.getTime(), b.end.getTime(), satId)) {
+    positionStatsPopup(event, document.getElementById('schart-popup'));
+  }
+}
+
+// Build (or rebuild) the bar popup for the acquisition window [startMs, endMs)
+// and show it, WITHOUT repositioning. Split out from statsBarClick so a
+// timezone change can relabel the times in place: the window is an absolute
+// instant range stored in statsState.openBucket, so changing the zone only
+// changes the displayed local time (and TZ badge), never the contents. The
+// bucket *index* can't be reused across a zone change — getChartDateRange
+// pins its bounds to display-zone midnights, so the indexing shifts.
+function buildStatsBucketPopup(startMs, endMs, satId) {
+  const popup = document.getElementById('schart-popup');
+  if (!popup) return false;
+  const b = { start: new Date(startMs), end: new Date(endMs), label: displayDateKey(new Date(startMs)) };
 
   const frames = state.rawFrames || [];
   // Day keys in the display timezone, so they line up with the map's date
@@ -4263,8 +4287,8 @@ function statsBarClick(event, bucketIdx, satId) {
   const beDate = displayDateKey(b.end);
   // Membership itself is by timestamp: a sub-day cell starts and ends on the
   // same calendar day, so a string range would match nothing.
-  const bsMs = b.start.getTime();
-  const beMs = b.end.getTime();
+  const bsMs = startMs;
+  const beMs = endMs;
   const inBucket = frames.filter(f =>
     f.satellite_id === satId && f.date &&
     Date.parse(f.date) >= bsMs && Date.parse(f.date) < beMs &&
@@ -4292,10 +4316,11 @@ function statsBarClick(event, bucketIdx, satId) {
   const clr = getSatColors()[satId] || '#29b6f6';
   const cellHours = statsCellHours();
   // Sub-day cells describe a single instant range; day+ cells span dates.
+  // Either way, tag the current zone so the time reads unambiguously.
   const endLabel = displayDateKey(b.end.getTime() - 86400000);
-  const periodLabel = cellHours <= 24
+  const periodLabel = (cellHours <= 24
     ? statsBucketLabel(b, cellHours)
-    : `${b.label} – ${endLabel}`;
+    : `${b.label} – ${endLabel}`) + ` · ${displayTZLabel(b.start)}`;
 
   const trackHTML = tracks.map(trackInfo => {
     const dirSh    = formatStatsDirectionShort(trackInfo.dir || '?');
@@ -4309,21 +4334,36 @@ function statsBarClick(event, bucketIdx, satId) {
     </div>`;
   }).join('');
 
-  const popup = document.getElementById('schart-popup');
-  if (!popup) return;
   popup.style.setProperty('--scp-accent', clr);
   popup.innerHTML = `
     <div class="scp-hdr">
       <span class="scp-sat" style="color:${clr}">${satId}</span>
       <span class="scp-period">${periodLabel}</span>
-      <button class="scp-close" onclick="document.getElementById('schart-popup').hidden=true">✕</button>
+      <button class="scp-close" onclick="closeStatsBucketPopup()">✕</button>
     </div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
     ${trackHTML ? `<div class="scp-tracks">${trackHTML}</div>` : `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
     <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</div>
   `;
   popup.hidden = false;
-  positionStatsPopup(event, popup);
+  statsState.openBucket = { startMs, endMs, satId };
+  return true;
+}
+
+// Relabel the open bar popup after a timezone change, in place. The stored
+// window is an absolute instant range, so the contents are unchanged — only the
+// displayed local time and TZ badge move.
+function refreshStatsBucketPopup() {
+  const popup = document.getElementById('schart-popup');
+  const open = statsState.openBucket;
+  if (!popup || popup.hidden || !open) return;
+  buildStatsBucketPopup(open.startMs, open.endMs, open.satId);
+}
+
+function closeStatsBucketPopup() {
+  const popup = document.getElementById('schart-popup');
+  if (popup) popup.hidden = true;
+  statsState.openBucket = null;
 }
 
 function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
@@ -4399,7 +4439,7 @@ function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
   }
 
   statsState.activeFilter = { satId, track: trackNum ?? null, dir: dir || null };
-  document.getElementById('schart-popup').hidden = true;
+  closeStatsBucketPopup();
   setMobTab('map');
   applyAdvancedFilters();
   closeStatsPanel();
@@ -4727,15 +4767,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeStatsPanel();
-      const popup = document.getElementById('schart-popup');
-      if (popup) popup.hidden = true;
+      closeStatsBucketPopup();
     }
   });
 
   document.addEventListener('click', e => {
     const popup = document.getElementById('schart-popup');
     if (popup && !popup.hidden && !popup.contains(e.target) && !e.target.closest('.schart-bar')) {
-      popup.hidden = true;
+      closeStatsBucketPopup();
     }
   });
 
