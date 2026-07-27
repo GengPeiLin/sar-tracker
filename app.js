@@ -1478,6 +1478,8 @@ function renderFormatOptions() {
   if (!types.length) {
     wrap.innerHTML = '<span class="filter-note">No product types in current inventory.</span>';
     state.filters.formats = new Set();
+    // Re-seed when Sentinel-1 returns to the pool; see renderNisarOptions.
+    state.filters.seeded.delete('formats');
     if (summary) summary.textContent = '0 visible';
     renderNisarOptions();
     return;
@@ -1524,10 +1526,16 @@ function renderNisarOptions() {
   const pool = getFormatPoolFrames().filter(isNisarFrame);
   if (!pool.length) {
     section.hidden = true;
-    // Drop stale selections so hidden chips cannot filter the map.
+    // Drop stale selections so hidden chips cannot filter the map, and clear
+    // the seed markers too: otherwise, when NISAR returns to the pool (e.g. the
+    // user switches from C-Band back to L-Band), the groups stay empty and an
+    // empty set means "match nothing" — so every NISAR frame is hidden.
     state.filters.nisarFormats.clear();
     state.filters.nisarCoverage.clear();
     state.filters.nisarBandwidth.clear();
+    state.filters.seeded.delete('nisarFormats');
+    state.filters.seeded.delete('nisarCoverage');
+    state.filters.seeded.delete('nisarBandwidth');
     return;
   }
   section.hidden = false;
