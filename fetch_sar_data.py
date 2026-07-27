@@ -34,10 +34,12 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
 
 __version__ = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
 
 
+XML_ATTR_ESCAPES = {'"': "&quot;"}
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "7"))
 MAX_RESULTS = int(os.environ.get("MAX_RESULTS", "1000"))
 TAIWAN_WKT = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
@@ -884,10 +886,10 @@ def write_meta4(frames: list[dict], target: Path, source: str) -> None:
         url = frame.get("asf_url") if source == "ASF" else frame.get("download_url")
         name = f'{frame.get("granule", "scene")}{".SAFE.zip" if source == "Copernicus" else ""}'
         size = int(float(frame.get("file_size_mb") or 0) * 1_000_000)
-        lines.append(f'  <file name="{name}">')
+        lines.append(f'  <file name="{xml_escape(name, XML_ATTR_ESCAPES)}">')
         if size:
             lines.append(f"    <size>{size}</size>")
-        lines.append(f"    <url priority=\"1\">{url}</url>")
+        lines.append(f"    <url priority=\"1\">{xml_escape(str(url or ''))}</url>")
         lines.append("  </file>")
     lines.append("</metalink>")
     target.write_text("\n".join(lines), encoding="utf-8")
