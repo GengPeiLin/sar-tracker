@@ -4,7 +4,7 @@ Fetch Sentinel-1 and NISAR SAR inventory for the Taiwan dashboard.
 
 Storage model:
   1. Keep one metadata catalog per mission under data/catalog/
-  2. Export the merged catalogs to data/sar_status.json
+  2. Export the merged catalogs to data/sar_status.js
   3. After bootstrap, only fetch data newer than each mission's watermark
 
 Sentinel-1 and NISAR have separate settings and separate fetch workflows
@@ -16,7 +16,8 @@ mission; the other mission's stored catalog is reused untouched.
 Output:
   data/catalog/sentinel1.json
   data/catalog/nisar.json
-  data/sar_status.json
+  data/sar_status.js             (full history; served to both file:// and web)
+  data/sar_recent.json           (last 14 days; web first-paint only)
   data/asf_taiwan.meta4          (all missions, by source)
   data/copernicus_taiwan.meta4
   data/meta4/<source>_<mission>.meta4
@@ -44,7 +45,6 @@ TAIWAN_WKT = "POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))"
 OUTPUT_DIR = Path(__file__).parent / "data"
 CATALOG_DIR = OUTPUT_DIR / "catalog"
 LEGACY_CATALOG_FILE = OUTPUT_DIR / "catalog_db.json"
-JSON_FILE   = OUTPUT_DIR / "sar_status.json"
 RECENT_FILE = OUTPUT_DIR / "sar_recent.json"
 JS_FILE     = OUTPUT_DIR / "sar_status.js"
 META4_DIR = OUTPUT_DIR / "meta4"
@@ -1063,8 +1063,17 @@ def main() -> int:
     # daily and served on every load. The per-mission catalogs under
     # data/catalog/ stay pretty-printed — they are gitignored, never served,
     # and are read by hand when debugging a fetch.
+    # ONE full-history file, wrapped as a JS assignment. It used to be written
+    # twice — sar_status.json for the web and a byte-identical sar_status.js for
+    # file:// — because a page opened from disk cannot fetch() a local .json
+    # (Chrome gives each file:// its own opaque origin). Committing both cost
+    # 23 MB a day to carry 11.5 MB of information.
+    #
+    # The wrapper is what makes one file serve both: file:// loads it with a
+    # <script> tag, and the web still fetch()es it, strips the assignment and
+    # parses the rest — so the streaming progress bar is unaffected. Keep the
+    # prefix in sync with unwrapSarData() in app.js.
     compact = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    JSON_FILE.write_text(compact, encoding="utf-8")
     JS_FILE.write_text(f"window.__SAR_DATA={compact};\n", encoding="utf-8")
 
     # Recent file: last 14 days only — loaded first for fast initial display
@@ -1090,8 +1099,8 @@ def main() -> int:
             log(f"Wrote {target.relative_to(OUTPUT_DIR)} "
                 f"({len([f for f in subset if (f.get('asf_url') if source == 'ASF' else f.get('download_url'))])} scenes)")
 
-    log(f"Wrote {JSON_FILE.name} ({len(slim_frames)} frames), "
-        f"{RECENT_FILE.name} ({len(recent_frames)} recent), {JS_FILE.name}")
+    log(f"Wrote {JS_FILE.name} ({len(slim_frames)} frames), "
+        f"{RECENT_FILE.name} ({len(recent_frames)} recent)")
     return 0
 
 

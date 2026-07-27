@@ -1433,6 +1433,27 @@ function applyFrameData(data, options = {}) {
   applyAdvancedFilters();
 }
 
+// data/sar_status.js is a JS assignment (`window.__SAR_DATA={...};`) rather
+// than plain JSON so that ONE file can serve both entry points: a page opened
+// from disk cannot fetch() a local .json — Chrome gives every file:// its own
+// opaque origin — but it can always load a <script>. The web path therefore
+// fetches this same file and peels the wrapper off, which keeps the streaming
+// progress bar that a <script> tag could never provide.
+// Keep the prefix in sync with the writer in fetch_sar_data.py.
+const SAR_DATA_PREFIX = 'window.__SAR_DATA=';
+
+function unwrapSarData(text) {
+  let body = text.trimStart();
+  if (!body.startsWith(SAR_DATA_PREFIX)) {
+    // Not the expected wrapper — most likely a plain-JSON build, so try it as
+    // JSON rather than failing outright.
+    return JSON.parse(body);
+  }
+  body = body.slice(SAR_DATA_PREFIX.length).trimEnd();
+  if (body.endsWith(';')) body = body.slice(0, -1);
+  return JSON.parse(body);
+}
+
 async function loadData() {
   ensureAdvancedState();
 
@@ -1478,8 +1499,8 @@ async function loadData() {
     try {
       const loadedVersion = state.baseStats?.version;
       const fullUrl = loadedVersion
-        ? `./data/sar_status.json?v=${encodeURIComponent(loadedVersion)}`
-        : './data/sar_status.json';
+        ? `./data/sar_status.js?v=${encodeURIComponent(loadedVersion)}`
+        : './data/sar_status.js';
       const res = await fetch(fullUrl, { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const contentLength = res.headers.get('content-length');
@@ -1500,9 +1521,11 @@ async function loadData() {
         const full = new Uint8Array(loaded);
         let off = 0;
         for (const c of chunks) { full.set(c, off); off += c.length; }
-        data = JSON.parse(new TextDecoder().decode(full));
+        data = unwrapSarData(new TextDecoder().decode(full));
       } else {
-        data = await res.json();
+        // No content-length (or no streaming body) — read it in one go. Still
+        // the wrapped file, so it cannot go through res.json().
+        data = unwrapSarData(await res.text());
       }
       hideBar();
       // Replace the recent bootstrap only with a full dataset that is at least

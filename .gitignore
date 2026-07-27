@@ -13,3 +13,4 @@ node_modules/
 data/catalog_db.json
 data/old_catalog_db.json
 data/catalog/
+data/sar_status.json  # retired: sar_status.js is now the single full-history file

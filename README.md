@@ -11,7 +11,7 @@ sar-tracker/
 │       ├── update.yml        # daily data refresh + Pages deploy
 │       └── deploy-pages.yml  # manual-only Pages deploy
 ├── data/
-│   ├── sar_status.json       # merged frame catalog (frontend reads this)
+│   ├── sar_status.js         # merged frame catalog (frontend reads this)
 │   ├── asf_taiwan.meta4      # metalink download manifest (ASF)
 │   └── copernicus_taiwan.meta4  # metalink download manifest (Copernicus)
 ├── app.js                    # all frontend JavaScript
@@ -33,13 +33,13 @@ The frontend is split across three files:
 - `styles.css` — all CSS including four switchable themes
 - `app.js` — satellite database, state, filters, map, drawer, export logic
 
-It loads `data/sar_status.json` on startup and renders an interactive Leaflet map with a satellite list sidebar, filter panel, detail drawer, and export bar.
+It loads `data/sar_status.js` on startup and renders an interactive Leaflet map with a satellite list sidebar, filter panel, detail drawer, and export bar.
 
 ### Data Pipeline
 
 `fetch_sar_data.py` (v0.7.1) runs on GitHub Actions and writes:
 
-- `data/sar_status.json` — merged frame metadata from both sources
+- `data/sar_status.js` — merged frame metadata from both sources (JSON in a `window.__SAR_DATA` wrapper, so one file serves both `file://` and the web)
 - `data/asf_taiwan.meta4` — ASF metalink manifest
 - `data/copernicus_taiwan.meta4` — Copernicus metalink manifest
 
@@ -80,7 +80,7 @@ For frontend changes, edit `app.js` or `styles.css` and open `index.html` in a b
 ## Versioning
 
 - `APP_VERSION` in `app.js` is the frontend version, shown in the page header
-- `data.version` in `sar_status.json` is the data pipeline version
+- `data.version` in `sar_status.js` is the data pipeline version
 - They are independent — bump `APP_VERSION` for any user-visible frontend change
 
 ## Satellite Coverage
