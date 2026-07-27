@@ -1509,23 +1509,20 @@ header {
 /* layout: stack — single column (default) */
 .stats-dash.layout-stack {
   grid-template-columns: 1fr;
-  grid-template-areas: "kpis" "chart" "table";
+  grid-template-areas: "chart" "table";
 }
 /* layout: split — chart left, table right */
 .stats-dash.layout-split {
   grid-template-columns: 55fr 45fr;
-  grid-template-areas:
-    "kpis  kpis"
-    "chart table";
+  grid-template-areas: "chart table";
 }
 /* layout: chart — full-width tall chart only, table hidden */
 .stats-dash.layout-chart {
   grid-template-columns: 1fr;
-  grid-template-areas: "kpis" "chart";
+  grid-template-areas: "chart";
 }
 .stats-dash.layout-chart .stats-sec-table { display: none; }
 
-.stats-kpi-row   { grid-area: kpis; }
 .stats-sec-chart { grid-area: chart; }
 .stats-sec-table { grid-area: table; }
 
@@ -1538,44 +1535,11 @@ header {
   min-height: 320px;
 }
 
-/* ── KPI strip ── */
-.stats-kpi-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.stats-kpi-card {
-  flex: 1;
-  min-width: 120px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 16px;
-}
-.stats-kpi-card--wide { flex: 2; min-width: 200px; }
-.stats-kpi-lbl {
-  font-family: var(--mono);
-  font-size: calc(8px + var(--font-bump) - 2px);
-  letter-spacing: 1px;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.stats-kpi-val {
-  font-family: var(--mono);
-  font-size: calc(22px + var(--font-bump));
-  font-weight: 600;
-  color: var(--cyan);
-  line-height: 1.1;
-}
-.stats-kpi-val.orange { color: var(--orange); }
-.stats-kpi-val.small  { font-size: calc(13px + var(--font-bump)); padding-top: 4px; }
-
 /* ── below 900px: all layouts collapse to stack ── */
 @media (max-width: 900px) {
   .stats-dash {
     grid-template-columns: 1fr !important;
-    grid-template-areas: "kpis" "chart" "table" !important;
+    grid-template-areas: "chart" "table" !important;
     padding: 12px 14px 24px;
   }
   .stats-layout-sw { display: none; }
@@ -2429,13 +2393,6 @@ header {
 
   /* dashboard grid tighter on mobile */
   .stats-dash { padding: 10px 12px 16px; gap: 10px; }
-
-  /* KPI strip: 2×2 grid on narrow screens */
-  .stats-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stats-kpi-card { min-width: 0; padding: 8px 10px; border-radius: 4px; }
-  .stats-kpi-card--wide { grid-column: 1 / -1; }
-  .stats-kpi-val { font-size: calc(18px + var(--font-bump)); }
-  .stats-kpi-val.small { font-size: calc(10px + var(--font-bump)); padding-top: 2px; }
 
   /* hide export buttons from header — too cramped; still accessible on desktop */
   .stats-hdr-export { display: none; }

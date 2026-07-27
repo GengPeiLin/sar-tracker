@@ -3718,42 +3718,8 @@ function buildStatsPanelHTML() {
     .map(id => `<span class="stats-legend-item"><span class="stats-legend-sw" style="background:${satColors[id]}"></span>${id}</span>`)
     .join('');
 
-  // KPI values — computed fresh each render from current state
-  const data    = state.baseStats || {};
-  const frames  = state.filteredFrames || [];
-  // Same window the header KPI shows: the active date filter, not the whole
-  // database span.
-  const qStart  = parseDateInputValue(state.filters?.dateStart)
-    || new Date(data.query_start || Date.now() - 7*864e5);
-  const qEnd    = parseDateInputValue(state.filters?.dateEnd)
-    || new Date(data.query_end || Date.now());
-  const qSpansYears = qStart.getFullYear() !== qEnd.getFullYear();
-  const fmtD    = v => (qSpansYears ? `${v.getFullYear()}/` : '') + `${v.getMonth()+1}/${v.getDate()}`;
-  const next    = computeNextExpected();
-  const kpiHTML = `
-    <div class="stats-kpi-card">
-      <div class="stats-kpi-lbl">${t('filtered-frames')}</div>
-      <div class="stats-kpi-val">${frames.length}</div>
-    </div>
-    <div class="stats-kpi-card">
-      <div class="stats-kpi-lbl">${t('active-satellites')}</div>
-      <div class="stats-kpi-val orange">${new Set(frames.map(f => f.satellite_id)).size}</div>
-    </div>
-    <div class="stats-kpi-card">
-      <div class="stats-kpi-lbl">${t('query-window')}</div>
-      <div class="stats-kpi-val small">${fmtD(qStart)} – ${fmtD(qEnd)}</div>
-    </div>
-    <div class="stats-kpi-card stats-kpi-card--wide">
-      <div class="stats-kpi-lbl">${next.label}</div>
-      <div class="stats-kpi-val small">${next.value}</div>
-    </div>`;
-
   return `
   <div class="stats-dash layout-${statsState.layout}">
-
-    <div class="stats-kpi-row">
-      ${kpiHTML}
-    </div>
 
     <div class="stats-section stats-sec-chart">
       <div class="stats-section-hd">
