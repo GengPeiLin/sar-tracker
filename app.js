@@ -1686,8 +1686,15 @@ function frameMatchesAdvancedFilters(frame) {
   if (min !== null && (frame.frame_number_norm === null || frame.frame_number_norm < min)) return false;
   if (max !== null && (frame.frame_number_norm === null || frame.frame_number_norm > max)) return false;
 
-  if (state.filters.dateStart && frame.date && frame.date.slice(0, 10) < state.filters.dateStart) return false;
-  if (state.filters.dateEnd && frame.date && frame.date.slice(0, 10) > state.filters.dateEnd) return false;
+  // Compare on the display-timezone day, not the raw UTC day. The date pickers
+  // are UTC+8 calendar dates and the stats buckets are UTC+8-aligned, so a raw
+  // UTC comparison mismatched by a day for any pass whose UTC and UTC+8 dates
+  // differ — which is why "view on map" from a single-frame bar showed nothing.
+  if (state.filters.dateStart || state.filters.dateEnd) {
+    const day = frame.date ? displayDateKey(frame.date) : '';
+    if (state.filters.dateStart && day && day < state.filters.dateStart) return false;
+    if (state.filters.dateEnd && day && day > state.filters.dateEnd) return false;
+  }
 
   return true;
 }
@@ -2511,7 +2518,7 @@ function parseDateInputValue(text) {
 }
 
 function getDefaultWeekWindow() {
-  const end = getQueryEndDate();
+  const end = toDisplayDate(getQueryEndDate());
   const start = new Date(end);
   start.setDate(start.getDate() - 6);
   return {
@@ -2521,7 +2528,9 @@ function getDefaultWeekWindow() {
 }
 
 function getPresetWindow(days) {
-  const end = getQueryEndDate();
+  // Window edges are display-timezone calendar dates, matching how the map's
+  // date filter now compares frames (by display day).
+  const end = toDisplayDate(getQueryEndDate());
   const start = new Date(end);
   start.setDate(start.getDate() - (days - 1));
   return {
@@ -3495,7 +3504,7 @@ function buildChartBuckets() {
     const counts = {};
     for (const id of activeSats) counts[id] = 0;
     return {
-      label: bStart.toISOString().slice(0, 10),
+      label: displayDateKey(bStart),
       start: bStart,
       end: new Date(Math.min(startMs + (i + 1) * cellMs, endMs)),
       counts, total: 0,
@@ -4205,9 +4214,11 @@ function statsBarClick(event, bucketIdx, satId) {
   if (!b) return;
 
   const frames = state.rawFrames || [];
-  const bsDate = b.start.toISOString().slice(0, 10);
-  const beDate = b.end.toISOString().slice(0, 10);
-  // Compare timestamps, not date strings: a sub-day cell starts and ends on the
+  // Day keys in the display timezone, so they line up with the map's date
+  // filter (which now also compares display days).
+  const bsDate = displayDateKey(b.start);
+  const beDate = displayDateKey(b.end);
+  // Membership itself is by timestamp: a sub-day cell starts and ends on the
   // same calendar day, so a string range would match nothing.
   const bsMs = b.start.getTime();
   const beMs = b.end.getTime();
@@ -4224,7 +4235,7 @@ function statsBarClick(event, bucketIdx, satId) {
   const trackMap = new Map();
   let uniqueCount = 0;
   for (const f of inBucket) {
-    const d = f.date.slice(0, 10);
+    const d = displayDateKey(f.date);
     const acqKey = `${d}|${f.path_number_norm ?? ''}|${f.direction_norm || ''}|${getAcqFramePosKey(f, barTileKeyMap)}`;
     if (seenAcq.has(acqKey)) continue;
     seenAcq.add(acqKey);
@@ -4238,7 +4249,7 @@ function statsBarClick(event, bucketIdx, satId) {
   const clr = getSatColors()[satId] || '#29b6f6';
   const cellHours = statsCellHours();
   // Sub-day cells describe a single instant range; day+ cells span dates.
-  const endLabel = new Date(b.end.getTime() - 86400000).toISOString().slice(0, 10);
+  const endLabel = displayDateKey(b.end.getTime() - 86400000);
   const periodLabel = cellHours <= 24
     ? statsBucketLabel(b, cellHours)
     : `${b.label} – ${endLabel}`;
@@ -4275,14 +4286,17 @@ function statsBarClick(event, bucketIdx, satId) {
 function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
   ensureAdvancedState();
 
-  // Bucket end is exclusive; compute inclusive end for the date filter.
-  // A sub-day cell begins and ends on the same day, so never step back past
-  // the start or the resulting range would be empty.
-  const endDate = new Date(beDateExclusive);
-  endDate.setDate(endDate.getDate() - 1);
-  const dateEnd = endDate.toISOString().slice(0, 10) < bsDate
-    ? bsDate
-    : endDate.toISOString().slice(0, 10);
+  // bsDate / beDateExclusive are already display-timezone day keys from the
+  // bucket. The end is exclusive; step back one day for the inclusive filter,
+  // but never past the start (a sub-day cell spans a single day).
+  const [ey, em, ed] = String(beDateExclusive).split('-').map(Number);
+  const incEnd = Number.isFinite(ey)
+    ? new Date(ey, em - 1, ed - 1)
+    : null;
+  const incEndKey = incEnd
+    ? `${incEnd.getFullYear()}-${String(incEnd.getMonth() + 1).padStart(2, '0')}-${String(incEnd.getDate()).padStart(2, '0')}`
+    : bsDate;
+  const dateEnd = incEndKey < bsDate ? bsDate : incEndKey;
 
   // Satellite
   const effectiveSat = satId || 'ALL';
@@ -4320,6 +4334,25 @@ function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
     state.filters.pathMax = tn;
     if (pMin) pMin.value = tn;
     if (pMax) pMax.value = tn;
+  }
+
+  // Guarantee the frame the chart counted is actually shown. Any of the
+  // product-type / coverage / bandwidth sets can be empty (an empty set means
+  // "match nothing"), which would hide the very acquisition we jumped to.
+  const canonical = STATS_CANONICAL_PRODUCT[satId];
+  if (canonical) {
+    const targetSet = satId === 'NISAR' ? 'nisarFormats' : 'formats';
+    state.filters[targetSet].add(canonical);
+    state.filters.seeded.add(targetSet);   // treat as an explicit choice
+  }
+  if (satId === 'NISAR') {
+    // Drop the NISAR sub-filters back to "no restriction"; clearing the seed
+    // markers lets renderNisarOptions repopulate them to every value, so
+    // coverage / bandwidth can't hide the jumped frame.
+    state.filters.nisarCoverage.clear();
+    state.filters.nisarBandwidth.clear();
+    state.filters.seeded.delete('nisarCoverage');
+    state.filters.seeded.delete('nisarBandwidth');
   }
 
   statsState.activeFilter = { satId, track: trackNum ?? null, dir: dir || null };
@@ -4564,7 +4597,7 @@ function statsExportChartCSV(button) {
   const headers = ['period_start', 'period_end', ...sats, 'total'];
   const rows    = buckets.map(b => [
     b.label,
-    b.end.toISOString().slice(0, 10),
+    displayDateKey(b.end),
     ...sats.map(id => b.counts[id] || 0),
     b.total,
   ]);
