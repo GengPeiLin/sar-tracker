@@ -145,6 +145,7 @@ const TRANSLATIONS = {
     'date-start':'Date Start','date-end':'Date End',
     'track-min':'Track Min','track-max':'Track Max','frame-min':'Frame Min','frame-max':'Frame Max',
     'product-types':'Product Types','loading-types':'Loading...','no-product-types':'No product types in current inventory.',
+    'chip-solo-hint':'Click to toggle · double-click to select only this (double-click again to select all)',
     's1-options':'Sentinel-1 Options','nisar-options':'NISAR Options',
     'frame-coverage':'Frame Coverage','range-bandwidth':'Range Bandwidth',
     'release-beta':'Beta release (Feb 2026) — uncalibrated, not for quantitative use',
@@ -218,6 +219,7 @@ const TRANSLATIONS = {
     'date-start':'開始日期','date-end':'結束日期',
     'track-min':'軌道最小值','track-max':'軌道最大值','frame-min':'幀號最小值','frame-max':'幀號最大值',
     'product-types':'產品類型','loading-types':'載入中...','no-product-types':'目前清單無產品類型。',
+    'chip-solo-hint':'點擊切換 · 雙擊只選此項（再次雙擊選取全部）',
     's1-options':'Sentinel-1 選項','nisar-options':'NISAR 選項',
     'frame-coverage':'幀涵蓋範圍','range-bandwidth':'距離向頻寬',
     'release-beta':'Beta 版本（2026 年 2 月）— 未校正，不適用於定量分析',
@@ -1463,8 +1465,63 @@ function getDefaultFormatsForSatellite(types) {
   return defaults.length ? defaults : types;
 }
 
-// Sentinel-1 product types. NISAR's live in renderNisarOptions so a selection
-// in one mission never hides the other.
+// Multi-select filter chips support a "solo" gesture: double-click a chip to
+// make it the only selected value in its group, and double-click a soloed chip
+// again to restore the whole group. Every chip routes its click through chipTap.
+//
+// The double-click is detected from the two clicks' own event.timeStamps, NOT
+// from a wall-clock diff taken at handler entry, and NOT from the browser's
+// native `dblclick`. Both of those fail here: a single click re-renders the
+// panel (up to ~1 s for the stats panel) which replaces the chip's DOM node, so
+// the browser never synthesises a `dblclick` (the two clicks have different
+// targets), and the render time sits between the two handlers so any entry-time
+// diff overshoots. event.timeStamp is set from the *physical* click time and is
+// unaffected by the render in between, so the diff between the two is the true
+// inter-click interval.
+//
+// The first click of the pair has already toggled the chip by the time the
+// second arrives, so the "restore the whole group" decision uses wasSolo — the
+// selection state snapshotted on that first click, before it mutated the set.
+// Each group's universe (every value currently rendered) is recorded by its
+// render function into chipUniverse; the static stats groups declare theirs
+// inline. Sentinel-1 product types live in renderFormatOptions below; NISAR's
+// live in renderNisarOptions so a selection in one mission never hides the other.
+const CHIP_SOLO_MS = 400;
+const chipUniverse = {};
+const CHIP_SOLO_GROUPS = {
+  formats:          { set: () => state.filters.formats,        rerender: () => { renderFormatOptions(); applyAdvancedFilters(); } },
+  nisarFormats:     { set: () => state.filters.nisarFormats,   rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
+  nisarCoverage:    { set: () => state.filters.nisarCoverage,  rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
+  nisarBandwidth:   { set: () => state.filters.nisarBandwidth, rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
+  statsSats:        { set: () => statsState.activeSats,        rerender: () => renderStatsPanel(), universe: () => STATS_CHART_SATS },
+  statsTracks:      { set: () => statsState.activeTracks,      rerender: () => renderStatsPanel(), universe: () => STATS_S1_TRACKS, cast: Number },
+  statsNisarTracks: { set: () => statsState.activeNisarTracks, rerender: () => renderStatsPanel(), universe: () => STATS_NISAR_TRACKS.map(track => track.key) },
+};
+let _lastChipTap = { id: null, at: -Infinity, wasSolo: false };
+
+function chipTap(groupId, rawValue, evt) {
+  const cfg = CHIP_SOLO_GROUPS[groupId];
+  if (!cfg) return;
+  const set = cfg.set();
+  const value = cfg.cast ? cfg.cast(rawValue) : rawValue;
+  const id = groupId + '#' + String(rawValue);
+  const ts = evt ? evt.timeStamp : performance.now();
+  const isDouble = _lastChipTap.id === id && (ts - _lastChipTap.at) < CHIP_SOLO_MS;
+  if (isDouble) {
+    const wasSolo = _lastChipTap.wasSolo;
+    _lastChipTap = { id: null, at: -Infinity, wasSolo: false };
+    const universe = cfg.universe ? cfg.universe() : (chipUniverse[groupId] || []);
+    set.clear();
+    if (wasSolo) for (const v of universe) set.add(v);  // restore the whole group
+    else set.add(value);                                // isolate this one
+  } else {
+    _lastChipTap = { id, at: ts, wasSolo: set.size === 1 && set.has(value) };
+    if (set.has(value)) set.delete(value);
+    else set.add(value);
+  }
+  cfg.rerender();
+}
+
 function renderFormatOptions() {
   ensureAdvancedState();
   const wrap = document.getElementById('format-options');
@@ -1497,18 +1554,15 @@ function renderFormatOptions() {
     }
   }
 
+  chipUniverse.formats = types;
   wrap.innerHTML = '';
   for (const type of types) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'format-chip' + (state.filters.formats.has(type) ? ' on' : '');
     button.textContent = type;
-    button.onclick = () => {
-      if (state.filters.formats.has(type)) state.filters.formats.delete(type);
-      else state.filters.formats.add(type);
-      renderFormatOptions();
-      applyAdvancedFilters();
-    };
+    button.title = t('chip-solo-hint');
+    button.onclick = evt => chipTap('formats', type, evt);
     wrap.appendChild(button);
   }
   if (summary) summary.textContent = `${state.filters.formats.size} selected · ${types.length} visible`;
@@ -1559,18 +1613,15 @@ function renderNisarOptions() {
     }
     // Drop selections that no longer exist in the pool.
     for (const value of [...selected]) if (!values.includes(value)) selected.delete(value);
+    chipUniverse[group.key] = values;
     wrap.innerHTML = '';
     for (const value of values) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'format-chip' + (selected.has(value) ? ' on' : '');
       button.textContent = value;
-      button.onclick = () => {
-        if (selected.has(value)) selected.delete(value);
-        else selected.add(value);
-        renderNisarOptions();
-        applyAdvancedFilters();
-      };
+      button.title = t('chip-solo-hint');
+      button.onclick = evt => chipTap(group.key, value, evt);
       wrap.appendChild(button);
     }
   }
@@ -1592,19 +1643,15 @@ function renderNisarFormatChips(pool) {
       state.filters.nisarFormats = new Set(stillValid);
     }
   }
+  chipUniverse.nisarFormats = types;
   wrap.innerHTML = '';
   for (const type of types) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'format-chip' + (state.filters.nisarFormats.has(type) ? ' on' : '');
     button.textContent = type;
-    button.onclick = () => {
-      const set = state.filters.nisarFormats;
-      if (set.has(type)) set.delete(type);
-      else set.add(type);
-      renderNisarOptions();
-      applyAdvancedFilters();
-    };
+    button.title = t('chip-solo-hint');
+    button.onclick = evt => chipTap('nisarFormats', type, evt);
     wrap.appendChild(button);
   }
 }
@@ -3607,7 +3654,7 @@ function buildStatsPanelHTML() {
   const chipHTML = STATS_CHART_SATS.map(id => {
     const on  = statsState.activeSats.has(id);
     const clr = satColors[id] || '#29b6f6';
-    return `<div class="stats-chip-ctr"><label class="stats-color-dot" data-sat-color="${id}" style="background:${clr}" title="${t('stats-edit-color')}"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" data-sat-chip="${id}" style="--sc:${clr}" onclick="statsToggleSat('${id}')">${id}</button></div>`;
+    return `<div class="stats-chip-ctr"><label class="stats-color-dot" data-sat-color="${id}" style="background:${clr}" title="${t('stats-edit-color')}"><input type="color" value="${clr}" onchange="statsSetSatColor('${id}',this.value)"></label><button class="stats-chip${on ? ' on' : ''}" data-sat-chip="${id}" style="--sc:${clr}" title="${t('chip-solo-hint')}" onclick="statsToggleSat('${id}', event)">${id}</button></div>`;
   }).join('') + (hasCustomColors ? `<button class="stats-chip stats-chip-reset" onclick="statsResetAllColors()" title="${t('stats-reset-colors')}">↺</button>` : '');
 
   const sortHTML = [['lastDate','stats-sort-last-acq'],['count','stats-sort-frames'],['interval','stats-sort-interval'],['name','stats-sort-name']].map(([v, labelKey]) =>
@@ -3625,11 +3672,12 @@ function buildStatsPanelHTML() {
   const af = statsState.activeFilter;
   const activeFilterBadge = af ? `<span class="trk-filter-badge">${af.satId ? af.satId + ' ' : ''}T${af.track} ${formatStatsDirectionShort(af.dir)}<button class="trk-filter-clear" onclick="clearStatsFilter()">×</button></span>` : '';
 
-  const trackChipHTML = STATS_S1_TRACKS.map(t =>
-    `<button class="stats-chip${statsState.activeTracks.has(t) ? ' on' : ''}" onclick="statsToggleTrack(${t})">T${t}</button>`
+  const soloHint = t('chip-solo-hint');
+  const trackChipHTML = STATS_S1_TRACKS.map(track =>
+    `<button class="stats-chip${statsState.activeTracks.has(track) ? ' on' : ''}" title="${soloHint}" onclick="statsToggleTrack(${track}, event)">T${track}</button>`
   ).join('');
   const nisarTrackChipHTML = STATS_NISAR_TRACKS.map(track =>
-    `<button class="stats-chip${statsState.activeNisarTracks.has(track.key) ? ' on' : ''}" onclick="statsToggleNisarTrack('${track.key}')">${track.key}</button>`
+    `<button class="stats-chip${statsState.activeNisarTracks.has(track.key) ? ' on' : ''}" title="${soloHint}" onclick="statsToggleNisarTrack('${track.key}', event)">${track.key}</button>`
   ).join('');
 
   const legendHTML = STATS_CHART_SATS
@@ -4142,22 +4190,9 @@ function statsSetCellIdx(idx) {
 }
 // Every chip may be switched off, including the last one — an empty selection
 // legitimately means "show nothing".
-function statsToggleSat(id) {
-  if (statsState.activeSats.has(id)) statsState.activeSats.delete(id);
-  else statsState.activeSats.add(id);
-  renderStatsPanel();
-}
-function statsToggleTrack(t) {
-  if (statsState.activeTracks.has(t)) statsState.activeTracks.delete(t);
-  else statsState.activeTracks.add(t);
-  renderStatsPanel();
-}
-function statsToggleNisarTrack(key) {
-  const set = statsState.activeNisarTracks;
-  if (set.has(key)) set.delete(key);
-  else set.add(key);
-  renderStatsPanel();
-}
+function statsToggleSat(id, evt)        { chipTap('statsSats', id, evt); }
+function statsToggleTrack(t, evt)       { chipTap('statsTracks', t, evt); }
+function statsToggleNisarTrack(key, evt) { chipTap('statsNisarTracks', key, evt); }
 function statsSetPass(pass) {
   statsState.pass = ['ALL', 'ASCENDING', 'DESCENDING'].includes(pass) ? pass : 'ALL';
   renderStatsPanel();
