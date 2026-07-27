@@ -536,6 +536,13 @@ function applyDisplayTZ() {
   const badge = document.getElementById('tz-label');
   if (badge) badge.textContent = displayTZLabel();
   if (state.rawFrames?.length) applyAdvancedFilters();
+  // applyAdvancedFilters() re-renders the map/list but never the open drawer's
+  // own text (its "Selected Date" and per-day group headings) — rebuild it in
+  // place for the new zone, same fix as the stats bucket popup below.
+  if (document.getElementById('drawer')?.classList.contains('open') && state.selectedFrameKey) {
+    const selectedFrame = state.filteredFrames.find(frame => getFrameKey(frame) === state.selectedFrameKey);
+    if (selectedFrame) openFrameDrawer(selectedFrame);
+  }
   if (document.getElementById('stats-panel')?.classList.contains('open')) {
     renderStatsPanel();
     // The open bar popup lives outside the panel body, so renderStatsPanel
@@ -2400,25 +2407,25 @@ function getFrameAcquisitionInfo(frame) {
   const granuleWindow = parseGranuleAcquisitionWindow(frame?.granule);
   const startMs = granuleWindow.startMs ?? getFrameTimestamp(frame);
   const stopMs = granuleWindow.stopMs ?? startMs;
+  // Identity key: a precise UTC instant, independent of the display zone —
+  // used only to match "the same acquisition", never shown to the user.
   const key = startMs !== null
     ? new Date(startMs).toISOString().slice(0, 19)
     : `${getFrameSeriesKey(frame)}|${normalizeGranuleKey(frame?.granule) || 'unknown'}`;
+  // Grouping key: the display zone's calendar day, same rule as
+  // buildChartBuckets / buildFrequencyStats — a late-evening Taiwan pass is
+  // early-morning UTC the next day, so grouping on the raw UTC date would
+  // split one night's acquisitions across two headings.
+  const dayKey = startMs !== null ? displayDateKey(startMs) : null;
 
-  const acqLocale = state?.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
   const label = startMs !== null
-    ? new Date(startMs).toLocaleString(acqLocale, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-        timeZone: 'UTC',
-      }) + ' UTC'
+    ? `${formatDisplayTime(startMs, {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      })} ${displayTZLabel(new Date(startMs))}`
     : t('unknown-acquisition');
 
-  return { key, startMs, stopMs, label };
+  return { key, dayKey, startMs, stopMs, label };
 }
 
 // Pull NISAR's own fields out of a granule name. Used as a fallback for
@@ -2880,7 +2887,7 @@ function openFrameDrawer(clickedFrame) {
   const groups = new Map();
   for (const frame of historyFrames) {
     const info = getFrameAcquisitionInfo(frame);
-    const dateKey = info.key.slice(0, 10);
+    const dateKey = info.dayKey || info.key.slice(0, 10);
     const list = groups.get(dateKey) || [];
     list.push(frame);
     groups.set(dateKey, list);
@@ -2888,7 +2895,15 @@ function openFrameDrawer(clickedFrame) {
 
   const cards = [...groups.entries()].map(([groupKey, groupFrames]) => {
     const acqLocale = state?.lang === 'zh-TW' ? 'zh-TW' : 'en-US';
-    const heading = new Date(groupKey + 'T00:00:00Z').toLocaleDateString(acqLocale, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' });  // groupKey is already a UTC+8 day key
+    // groupKey is already the display zone's calendar day (see dayKey above);
+    // build a UTC midnight from those same y/m/d numbers purely so Intl can
+    // render the locale's month/weekday names — timeZone:'UTC' here just
+    // pins the formatter to the values we already picked, it does not
+    // re-interpret the date across zones.
+    const [gy, gm, gd] = groupKey.split('-').map(Number);
+    const heading = Number.isFinite(gy)
+      ? new Date(Date.UTC(gy, gm - 1, gd)).toLocaleDateString(acqLocale, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })
+      : groupKey;
     const groupEntries = mergeFramesForDrawer(groupFrames);
     const body = groupEntries.map(frame => {
       const asfUrl = frame.asf_url || '';
@@ -2938,7 +2953,7 @@ function openFrameDrawer(clickedFrame) {
     }).join('');
 
     return `
-      <details class="d-group-fold"${groupKey === clickedAcquisition.key.slice(0, 10) ? ' open' : ''}>
+      <details class="d-group-fold"${groupKey === (clickedAcquisition.dayKey || clickedAcquisition.key.slice(0, 10)) ? ' open' : ''}>
         <summary class="d-group-summary">
           <span class="d-group-head">${escapeHtml(heading)}</span>
           <span class="d-group-meta">${groupEntries.length} file${groupEntries.length === 1 ? '' : 's'}</span>
@@ -4266,9 +4281,9 @@ function statsTrackInfoClick(event, trackNum, dir) {
     <div class="scp-hdr">
       <span class="sts-tdir ${dirCls}">${dirSh}</span>
       <span class="scp-sat">${title}</span>
-      <span class="scp-period">${t('stats-last')} ${fmtMonDay(row.lastDate)}</span>
       <button class="scp-close" onclick="closeStatsBucketPopup()">x</button>
     </div>
+    <div class="scp-period">${t('stats-last')} ${fmtMonDay(row.lastDate)}</div>
     <div class="scp-total">${row.totalCount.toLocaleString()} ${t('stats-frame-unit')} / ${t('stats-sort-interval')} ${avgGap}</div>
     ${satHTML || `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
   `;
@@ -4374,9 +4389,9 @@ function buildStatsBucketPopup(startMs, endMs, satId) {
   popup.innerHTML = `
     <div class="scp-hdr">
       <span class="scp-sat" style="color:${clr}">${satId}</span>
-      <span class="scp-period">${periodLabel}</span>
       <button class="scp-close" onclick="closeStatsBucketPopup()">✕</button>
     </div>
+    <div class="scp-period">${periodLabel}</div>
     <div class="scp-total">${uniqueCount} ${t(uniqueCount === 1 ? 'stats-frame-word' : 'stats-frames-word')}</div>
     ${trackHTML ? `<div class="scp-tracks">${trackHTML}</div>` : `<div class="scp-empty">${t('stats-no-track-data')}</div>`}
     <div class="scp-view-all-row" onclick="applyStatsBucketFilter('${satId}','${bsDate}','${beDate}',null,null)">${t('stats-view-on-map')}</div>

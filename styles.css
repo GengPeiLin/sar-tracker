@@ -2115,19 +2115,22 @@ header {
 }
 .scp-hdr {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
   padding: 8px 10px 0 12px;
 }
 .scp-sat { font-weight: 700; font-size: calc(13px + var(--font-bump)); flex-shrink: 0; }
+/* Own row, not squeezed into the header alongside the satellite name and
+   close button — a bucket can list several distinct pass times ("18:00,
+   18:01 · UTC+8"), and truncating that with ellipsis hid the very time the
+   card exists to show. Wraps instead of clipping. */
 .scp-period {
   font-size: calc(9px + var(--font-bump));
   color: var(--muted);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 2px 12px 0;
+  white-space: normal;
+  line-height: 1.35;
 }
 .scp-close {
   background: none;
