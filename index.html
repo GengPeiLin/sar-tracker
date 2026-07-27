@@ -266,6 +266,9 @@
 </div>
 
 <div id="schart-popup" class="schart-popup" hidden></div>
+<!-- User settings. Plain (non-deferred) so it runs before the deferred app.js
+     below, which reads window.SAR_CONFIG as it initialises. -->
+<script src="config.js"></script>
 <script src="app.js" defer></script>
 </body>
 </html>
