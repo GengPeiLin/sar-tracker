@@ -2777,8 +2777,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeInlineJsArg(value) {
+  return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
 function createDrawerCopyButton(label, url, variant) {
-  return `<button type="button" class="d-copy-btn ${variant}" onclick="copyDrawerLink(this, '${escapeHtml(url)}')">${label}</button>`;
+  return `<button type="button" class="d-copy-btn ${escapeHtml(variant)}" onclick="copyDrawerLink(this, ${escapeInlineJsArg(url)})">${escapeHtml(label)}</button>`;
 }
 
 // Final override: group drawer content by the clicked acquisition date, not by the whole track history.
@@ -2860,14 +2864,14 @@ function openFrameDrawer(clickedFrame) {
   document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
   document.getElementById('d-week-wrap').innerHTML = '';
   document.getElementById('d-grid').innerHTML = `
-    <div class="d-item"><div class="k">${t('track')}</div><div class="v">${getFramePathNumber(primary) ?? '--'}</div></div>
-    <div class="d-item"><div class="k">${t('frame')}</div><div class="v">${frameCenterLabel}</div></div>
-    <div class="d-item"><div class="k">${t('direction')}</div><div class="v"><small>${primary.direction_norm || '--'}</small></div></div>
-    <div class="d-item"><div class="k">${t('mode')}</div><div class="v"><small>${primary.mode || '--'}</small></div></div>
-    <div class="d-item"><div class="k">${t('acquisitions')}</div><div class="v"><small>${t('n-acquisition-dates', { n: acquisitionCount })}</small></div></div>
-    <div class="d-item"><div class="k">${t('files-label')}</div><div class="v"><small>${t('n-files-in-drawer', { n: entries.length, s: entries.length === 1 ? '' : 's' })}</small></div></div>
-    <div class="d-item span-2"><div class="k">${t('source')}</div><div class="v"><small>${getSourceState(primary)}</small></div></div>
-    <div class="d-item span-2"><div class="k">${t('selected-date')}</div><div class="v"><small>${acquisition.label}</small></div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('track'))}</div><div class="v">${escapeHtml(getFramePathNumber(primary) ?? '--')}</div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('frame'))}</div><div class="v">${escapeHtml(frameCenterLabel)}</div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('direction'))}</div><div class="v"><small>${escapeHtml(primary.direction_norm || '--')}</small></div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('mode'))}</div><div class="v"><small>${escapeHtml(primary.mode || '--')}</small></div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('acquisitions'))}</div><div class="v"><small>${escapeHtml(t('n-acquisition-dates', { n: acquisitionCount }))}</small></div></div>
+    <div class="d-item"><div class="k">${escapeHtml(t('files-label'))}</div><div class="v"><small>${escapeHtml(t('n-files-in-drawer', { n: entries.length, s: entries.length === 1 ? '' : 's' }))}</small></div></div>
+    <div class="d-item span-2"><div class="k">${escapeHtml(t('source'))}</div><div class="v"><small>${escapeHtml(getSourceState(primary))}</small></div></div>
+    <div class="d-item span-2"><div class="k">${escapeHtml(t('selected-date'))}</div><div class="v"><small>${escapeHtml(acquisition.label)}</small></div></div>
   `;
 
   const section = document.querySelector('.d-section');
@@ -3569,6 +3573,7 @@ function buildChartBuckets() {
       start: bStart,
       end: new Date(Math.min(startMs + (i + 1) * cellMs, endMs)),
       counts, total: 0,
+      firstMs: {},  // satId -> earliest actual acquisition instant in this bucket
     };
   });
 
@@ -3588,6 +3593,13 @@ function buildChartBuckets() {
     const bucket = buckets[index];
     bucket.counts[f.satellite_id] = (bucket.counts[f.satellite_id] || 0) + 1;
     bucket.total += 1;
+    // Track the real pass time. Cells are boundary-aligned to the stride
+    // (every 00:00/12:00/…), but Taiwan overpasses cluster near ~05h and ~18h
+    // local, so the boundary itself is essentially never an actual pass time —
+    // any UI that shows a time for a cell must show this, not bucket.start.
+    const tms = Date.parse(f.date);
+    const prevMs = bucket.firstMs[f.satellite_id];
+    if (prevMs === undefined || tms < prevMs) bucket.firstMs[f.satellite_id] = tms;
   }
   return buckets;
 }
@@ -3940,12 +3952,16 @@ function buildSparklineSvg(data) {
 }
 
 // Tooltip label for a bucket — includes the hour once cells are sub-day.
-function statsBucketLabel(bucket, cellHours) {
-  const d = toDisplayDate(bucket.start);
-  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return cellHours < 24
-    ? `${day} ${String(d.getHours()).padStart(2, '0')}:00`
-    : day;
+// Formats a real acquisition instant, e.g. "2026-07-19 05:52" in the display
+// zone. Deliberately takes an instant (a frame's actual date), never a
+// bucket's start/end: those are arbitrary stride boundaries (00:00, 12:00, …)
+// and essentially never coincide with a real overpass, which for Taiwan
+// clusters near ~05h and ~18h local — labelling the boundary itself would
+// claim a pass happened at a time nothing actually flew over.
+function statsInstantLabel(ms) {
+  const dateStr = displayDateKey(ms);
+  const timeStr = formatDisplayTime(ms, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dateStr} ${timeStr}`;
 }
 
 function renderStatsChart() {
@@ -4105,7 +4121,10 @@ function renderStatsChart() {
       // over-wide bar nor the minimum width spills past the edges.
       const bx = Math.max(0, Math.min(svgW - 0.5, x + (stride - GAP - BAR_W) / 2));
       const w  = Math.min(BAR_W, svgW - bx);
-      barsSVG += `<rect x="${bx.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${statsBucketLabel(b, cellHours)} · ${satId}: ${cnt}</title></rect>`;
+      const barTimeLabel = (cellHours <= 24 && b.firstMs[satId] !== undefined)
+        ? statsInstantLabel(b.firstMs[satId])
+        : b.label;
+      barsSVG += `<rect x="${bx.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${barTimeLabel} · ${satId}: ${cnt}</title></rect>`;
     }
     if (twoRowAxis) {
       // Top row: hour only; the date is carried by the row beneath.
@@ -4300,6 +4319,7 @@ function buildStatsBucketPopup(startMs, endMs, satId) {
   const barTileKeyMap = buildTileKeyMap(inBucket);
   const seenAcq = new Set();
   const trackMap = new Map();
+  const realTimesMs = [];
   let uniqueCount = 0;
   for (const f of inBucket) {
     const d = displayDateKey(f.date);
@@ -4307,20 +4327,36 @@ function buildStatsBucketPopup(startMs, endMs, satId) {
     if (seenAcq.has(acqKey)) continue;
     seenAcq.add(acqKey);
     uniqueCount++;
+    realTimesMs.push(Date.parse(f.date));
     const k = `${f.path_number_norm ?? ''}|${f.direction_norm || ''}`;
     if (!trackMap.has(k)) trackMap.set(k, { track: f.path_number_norm, dir: f.direction_norm, count: 0 });
     trackMap.get(k).count++;
   }
+  realTimesMs.sort((a, c) => a - c);
   const tracks = [...trackMap.values()].sort((a, c) => c.count - a.count);
 
   const clr = getSatColors()[satId] || '#29b6f6';
   const cellHours = statsCellHours();
-  // Sub-day cells describe a single instant range; day+ cells span dates.
-  // Either way, tag the current zone so the time reads unambiguously.
-  const endLabel = displayDateKey(b.end.getTime() - 86400000);
-  const periodLabel = (cellHours <= 24
-    ? statsBucketLabel(b, cellHours)
-    : `${b.label} – ${endLabel}`) + ` · ${displayTZLabel(b.start)}`;
+  // Sub-day cells show the *actual* pass time(s) — never the bucket's
+  // boundary, which is only a stride mark (e.g. every 00:00/12:00) and
+  // essentially never a real overpass instant. Day+ cells genuinely span a
+  // range, so a date range is the right summary there.
+  let periodLabel;
+  if (cellHours <= 24 && realTimesMs.length) {
+    const dateStr = displayDateKey(realTimesMs[0]);
+    const timesStr = [...new Set(realTimesMs.map(ms =>
+      formatDisplayTime(ms, { hour: '2-digit', minute: '2-digit', hour12: false })
+    ))].join(', ');
+    periodLabel = `${dateStr} ${timesStr}`;
+  } else if (cellHours <= 24) {
+    // No acquisitions counted — shouldn't happen from a bar click (only
+    // non-empty bars are clickable), but keep a sane fallback.
+    periodLabel = bsDate;
+  } else {
+    const endLabel = displayDateKey(b.end.getTime() - 86400000);
+    periodLabel = `${b.label} – ${endLabel}`;
+  }
+  periodLabel += ` · ${displayTZLabel(new Date(realTimesMs[0] ?? b.start))}`;
 
   const trackHTML = tracks.map(trackInfo => {
     const dirSh    = formatStatsDirectionShort(trackInfo.dir || '?');
