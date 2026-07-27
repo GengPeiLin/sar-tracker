@@ -1348,6 +1348,12 @@ header {
 .stats-layout-sw {
   display: flex;
   gap: 4px;
+  /* Pushes itself (and, via normal flow, .stats-close right after it) to the
+     far right of the header — title stays pinned left, everything else
+     clusters right, the usual panel-header convention. Below 900px this is
+     hidden entirely, so the ≤900px query below gives .stats-close the same
+     push directly. */
+  margin-left: auto;
 }
 .sl-btn {
   background: var(--surface);
@@ -1543,6 +1549,10 @@ header {
     padding: 12px 14px 24px;
   }
   .stats-layout-sw { display: none; }
+  /* .stats-layout-sw normally carries the header's only margin-left:auto;
+     hiding it removes that push, so .stats-close needs its own here or it
+     collapses back next to the title instead of the far right. */
+  .stats-panel-hdr > .stats-close { margin-left: auto; }
   .stats-dash.layout-split .stats-cards-wrap { max-height: min(520px, 50vh); }
 }
 .stats-footer {
