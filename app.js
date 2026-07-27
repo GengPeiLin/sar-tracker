@@ -1,4 +1,98 @@
 // ═══════════════════════════════════════════════════════════════════════════
+// USER CONFIG
+// ═══════════════════════════════════════════════════════════════════════════
+// config.js assigns window.SAR_CONFIG and is loaded by a plain (non-deferred)
+// <script> ahead of this file, so it has always run by the time these read it.
+// It is a .js assignment rather than .json for the same reason
+// data/sar_status.js is: the dashboard must work from file://, where fetching
+// a local .json is blocked.
+//
+// Every value below is read through one of these accessors, each of which
+// validates and falls back to the built-in default baked into the call site.
+// That means a missing config.js, a missing key, or a mistyped value degrades
+// to stock behaviour instead of breaking the page — the config is hand-edited
+// by users with no build step or linter to catch them, so a bad edit must
+// never leave a blank dashboard. Rejected values warn to the console with the
+// key name and what was expected, since that is the only debugging channel a
+// static page has.
+const SAR_CFG = (typeof window !== 'undefined' && window.SAR_CONFIG) || {};
+
+// Warn once per key: some of these accessors are called from render loops, and
+// a repeated warning would bury the other messages a user needs to see.
+const _cfgWarned = new Set();
+function cfgWarn(path, expected, got) {
+  if (_cfgWarned.has(path)) return;
+  _cfgWarned.add(path);
+  console.warn(`[config.js] ${path}: expected ${expected}, got ${JSON.stringify(got)} — using default.`);
+}
+
+// Raw lookup by dotted path. Returns undefined when any link is missing, which
+// the typed helpers below treat as "not configured" rather than as an error.
+function cfgRaw(path) {
+  let node = SAR_CFG;
+  for (const key of path.split('.')) {
+    if (node === null || typeof node !== 'object' || !(key in node)) return undefined;
+    node = node[key];
+  }
+  return node;
+}
+
+function cfgNum(path, fallback, { min = -Infinity, max = Infinity } = {}) {
+  const value = cfgRaw(path);
+  if (value === undefined) return fallback;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    cfgWarn(path, 'a number', value);
+    return fallback;
+  }
+  // Clamp rather than reject: a slider value slightly out of range is a clear
+  // intent to go to the extreme, not a typo worth discarding.
+  return Math.min(max, Math.max(min, value));
+}
+
+// `allowed` is optional; when given, anything outside it falls back.
+function cfgStr(path, fallback, allowed = null) {
+  const value = cfgRaw(path);
+  if (value === undefined) return fallback;
+  if (typeof value !== 'string') {
+    cfgWarn(path, 'a quoted string', value);
+    return fallback;
+  }
+  if (allowed && !allowed.includes(value)) {
+    cfgWarn(path, `one of ${allowed.map(v => `'${v}'`).join(' | ')}`, value);
+    return fallback;
+  }
+  return value;
+}
+
+// Empty arrays fall back too: every list in config.js drives a control that
+// would render blank (or filter everything out) if emptied.
+function cfgList(path, fallback, itemCheck = null) {
+  const value = cfgRaw(path);
+  if (value === undefined) return fallback;
+  if (!Array.isArray(value) || !value.length) {
+    cfgWarn(path, 'a non-empty [list]', value);
+    return fallback;
+  }
+  if (itemCheck && !value.every(itemCheck)) {
+    cfgWarn(path, 'a list of valid entries', value);
+    return fallback;
+  }
+  return value;
+}
+
+// Merged over the fallback, so naming one key in config.js does not silently
+// drop the others (e.g. recolouring S1A must not erase every other platform).
+function cfgMap(path, fallback) {
+  const value = cfgRaw(path);
+  if (value === undefined) return fallback;
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    cfgWarn(path, 'a { key: value } block', value);
+    return fallback;
+  }
+  return { ...fallback, ...value };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SAR SATELLITE DATABASE
 // ═══════════════════════════════════════════════════════════════════════════
 const SATS = [
@@ -389,14 +483,28 @@ const THEME_OPTIONS = new Set(['soft-slate', 'night-ops', 'paper-radar', 'field-
 const FONT_SIZE_STEPS   = [2, 4, 6, 8];
 const FONT_SIZE_OPTIONS = new Set(FONT_SIZE_STEPS.map(String));
 
-const PLATFORM_COLORS = {
-  'S1A':'#00e5ff','S1C':'#ce93d8','S1D':'#4db6ac',
-  'SENTINEL-1A':'#00e5ff','SENTINEL-1C':'#ce93d8','SENTINEL-1D':'#4db6ac',
-  'ALOS-2':'#ff80ab','ALOS-4':'#ab68c4','ALOS2':'#ff80ab','ALOS4':'#ab68c4',
-  'RADARSAT-2':'#ffc107','RCM-1':'#ffb300','RCM-2':'#ffa000','RCM-3':'#ff8f00',
-  'R2':'#ffc107','RCM':'#ffb300',
-  '_default':'#ff7043',
-};
+const PLATFORM_COLORS = (() => {
+  const base = {
+    'S1A':'#00e5ff','S1C':'#ce93d8','S1D':'#4db6ac',
+    'ALOS-2':'#ff80ab','ALOS-4':'#ab68c4',
+    'RADARSAT-2':'#ffc107','RCM-1':'#ffb300','RCM-2':'#ffa000','RCM-3':'#ff8f00',
+    '_default':'#ff7043',
+  };
+  const colors = cfgMap('colors.platforms', base);
+  // The catalogues name the same platform several ways, so each alias is
+  // derived from its canonical entry rather than listed in config.js —
+  // recolouring 'S1A' there must also recolour scenes that arrive as
+  // 'SENTINEL-1A', which a user editing one hex value would never think to do.
+  const ALIASES = {
+    'SENTINEL-1A': 'S1A', 'SENTINEL-1C': 'S1C', 'SENTINEL-1D': 'S1D',
+    'ALOS2': 'ALOS-2', 'ALOS4': 'ALOS-4',
+    'R2': 'RADARSAT-2', 'RCM': 'RCM-1',
+  };
+  for (const [alias, canonical] of Object.entries(ALIASES)) {
+    if (colors[canonical]) colors[alias] = colors[canonical];
+  }
+  return colors;
+})();
 
 // ── Display timezone ────────────────────────────────────────────────────────
 // This dashboard is about Taiwan, so every time is PRESENTED in UTC+8 no
@@ -413,19 +521,25 @@ const PLATFORM_COLORS = {
 // dashboard) but the viewer can pick any zone to reason about acquisition
 // times in their own local clock. Stored data is never touched: frames keep
 // the exact ISO UTC strings the providers deliver.
-const DISPLAY_TZ_DEFAULT = 'Asia/Taipei';
-const DISPLAY_TZ_CHOICES = [
-  { id: 'Asia/Taipei',        key: 'tz-taipei' },
-  { id: 'UTC',                key: 'tz-utc' },
-  { id: '__local__',          key: 'tz-local' },
-  { id: 'Asia/Tokyo',         key: 'tz-tokyo' },
-  { id: 'Asia/Singapore',     key: 'tz-singapore' },
-  { id: 'Asia/Kolkata',       key: 'tz-kolkata' },
-  { id: 'Europe/London',      key: 'tz-london' },
-  { id: 'Europe/Berlin',      key: 'tz-berlin' },
-  { id: 'America/New_York',   key: 'tz-newyork' },
-  { id: 'America/Los_Angeles',key: 'tz-losangeles' },
-];
+const DISPLAY_TZ_DEFAULT = cfgStr('timezone.default', 'Asia/Taipei');
+// config.js lists zones as plain IANA strings; the label key is derived, so a
+// zone we ship a translation for stays translated and any other zone the user
+// adds falls back to showing its own name (renderTZSelect handles a missing
+// key). Requiring users to invent an i18n key would make the list un-editable.
+const DISPLAY_TZ_LABEL_KEYS = {
+  'Asia/Taipei': 'tz-taipei',   'UTC': 'tz-utc',
+  '__local__': 'tz-local',      'Asia/Tokyo': 'tz-tokyo',
+  'Asia/Singapore': 'tz-singapore', 'Asia/Kolkata': 'tz-kolkata',
+  'Europe/London': 'tz-london', 'Europe/Berlin': 'tz-berlin',
+  'America/New_York': 'tz-newyork', 'America/Los_Angeles': 'tz-losangeles',
+};
+const DISPLAY_TZ_CHOICES = cfgList(
+  'timezone.choices',
+  ['Asia/Taipei', 'UTC', '__local__', 'Asia/Tokyo', 'Asia/Singapore',
+   'Asia/Kolkata', 'Europe/London', 'Europe/Berlin', 'America/New_York',
+   'America/Los_Angeles'],
+  id => typeof id === 'string' && id.length > 0,
+).map(id => ({ id, key: DISPLAY_TZ_LABEL_KEYS[id] || '' }));
 
 function getDisplayTZ() {
   try {
@@ -526,7 +640,12 @@ function renderTZSelect() {
       const abs = Math.abs(offset);
       suffix = offset === 0 ? ' (UTC)' : ` (UTC${sign}${Math.floor(abs / 60)}${abs % 60 ? ':' + String(abs % 60).padStart(2, '0') : ''})`;
     } catch {}
-    return `<option value="${choice.id}">${t(choice.key)}${suffix}</option>`;
+    // Zones added in config.js carry no translation key; show the IANA name's
+    // city part ('Australia/Sydney' → 'Sydney') so the option is still readable.
+    const label = choice.key
+      ? t(choice.key)
+      : choice.id.split('/').pop().replace(/_/g, ' ');
+    return `<option value="${choice.id}">${label}${suffix}</option>`;
   }).join('');
   select.value = current;
 }
@@ -551,12 +670,24 @@ function applyDisplayTZ() {
   }
 }
 
-const NISAR_TRACK_COLORS = {
-  'ASCENDING|39':   '#00e676',  // vivid green
-  'ASCENDING|111':  '#ffd740',  // amber — clearly distinct from green
-  'DESCENDING|61':  '#f06292',  // rose/pink
-  'DESCENDING|133': '#b388ff',  // lavender — distinct from pink and green
-};
+// Keyed 'DIRECTION|path' internally, but config.js uses the short track names
+// ('A39') the chips and the rest of the UI show, so one name means one thing
+// everywhere a user looks.
+const NISAR_TRACK_COLORS = (() => {
+  const byTrackKey = cfgMap('colors.nisarTracks', {
+    'A39':  '#00e676',  // vivid green
+    'A111': '#ffd740',  // amber — clearly distinct from green
+    'D61':  '#f06292',  // rose/pink
+    'D133': '#b388ff',  // lavender — distinct from pink and green
+  });
+  const out = {};
+  for (const [key, color] of Object.entries(byTrackKey)) {
+    const match = /^([AD])(\d+)$/.exec(key);
+    if (!match) { cfgWarn(`colors.nisarTracks.${key}`, "a track name like 'A39'", key); continue; }
+    out[`${match[1] === 'A' ? 'ASCENDING' : 'DESCENDING'}|${match[2]}`] = color;
+  }
+  return out;
+})();
 
 // NISAR granule-name code tables — https://nisar-docs.asf.alaska.edu/naming-conventions/
 // NISAR_IL_PT_PROD_CYL_REL_P_FRM_MODE_POLE_S_Start_End_CRID_A_C_LOC_CTR.EXT
@@ -745,7 +876,7 @@ let state = {
   frames: [],
   tab:    'all',
   band:   'ALL',
-  lang:   localStorage.getItem('lang') || 'en',
+  lang:   localStorage.getItem('lang') || cfgStr('ui.language', 'en', ['en', 'zh-TW']),
   map:    null,
   frameLayer: null,
   selectedSat: null,
@@ -757,8 +888,16 @@ let state = {
 // MAP INIT
 // ═══════════════════════════════════════════════════════════════════════════
 function initMap() {
-  state.map = L.map('map', { center:[23.5,121], zoom:6, zoomControl:true, attributionControl:false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(state.map);
+  const center = cfgList('map.center', [23.5, 121],
+    n => typeof n === 'number' && Number.isFinite(n));
+  state.map = L.map('map', {
+    center: center.length === 2 ? center : [23.5, 121],
+    zoom: cfgNum('map.zoom', 6, { min: 1, max: 19 }),
+    zoomControl:true, attributionControl:false,
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: cfgNum('map.basemapMaxZoom', 19, { min: 1, max: 22 }),
+  }).addTo(state.map);
 
   // Taiwan outline
   L.polygon(TW_OUTLINE, { color:'#00e5ff', weight:1, fillColor:'#00e5ff', fillOpacity:.04, dashArray:'4 3' }).addTo(state.map);
@@ -829,15 +968,26 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
-const DEFAULT_PRODUCT_TYPES = ['SLC','RSLC'];
-const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = {
+const _PRODUCT_TYPE_CFG = cfgMap('filters.productTypes', {
+  default: ['SLC', 'RSLC'],
   ALL: ['SLC', 'RSLC'],
   NISAR: ['GSLC', 'RSLC'],
   S1A: ['SLC'],
   S1B: ['SLC'],
   S1C: ['SLC'],
   S1D: ['SLC'],
-};
+});
+const DEFAULT_PRODUCT_TYPES = cfgList('filters.productTypes.default', ['SLC','RSLC'],
+  v => typeof v === 'string');
+const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = Object.fromEntries(
+  Object.entries(_PRODUCT_TYPE_CFG)
+    .filter(([satId, types]) => {
+      if (satId === 'default') return false;   // read separately, above
+      if (Array.isArray(types) && types.length && types.every(v => typeof v === 'string')) return true;
+      cfgWarn(`filters.productTypes.${satId}`, 'a non-empty list of type names', types);
+      return false;
+    })
+);
 const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'L3_SME2', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'SME2', 'RAW', 'SSC', 'OCN', 'ETAD', 'COH12'];
 
 function ensureAdvancedState() {
@@ -851,12 +1001,12 @@ function ensureAdvancedState() {
     satellitesWithFrames: new Set(),
   };
   state.ui ||= {
-    theme: 'soft-slate',
-    fontSize: '4',
+    theme: cfgStr('ui.theme', 'soft-slate', [...THEME_OPTIONS]),
+    fontSize: cfgStr('ui.fontSize', '4', [...FONT_SIZE_OPTIONS]),
   };
   state.filters ||= {
-    satellite: 'ALL',
-    direction: 'ALL',
+    satellite: cfgStr('filters.satellite', 'ALL'),
+    direction: cfgStr('filters.direction', 'ALL', ['ALL', 'ASCENDING', 'DESCENDING']),
     showSameTrackInDrawer: false,
     showOtherSentinelTracks: false,
     pathMin: '',
@@ -1849,7 +1999,7 @@ function updateLegend() {
   const wrap = document.getElementById('legend-items');
   if (!wrap) return;
 
-  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  const hlId = getHighlightStyleId();
   const hlLabels = {
     ring: t('highlight-solid'),
     dash: t('highlight-dash'),
@@ -2237,6 +2387,12 @@ function appendSatelliteRow(container, sat) {
   return 1;
 }
 
+// A visitor's own pick (stored per-browser) wins over the configured default.
+function getHighlightStyleId() {
+  return localStorage.getItem('sar_hl_style')
+    || cfgStr('ui.highlightStyle', 'ring', ['ring', 'dash', 'color', 'gold']);
+}
+
 const HIGHLIGHT_STYLES = {
   ring:  { color: '#ffffff', weight: 3.5, dashArray: null,  fill: 0.36 },
   dash:  { color: '#ffffff', weight: 3.2, dashArray: '7 5', fill: 0.40 },
@@ -2251,7 +2407,7 @@ function setHighlightStyle(id) {
 }
 
 function syncHighlightButtons() {
-  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  const hlId = getHighlightStyleId();
   document.querySelectorAll('#hl-btns .legend-hl-btn').forEach(btn => {
     btn.classList.toggle('on', btn.id === 'hl-' + hlId);
   });
@@ -2259,7 +2415,7 @@ function syncHighlightButtons() {
 
 function updateMapSelectionState() {
   const hasSelection = !!state.selectedFrameKey;
-  const hlId = localStorage.getItem('sar_hl_style') || 'ring';
+  const hlId = getHighlightStyleId();
   const hl   = HIGHLIGHT_STYLES[hlId] || HIGHLIGHT_STYLES.ring;
   for (const item of state.framePolygons) {
     const color = item.polygon.options.baseColor;
@@ -2584,10 +2740,13 @@ function parseDateInputValue(text) {
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+// The window the app opens with. Named "week" for the 7-day default, but the
+// length is configurable; the This Week / Month / … buttons are separate and
+// keep their fixed meanings, since their labels state them.
 function getDefaultWeekWindow() {
   const end = toDisplayDate(getQueryEndDate());
   const start = new Date(end);
-  start.setDate(start.getDate() - 6);
+  start.setDate(start.getDate() - (cfgNum('filters.dateWindowDays', 7, { min: 1, max: 3650 }) - 1));
   return {
     start: formatDateInputValue(start),
     end: formatDateInputValue(end),
@@ -2771,7 +2930,7 @@ function renderFrames() {
 
   updateMapSelectionState();
   if (!state.selectedFrameKey) {
-    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
+    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: cfgNum('map.frameFocusMaxZoom', 8, { min: 1, max: 19 }), pad: cfgNum('map.frameFocusPadding', 0.2, { min: 0, max: 2 }) });
   }
 }
 
@@ -2975,7 +3134,18 @@ function openFrameDrawer(clickedFrame) {
 // Cell sizes in HOURS, so the chart can resolve individual passes (Sentinel-1
 // and NISAR cross Taiwan at fixed times of day) as well as long-term cadence.
 const STATS_CELL_STEPS = [1, 3, 6, 12, 24, 48, 72, 120, 168, 336, 720];
-const STATS_CELL_DEFAULT_IDX = STATS_CELL_STEPS.indexOf(24);   // 1 day
+// config.js names the size in hours rather than as an index into the array
+// above, since an index is meaningless to a reader and silently shifts if the
+// steps ever change. An hour value not on the list falls back to 1 day.
+const STATS_CELL_DEFAULT_IDX = (() => {
+  const hours = cfgNum('stats.cellSizeHours', 24);
+  const idx = STATS_CELL_STEPS.indexOf(hours);
+  if (idx === -1) {
+    cfgWarn('stats.cellSizeHours', `one of ${STATS_CELL_STEPS.join(', ')}`, hours);
+    return STATS_CELL_STEPS.indexOf(24);
+  }
+  return idx;
+})();
 
 function statsCellHours() {
   return STATS_CELL_STEPS[statsState.cellIdx] ?? 24;
@@ -2988,28 +3158,31 @@ function statsCellTag() {
 function formatCellSize(hours) {
   return hours < 24 ? `${hours}${t('stats-hour-suffix')}` : `${hours / 24}${t('stats-day-suffix')}`;
 }
-const STATS_CHART_SATS = ['S1A', 'S1C', 'S1D', 'NISAR'];
+const STATS_CHART_SATS = cfgList('stats.chartSatellites', ['S1A', 'S1C', 'S1D', 'NISAR'],
+  v => typeof v === 'string');
 const STATS_S1_IDS     = new Set(['S1A', 'S1C', 'S1D']);
-// Only the two priority Taiwan tracks are charted; T142/T171 clip the area
-// and were dropped from the stats controls.
-const STATS_S1_TRACKS  = [69, 105];
+// Only the two priority Taiwan tracks are charted by default; T142/T171 clip
+// the area and were dropped from the stats controls.
+const STATS_S1_TRACKS  = cfgList('stats.s1Tracks', [69, 105],
+  v => Number.isInteger(v));
 // NISAR flies its own Taiwan tracks and gets its own chips, keyed by
 // direction+path so ascending and descending stay distinct.
-const STATS_NISAR_TRACKS = [
+const STATS_NISAR_TRACKS = cfgList('stats.nisarTracks', [
   { key: 'A39',  path: 39,  dir: 'ASCENDING'  },
   { key: 'A111', path: 111, dir: 'ASCENDING'  },
   { key: 'D61',  path: 61,  dir: 'DESCENDING' },
   { key: 'D133', path: 133, dir: 'DESCENDING' },
-];
+], v => v && typeof v.key === 'string' && Number.isInteger(v.path)
+     && (v.dir === 'ASCENDING' || v.dir === 'DESCENDING'));
 
 function nisarTrackKey(frame) {
   const dir = frame?.direction_norm || frame?.direction || '';
   const prefix = dir === 'ASCENDING' ? 'A' : dir === 'DESCENDING' ? 'D' : '?';
   return `${prefix}${frame?.path_number_norm ?? ''}`;
 }
-const STATS_SAT_DEFAULT_COLORS = {
+const STATS_SAT_DEFAULT_COLORS = cfgMap('colors.statsSeries', {
   S1A: '#29b6f6', S1C: '#ce93d8', S1D: '#4db6ac', NISAR: '#ffb74d',
-};
+});
 
 // Acquisition counts use ONE canonical product per mission. A single overpass
 // is delivered as several products -- NISAR ships RSLC + GSLC + GCOV + SME2
@@ -3017,7 +3190,8 @@ const STATS_SAT_DEFAULT_COLORS = {
 // every product type would multiply each pass.
 // Verified against the current catalog: RSLC covers all 35 NISAR acquisitions,
 // SLC covers 1082 of 1088 Sentinel-1 ones.
-const STATS_CANONICAL_PRODUCT = { S1A: 'SLC', S1C: 'SLC', S1D: 'SLC', NISAR: 'RSLC' };
+const STATS_CANONICAL_PRODUCT = cfgMap('stats.canonicalProduct',
+  { S1A: 'SLC', S1C: 'SLC', S1D: 'SLC', NISAR: 'RSLC' });
 
 function statsIsCanonicalProduct(frame) {
   const wanted = STATS_CANONICAL_PRODUCT[frame.satellite_id];
@@ -3077,7 +3251,7 @@ function applySatColorChange() {
 // ── Chart appearance ────────────────────────────────────────────────────────
 // User-tunable drawing parameters, persisted separately from the data filters.
 // Everything here is presentation only; nothing changes what is counted.
-const CHART_STYLE_DEFAULTS = {
+const CHART_STYLE_BUILTIN = {
   chartWidth:  100,  // % of the available width; >100% scrolls horizontally
   chartHeight: 100,  // % of the height the current layout mode implies
   barWidth:    100,  // % of the space each bucket gets
@@ -3112,16 +3286,30 @@ const CHART_STYLE_RANGES = {
   axisTitles:  { min: 0,  max: 1,   step: 1,  unit: '' },
 };
 
+// Config overrides, each clamped to the slider's own range so a configured
+// value can never sit outside what the appearance panel can represent (which
+// would make the slider jump on first drag).
+const CHART_STYLE_DEFAULTS = Object.fromEntries(
+  Object.entries(CHART_STYLE_BUILTIN).map(([key, builtin]) => {
+    const range = CHART_STYLE_RANGES[key] || {};
+    return [key, cfgNum(`chartStyle.${key}`, builtin,
+      { min: range.min ?? -Infinity, max: range.max ?? Infinity })];
+  })
+);
+
 // Chart colours, kept apart from the numeric style settings because each may
 // be "auto" (follow the theme) rather than an explicit value. An empty string
 // means auto; 'transparent' is only meaningful for the background.
 const CHART_COLOR_KEYS = ['background', 'text', 'grid', 'band'];
+const CHART_COLOR_DEFAULTS = Object.fromEntries(CHART_COLOR_KEYS.map(
+  k => [k, cfgStr(`chartStyle.colors.${k}`, '')]));
 
 function getChartColors() {
   try {
     const saved = JSON.parse(localStorage.getItem('sar_chart_colors') || '{}');
-    return Object.fromEntries(CHART_COLOR_KEYS.map(k => [k, saved[k] || '']));
-  } catch { return Object.fromEntries(CHART_COLOR_KEYS.map(k => [k, ''])); }
+    return Object.fromEntries(CHART_COLOR_KEYS.map(
+      k => [k, saved[k] || CHART_COLOR_DEFAULTS[k] || '']));
+  } catch { return { ...CHART_COLOR_DEFAULTS }; }
 }
 
 // Resolve "auto" against the current theme so callers always get a real value.
@@ -3349,20 +3537,29 @@ function positionStylePopover(pop, gear) {
 
 const statsState = {
   styleOpen:    false,
-  chartPreset:  '6mo',  // '1mo' | '6mo' | '1yr' | 'custom'
+  // 'custom' is deliberately not offered in config.js: it is only meaningful
+  // alongside a start/end date the user picks in the panel.
+  chartPreset:  cfgStr('stats.chartPreset', '6mo', ['1mo', '6mo', '1yr']),
   chartStart:   '',     // YYYY-MM-DD, only used when preset === 'custom'
   chartEnd:     '',     // YYYY-MM-DD, only used when preset === 'custom'
   cellIdx:    STATS_CELL_DEFAULT_IDX,
-  activeSats:   new Set(['S1A', 'S1C', 'S1D', 'NISAR']),
-  activeTracks: new Set(STATS_S1_TRACKS),
-  activeNisarTracks: new Set(STATS_NISAR_TRACKS.map(track => track.key)),
-  pass:         'ALL',
-  sortBy:       'lastDate',
+  // The "active" sets are intersected with what is actually chartable, so a
+  // stale name left in config.js cannot switch on a series that has no chips.
+  activeSats:   new Set(cfgList('stats.activeSatellites', STATS_CHART_SATS,
+                  v => typeof v === 'string').filter(id => STATS_CHART_SATS.includes(id))),
+  activeTracks: new Set(cfgList('stats.activeS1Tracks', STATS_S1_TRACKS,
+                  Number.isInteger).filter(t => STATS_S1_TRACKS.includes(t))),
+  activeNisarTracks: new Set(cfgList('stats.activeNisarTracks',
+                  STATS_NISAR_TRACKS.map(track => track.key), v => typeof v === 'string')
+                  .filter(k => STATS_NISAR_TRACKS.some(track => track.key === k))),
+  pass:         cfgStr('stats.pass', 'ALL', ['ALL', 'ASCENDING', 'DESCENDING']),
+  sortBy:       cfgStr('stats.sortBy', 'lastDate', ['lastDate', 'count', 'interval', 'name']),
   expanded:     new Set(STATS_CHART_SATS),  // featured sats open by default
   showInactive: false,
   activeFilter: null,  // { satId, track, dir } — track row the user last clicked
   openBucket:   null,  // { startMs, endMs, satId } — bar popup window, for TZ relabel
-  layout:       localStorage.getItem('sar_stats_layout') || 'stack',
+  layout:       localStorage.getItem('sar_stats_layout')
+                  || cfgStr('stats.layout', 'stack', ['stack', 'split', 'chart']),
 };
 
 // Range boundaries sit on UTC+8 midnight, so buckets line up with the days
@@ -4498,7 +4695,7 @@ function applyStatsTrackFilter(satId, trackNum, dir) {
   closeStatsPanel();
   setTimeout(() => {
     if (state.map) state.map.invalidateSize();
-    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: 8, pad: 0.2 });
+    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: cfgNum('map.frameFocusMaxZoom', 8, { min: 1, max: 19 }), pad: cfgNum('map.frameFocusPadding', 0.2, { min: 0, max: 2 }) });
   }, 80);
 }
 

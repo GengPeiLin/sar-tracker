@@ -1,0 +1,133 @@
+SAR TRACKER — SETTINGS
+==================================================================
+
+MOST SETTINGS NOW LIVE IN  ->  config.js
+
+Open config.js, change a value, save, hard-refresh the browser
+(Ctrl+Shift+R). The page reads that file directly — no build step.
+Every setting there is commented with its allowed choices, and a bad
+value is ignored (with an explanation in the browser console, F12)
+rather than breaking the page.
+
+config.js covers: map view, theme, font size, language, time zone,
+starting filters, product-type defaults, all colours, statistics
+panel defaults, and chart appearance defaults.
+
+This file now only documents the two areas config.js does NOT cover,
+because they are read before the page runs or by a separate program.
+
+==================================================================
+
+
+[A] DATA FETCHING                                      fetch_sar_data.py
+------------------------------------------------------------------
+Controls what gets DOWNLOADED, not what gets displayed. Runs as a
+separate Python program, so it has its own settings.
+
+Entries marked [env] need no file edit — set the variable when you
+run the script:
+    DAYS_BACK=14 python fetch_sar_data.py
+
+DAYS_BACK                      7                                 [env]
+  :42                           fallback lookback in days, used only if a
+                                 mission's watermark can't be read
+
+MAX_RESULTS                    1000                              [env]
+  :43                           max results requested per ASF / Copernicus
+                                 query
+
+INCREMENTAL_OVERLAP_DAYS       2                                 [env]
+  :55                           days of overlap re-queried past the last
+                                 watermark, to catch late-arriving scenes
+
+FORCE_FULL_REBUILD             (unset = off)                     [env]
+  :56                           rebuild the whole catalog instead of
+                                 fetching incrementally
+  choices: 1 | true | yes   (anything else = off)
+  example: FORCE_FULL_REBUILD=1 python fetch_sar_data.py
+
+REBUILD_SCOPE                  all                               [env]
+  :57                           limit a rebuild to one mission
+  choices: all | sentinel1 | nisar
+  example: REBUILD_SCOPE=nisar python fetch_sar_data.py
+
+BACKFILL_FROM                  (unset = disabled)                [env]
+  :61                           re-query from an explicit date without
+                                 discarding the stored catalog — this is the
+                                 fix for a gap the normal incremental
+                                 watermark skipped over
+  example: BACKFILL_FROM=2026-06-01 python fetch_sar_data.py
+
+ASF_S1_CHUNK_DAYS              730                               [env]
+  :107                          days per ASF query chunk for Sentinel-1
+                                 (keeps each response under the results cap)
+
+ASF_NISAR_CHUNK_DAYS           3650                              [env]
+  :84                           days per ASF query chunk for NISAR — fetches
+                                 the whole mission life per track in one
+                                 request, because NISAR query time barely
+                                 depends on window length (unlike S1)
+
+S1_EARLIEST                    2014-04-03
+NISAR_LAUNCH                   2025-07-30
+  :78-79                        query floor dates — nothing earlier is ever
+                                 fetched. Edit the file to change.
+
+TAIWAN_S1_FRAME_SPECS                                             :99-104
+  ASCENDING  track 69   frames 67-83
+  ASCENDING  track 142  frames 67-83
+  ASCENDING  track 171  frames 67-83
+  DESCENDING track 105  frames 503-520
+
+TAIWAN_NISAR_FRAME_SPECS                                          :109-114
+  ASCENDING  track 39   frames 13-14
+  ASCENDING  track 111  frames 13-14
+  DESCENDING track 61   frames 76-77
+  DESCENDING track 133  frames 76-78
+
+                                 The exact track/frame combinations queried
+                                 per mission. Edit the file to change, and
+                                 READ THE FILE'S HEADER COMMENT FIRST: frame
+                                 numbers encode latitude and orbits encode
+                                 longitude, so a wrong combination silently
+                                 pulls in scenes from other countries (adding
+                                 track 42 here would fetch Pakistan).
+
+TAIWAN_WKT           POLYGON((119 21,123 21,123 26.5,119 26.5,119 21))
+  :44                            bounding box for Copernicus's geographic
+                                  query. Edit the file to change.
+
+S1_CENTROID_LAT_MIN            21.5
+S1_CENTROID_LAT_MAX            26.85
+S1_CENTROID_LON_MIN            117.5
+S1_CENTROID_LON_MAX            124.0
+  :128-136                      drops Sentinel-1 frames that only clip the
+                                 edge of the box above. Calibrated to
+                                 Sentinel-1 frame geometry — do NOT apply to
+                                 NISAR, whose frames span ~2.7 degrees of
+                                 latitude. Edit the file to change.
+
+
+[B] RESPONSIVE LAYOUT                                       styles.css
+------------------------------------------------------------------
+Screen widths at which the layout rearranges. These are CSS media
+queries, so they cannot be read from config.js.
+
+BREAKPOINT_TABLET               980px
+  :2199                          sidebar and map switch from side-by-side to
+                                  stacked
+
+BREAKPOINT_STATS_LAYOUT         900px
+  :1545                          statistics panel collapses to one column
+
+BREAKPOINT_MOBILE               640px
+  :2245                          full mobile layout with the bottom tab bar
+
+CHART_POPUP_MIN_WIDTH_PX        190
+CHART_POPUP_MAX_WIDTH_PX        240
+  :2084-2085                     size of the small card shown when a chart
+                                  bar is clicked
+
+------------------------------------------------------------------
+Line numbers drift as the code changes. If one stops matching, search
+the file for the name shown.
