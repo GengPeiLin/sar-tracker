@@ -27,3 +27,18 @@ data/catalog/
 # file serves both file:// and the web. Ignored so a stale copy left over from
 # an older checkout is never committed back.
 data/sar_status.json
+
+# Download lists. fetch_sar_data.py rewrites all five on every run, and
+# `git add data/` committed them daily — ~12 MB of churn for files the site
+# never requests: app.js builds the .meta4 in the browser (createMeta4) from
+# the frames already loaded, so the download buttons work without these.
+# Still written to disk, so the size report in update.yml is unaffected.
+data/*.meta4
+data/meta4/
+
+# Local documentation and tooling. Kept on disk, not shipped to GitHub:
+# CLAUDE.md is agent guidance, SETTINGS.txt documents config.js, and serve.py
+# is the local http.server wrapper that adds Cache-Control: no-store.
+CLAUDE.md
+SETTINGS.txt
+serve.py

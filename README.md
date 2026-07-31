@@ -79,9 +79,13 @@ For frontend changes, edit `app.js` or `styles.css` and open `index.html` in a b
 
 ## Versioning
 
-- `APP_VERSION` in `app.js` is the frontend version, shown in the page header
-- `data.version` in `sar_status.js` is the data pipeline version
-- They are independent — bump `APP_VERSION` for any user-visible frontend change
+The frontend carries no version of its own — it is served straight from `main`, so the deployed commit *is* the version. Only the data is stamped:
+
+- `data.version` in `sar_status.js` / `sar_recent.json` is the pipeline run timestamp, `YYYYMMDDTHHmmss` in UTC (`__version__` in `fetch_sar_data.py`, set at process start)
+- `applyFrameData()` in `app.js` writes it into the header as `database: <timestamp>`, and `updateMobDbBadge()` shows the date part as a freshness badge (fresh / recent / stale) in the mobile nav
+- Nothing to bump by hand for a frontend change — just commit and push
+
+An earlier `APP_VERSION` constant used to show a frontend build timestamp in the header; it was removed in `be063d3` when the logo was given over to title-font cycling, and has no replacement.
 
 ## Satellite Coverage
 
