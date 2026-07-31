@@ -229,7 +229,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','tz-label':'Time Zone','tz-taipei':'Taipei','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','tz-label':'Time Zone','tz-taipei':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -303,7 +303,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','tz-label':'時區','tz-taipei':'臺北','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','tz-label':'時區','tz-taipei':'臺灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
