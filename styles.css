@@ -197,7 +197,17 @@ header {
 
 /* Source-repo link. .hdr-controls carries margin-left:auto, so this trailing
    icon lands at the far right on desktop; on mobile the controls are hidden
-   and it sits next to the database badge. */
+   and it sits next to the database badge.
+
+   The link wears .control-field with the Stats tab's spacer label, so the icon
+   sits on the same baseline as the selects. Centring the bare <a> on the header
+   line instead put it ~8px high: it split the difference over label+input while
+   every neighbour's input sits below its label. */
+/* Stretch to the control row's full height and let auto block margins centre
+   the icon in what is left below the spacer. The icon box is 26px against a
+   30px select, so matching only the field's top still left it ~2px high. */
+.hdr-repo-field { align-self: stretch; }
+.hdr-repo-field .hdr-repo { margin-block: auto; }
 .hdr-repo {
   display: inline-flex;
   align-items: center;
@@ -2291,8 +2301,12 @@ header {
   .mob-db-ts.fresh  { color: var(--green);  opacity: 1; }
   .mob-db-ts.recent { color: var(--amber);  opacity: 1; }
   .mob-db-ts.stale  { color: var(--orange); opacity: 1; }
-  /* .hdr-controls is hidden here, so the repo link keeps its own place. */
+  /* .hdr-controls is hidden here, so the repo link keeps its own place — and
+     with no labelled controls left to line up with, the spacer would only push
+     the icon down out of line with the database badge. */
   .hdr-repo { width: 24px; height: 24px; }
+  .hdr-repo-field { align-self: center; }
+  .hdr-repo-field .hdr-tabs-spacer { display: none; }
 
   /* ── layout: stacking context ── */
   .layout { flex: 1; position: relative; overflow: hidden; display: block; }
