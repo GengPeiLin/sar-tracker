@@ -11,17 +11,17 @@ sar-tracker/
 │       ├── update.yml        # scheduled data refresh (5×/day) + Pages deploy
 │       └── deploy-pages.yml  # manual-only Pages deploy
 ├── data/
-│   ├── sar_status.js         # merged frame catalog (frontend reads this)
-│   ├── asf_taiwan.meta4      # metalink download manifest (ASF)
-│   └── copernicus_taiwan.meta4  # metalink download manifest (Copernicus)
+│   ├── sar_status.js         # full-history frame catalog (JS wrapper, see below)
+│   └── sar_recent.json       # last 14 days, loaded first for a fast start
 ├── app.js                    # all frontend JavaScript
 ├── styles.css                # all frontend CSS
-├── index.html                # HTML structure only (~192 lines)
+├── index.html                # HTML structure only
+├── config.js                 # editable defaults (map, theme, filters, colours)
 ├── fetch_sar_data.py         # data pipeline script
 └── README.md
 ```
 
-`data/catalog/` (per-mission internal cache) is gitignored, and cached between workflow runs so updates stay incremental.
+`data/catalog/` (per-mission internal cache) is gitignored, and cached between workflow runs so updates stay incremental. The `.meta4` download manifests are generated on every run but are **not** committed — `app.js` builds them in the browser from the frames already loaded, so the download buttons need no server-side file.
 
 ## How It Works
 
@@ -37,11 +37,11 @@ It loads `data/sar_status.js` on startup and renders an interactive Leaflet map 
 
 ### Data Pipeline
 
-`fetch_sar_data.py` (v0.7.1) runs on GitHub Actions and writes:
+`fetch_sar_data.py` runs on GitHub Actions and writes:
 
 - `data/sar_status.js` — merged frame metadata from both sources (JSON in a `window.__SAR_DATA` wrapper, so one file serves both `file://` and the web)
-- `data/asf_taiwan.meta4` — ASF metalink manifest
-- `data/copernicus_taiwan.meta4` — Copernicus metalink manifest
+- `data/sar_recent.json` — the last 14 days, fetched first so the map draws before the full history arrives
+- `data/meta4/<source>_<mission>.meta4` — metalink manifests, written locally but not committed
 
 It queries the ASF Search API and Copernicus OData API for Sentinel-1 and NISAR frames intersecting Taiwan, merges and deduplicates results, then applies a centroid latitude filter `[21.5°N, 26.85°N]` to drop frames that merely clip the search bounding box edges (e.g. frames centered north of Matsu or south of Taiwan's southern tip). Incremental updates use a configurable overlap window to avoid missing frames near the last-fetch boundary.
 
@@ -122,6 +122,44 @@ Before shipping a UI change:
 - [ ] Sentinel-1B does not appear in "Featured open missions"
 - [ ] Acquisition Frequency Chart updates after full dataset loads (Phase 2)
 
+## Citing This Work
+
+If this dashboard supported a paper, report, or presentation, please cite both the tool and the data it merely re-presents. **SAR Tracker holds no imagery of its own** — it indexes and links what ASF DAAC and Copernicus CDSE publish, so the mission and archive citations below are the ones that carry scientific weight.
+
+### The tool
+
+> GengPeiLin (2026). *SAR Tracker: a dashboard of Taiwan SAR satellite acquisitions.* https://github.com/GengPeiLin/sar-tracker
+
+```bibtex
+@software{sar_tracker,
+  author = {GengPeiLin},
+  title  = {SAR Tracker: a dashboard of Taiwan SAR satellite acquisitions},
+  year   = {2026},
+  url    = {https://github.com/GengPeiLin/sar-tracker},
+  note   = {Dataset stamp: YYYYMMDDTHHmmss; accessed YYYY-MM-DD}
+}
+```
+
+**Record the dataset stamp, not a version number.** The frontend has no version of its own (see [Versioning](#versioning)), and the catalog is rewritten five times a day, so "SAR Tracker, accessed March 2026" does not identify what you actually saw. The header shows `database: 2026-07-27 13:41 UTC+8` — that timestamp is `data.version`, and it pins the exact catalog. A commit SHA from `main` works equally well and is the more precise choice if you also relied on the filtering or statistics behaviour.
+
+### The data
+
+Frames indexed here come from two archives, each with its own attribution requirement:
+
+| Source | Attribution |
+|---|---|
+| **Sentinel-1** (ESA / Copernicus) | "Contains modified Copernicus Sentinel data [years]." Cite the year range you used — this catalog spans 2014 to present. |
+| **NISAR** (NASA / ISRO) | Cite the NASA-ISRO SAR mission and the granules' release tier. Distributed by ASF DAAC. |
+| **ASF DAAC** (distributor for both) | Cite the Alaska Satellite Facility DAAC as the distributor of the granules you downloaded. |
+
+Individual granules carry their own DOIs, issued by the archive rather than by this project. Take the DOI from ASF Vertex or the Copernicus Data Space entry for the specific product — the detail drawer links to both — rather than citing a DOI for the dashboard, which has none.
+
+**A caution specific to NISAR.** Products are published in release tiers, shown in the drawer as a badge beside the granule name. **Beta products are uncalibrated** and were released for familiarisation rather than for science; provisional products supersede them. If your work rests on beta granules, say so explicitly and state the tier — the distinction is not recoverable from the granule name alone, and conclusions drawn from uncalibrated radiometry may not survive reprocessing.
+
+### Scope, so nobody over-claims
+
+This catalog is filtered to Taiwan and is not a complete record of either mission. Sentinel-1 coverage comes from four priority tracks plus whatever a geographic Copernicus query returns; frames are additionally centroid-filtered to `[21.5°N, 26.85°N]`. Absence of a frame here is **not** evidence that no acquisition took place — check the archives directly before making that claim. The [Known Limitations](#known-limitations) section lists where the merge is deliberately conservative.
+
 ## License
 
-MIT
+MIT — the code only. The satellite data carries the terms of its originating archive; see the attribution table above.
