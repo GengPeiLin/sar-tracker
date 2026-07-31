@@ -1,6 +1,6 @@
 # SAR Tracker
 
-A static GitHub Pages dashboard for monitoring Sentinel-1, NISAR, and other SAR satellite acquisitions over Taiwan. Data is fetched from ASF DAAC and Copernicus CDSE, updated daily by a GitHub Actions workflow, and served as a Leaflet map with filtering and download support.
+A static GitHub Pages dashboard for monitoring Sentinel-1, NISAR, and other SAR satellite acquisitions over Taiwan. Data is fetched from ASF DAAC and Copernicus CDSE, refreshed several times a day by a GitHub Actions workflow, and served as a Leaflet map with filtering and download support.
 
 ## Repository Structure
 
@@ -8,7 +8,7 @@ A static GitHub Pages dashboard for monitoring Sentinel-1, NISAR, and other SAR 
 sar-tracker/
 ├── .github/
 │   └── workflows/
-│       ├── update.yml        # daily data refresh + Pages deploy
+│       ├── update.yml        # scheduled data refresh (5×/day) + Pages deploy
 │       └── deploy-pages.yml  # manual-only Pages deploy
 ├── data/
 │   ├── sar_status.js         # merged frame catalog (frontend reads this)
@@ -21,7 +21,7 @@ sar-tracker/
 └── README.md
 ```
 
-`data/catalog_db.json` (internal cache) is gitignored.
+`data/catalog/` (per-mission internal cache) is gitignored, and cached between workflow runs so updates stay incremental.
 
 ## How It Works
 
@@ -56,7 +56,7 @@ Environment variables:
 
 ### Deployment
 
-`update.yml` runs daily at 02:00 UTC (10:00 Taiwan time), updates the data files, commits them to `main`, and deploys to GitHub Pages. A manual trigger is also available via `workflow_dispatch`.
+`update.yml` runs five times a day — 00:00, 02:00, 04:00, 09:00 and 15:00 UTC, i.e. 08:00, 10:00, 12:00, 17:00 and 23:00 Taiwan time (UTC+8, no DST) — updates the data files, commits them to `main`, and deploys to GitHub Pages. A manual trigger is also available via `workflow_dispatch`.
 
 `deploy-pages.yml` is manual-only and can be used to redeploy without a data update.
 
@@ -91,6 +91,8 @@ The sidebar shows SAR satellites grouped by status:
 - **Other SAR missions** — commercial, restricted-access, and retired satellites (collapsed by default)
 
 Retired satellites (including Sentinel-1B, retired 2022-08-23) appear in "Other SAR missions" when historical data is in view, never in the featured group.
+
+The **Satellite** dropdown is built from the whole catalog rather than the current date window, so a retired mission is always selectable. Selecting one whose data lies outside the window moves the window onto that mission's own data — its full operational span for a retired satellite, or the same-length window ending on its newest acquisition for an active one. The date shortcut buttons anchor there too, so "This Week" / "1 Year" mean the last week / year of the selected mission's life.
 
 ## Frame Number Display
 

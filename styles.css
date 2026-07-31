@@ -194,6 +194,24 @@ header {
   flex-wrap: wrap;
   margin-left: auto;
 }
+
+/* Source-repo link. .hdr-controls carries margin-left:auto, so this trailing
+   icon lands at the far right on desktop; on mobile the controls are hidden
+   and it sits next to the database badge. */
+.hdr-repo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--muted);
+  transition: color .12s, border-color .12s, background .12s;
+}
+.hdr-repo:hover { color: var(--cyan); border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 10%, transparent); }
+.hdr-repo svg { display: block; }
 .tab {
   font-family: var(--mono);
   font-size: calc(10px + var(--font-bump) - 1px);
@@ -2273,6 +2291,8 @@ header {
   .mob-db-ts.fresh  { color: var(--green);  opacity: 1; }
   .mob-db-ts.recent { color: var(--amber);  opacity: 1; }
   .mob-db-ts.stale  { color: var(--orange); opacity: 1; }
+  /* .hdr-controls is hidden here, so the repo link keeps its own place. */
+  .hdr-repo { width: 24px; height: 24px; }
 
   /* ── layout: stacking context ── */
   .layout { flex: 1; position: relative; overflow: hidden; display: block; }
