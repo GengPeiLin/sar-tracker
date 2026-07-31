@@ -68,7 +68,7 @@ FORCE_FULL_REBUILD=1 REBUILD_SCOPE=nisar python fetch_sar_data.py   # ignore wat
 
 1. **`SATS` array** — static satellite catalogue (id, band, agency, status, `asf_prefix[]`, bilingual descriptions)
 2. **`TRANSLATIONS`** — all UI strings in `en` and `zh-TW`; accessed via `t(key, vars)`
-3. **Global constants** — `FEATURED_SATELLITES`, `OPEN_DATA_SATELLITES`, `PLATFORM_COLORS`, `NISAR_TRACK_COLORS`, `APP_VERSION`
+3. **Global constants** — `FEATURED_SATELLITES`, `OPEN_DATA_SATELLITES`, `PLATFORM_COLORS`, `NISAR_TRACK_COLORS`, `THEME_OPTIONS`, `FONT_SIZE_STEPS`
 4. **`state` object** — single mutable app state; `ensureAdvancedState()` lazily adds filter sub-keys
 5. **Data loading** — `loadData()` / `applyFrameData()` / `reconcileFrameMetadata()` / `enhanceFrame()`
 6. **Map** — Leaflet init, polygon rendering, selection, highlight styles, drawer open/close
