@@ -170,15 +170,9 @@
         </div>
       </details>
       <div class="filter-actions">
-        <div class="filter-hl-row">
-          <span class="filter-hl-lbl" data-i18n="highlight-label">Highlight</span>
-          <div class="filter-hl-btns" id="hl-btns">
-            <button class="legend-hl-btn" id="hl-ring"  onclick="setHighlightStyle('ring')" data-i18n="highlight-solid">Solid</button>
-            <button class="legend-hl-btn" id="hl-dash"  onclick="setHighlightStyle('dash')" data-i18n="highlight-dash">Dash</button>
-            <button class="legend-hl-btn" id="hl-color" onclick="setHighlightStyle('color')" data-i18n="highlight-color">Color</button>
-            <button class="legend-hl-btn" id="hl-gold"  onclick="setHighlightStyle('gold')" data-i18n="highlight-gold">Gold</button>
-          </div>
-        </div>
+        <!-- Highlight style lives on the map's Visible Data overlay only. It
+             sits next to the legend it restyles, so a second copy here was
+             the same four buttons twice on one screen. -->
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()" data-i18n="reset-filters">Reset Filters</button>
         <label class="filter-toggle" for="filter-show-same-track">
           <input id="filter-show-same-track" type="checkbox">
