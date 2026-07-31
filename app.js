@@ -290,7 +290,7 @@ const TRANSLATIONS = {
     'unknown-granule':'Unknown Granule','unknown-acquisition':'Unknown acquisition time',
     'lang-label':'Lang','theme-label':'Theme','text-size-label':'Text Size','stats-tab':'Stats',
     'map-tab':'Map','list-tab':'List','filters-tab':'Filters',
-    'highlight-label':'Highlight','highlight-solid':'Solid','highlight-dash':'Dash','highlight-color':'Color','highlight-gold':'Gold',
+    'highlight-solid':'Solid','highlight-dash':'Dash','highlight-color':'Color','highlight-gold':'Gold',
     'statistics-title':'Statistics','layout-stacked':'Stacked','layout-side-by-side':'Side by side','layout-chart-focus':'Chart focus',
     'chart-label':'Chart','table-label':'Table',
     'stats-acq-frequency-chart':'Acquisition Frequency Chart','stats-all-acquisitions':'all acquisitions',
@@ -367,7 +367,7 @@ const TRANSLATIONS = {
     'unknown-granule':'未知取像','unknown-acquisition':'未知取像時間',
     'lang-label':'語言','theme-label':'主題','text-size-label':'文字大小','stats-tab':'統計',
     'map-tab':'地圖','list-tab':'清單','filters-tab':'篩選',
-    'highlight-label':'醒目標示','highlight-solid':'實線','highlight-dash':'虛線','highlight-color':'顏色','highlight-gold':'金色',
+    'highlight-solid':'實線','highlight-dash':'虛線','highlight-color':'顏色','highlight-gold':'金色',
     'statistics-title':'統計','layout-stacked':'上下排列','layout-side-by-side':'左右並排','layout-chart-focus':'圖表聚焦',
     'chart-label':'圖表','table-label':'表格',
     'stats-acq-frequency-chart':'取像頻率圖','stats-all-acquisitions':'全部取像',
@@ -2636,15 +2636,10 @@ const HIGHLIGHT_STYLES = {
 
 function setHighlightStyle(id) {
   localStorage.setItem('sar_hl_style', id);
-  syncHighlightButtons();
+  // updateLegend() rebuilds the overlay's button row, which is what carries
+  // the active state now that the sidebar's duplicate row is gone.
+  updateLegend();
   updateMapSelectionState();
-}
-
-function syncHighlightButtons() {
-  const hlId = getHighlightStyleId();
-  document.querySelectorAll('#hl-btns .legend-hl-btn').forEach(btn => {
-    btn.classList.toggle('on', btn.id === 'hl-' + hlId);
-  });
 }
 
 function updateMapSelectionState() {
