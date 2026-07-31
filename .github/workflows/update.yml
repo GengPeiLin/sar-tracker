@@ -2,8 +2,14 @@ name: Update SAR acquisition data
 
 on:
   schedule:
-    # Daily at UTC 02:00 (Taiwan time 10:00)
-    - cron: '0 2 * * *'
+    # Five times a day, expressed here in UTC. Taiwan (UTC+8) has no DST, so
+    # these map to a fixed local clock year-round:
+    #   UTC 00:00 → 08:00 Taiwan
+    #   UTC 02:00 → 10:00 Taiwan
+    #   UTC 04:00 → 12:00 Taiwan
+    #   UTC 09:00 → 17:00 Taiwan
+    #   UTC 15:00 → 23:00 Taiwan
+    - cron: '0 0,2,4,9,15 * * *'
   workflow_dispatch:
     inputs:
       days_back:
@@ -42,10 +48,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Per-mission catalogs (data/catalog/*.json) are gitignored local build
+      # state; without them every run would rebuild the full history from ASF
+      # and Copernicus instead of fetching incrementally from the watermark.
       - name: Restore catalog cache
         uses: actions/cache@v4
         with:
-          path: data/catalog_db.json
+          path: data/catalog
           key: catalog-db-${{ github.run_id }}
           restore-keys: catalog-db-
 
@@ -86,7 +95,7 @@ jobs:
         uses: actions/cache/save@v4
         if: always()
         with:
-          path: data/catalog_db.json
+          path: data/catalog
           key: catalog-db-${{ github.run_id }}
 
       - name: Commit & push updated data

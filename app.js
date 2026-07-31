@@ -229,7 +229,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','tz-label':'Time Zone','tz-taipei':'Taipei','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','repo-link':'View source on GitHub','db-stamp':'database: {stamp}','tz-label':'Time Zone','tz-taiwan':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -303,7 +303,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','tz-label':'時區','tz-taipei':'臺北','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','repo-link':'在 GitHub 檢視原始碼','db-stamp':'資料庫：{stamp}','tz-label':'時區','tz-taiwan':'台灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
@@ -426,17 +426,47 @@ function cycleTitleFont() {
   applyTitleFont();
 }
 
+// The dataset version is a compact UTC timestamp (YYYYMMDDThhmmss) written by
+// fetch_sar_data.py. Parsed back to a real instant so the header stamp and the
+// mobile badge can be shown in the selected display zone like every other time
+// in the app — a raw UTC stamp beside UTC+8 acquisition times reads as a
+// different (and apparently staler) day for most of the Taiwan evening.
+function parseDatasetVersion(version) {
+  const match = /^(\d{4})(\d{2})(\d{2})(?:T?(\d{2})(\d{2})(\d{2})?)?$/.exec(String(version || '').trim());
+  if (!match) return null;
+  const [, y, mo, d, hh = '00', mi = '00', ss = '00'] = match;
+  const ts = Date.UTC(+y, +mo - 1, +d, +hh, +mi, +ss);
+  return Number.isNaN(ts) ? null : new Date(ts);
+}
+
+// Header "database: …" stamp plus the mobile freshness badge. Re-run whenever
+// the display zone changes, not just when new data lands.
+function renderDatasetStamp(data = state.baseStats || {}) {
+  const el = document.getElementById('hdr-time');
+  const at = parseDatasetVersion(data.version);
+  let stamp = data.version || '--';
+  if (at) {
+    const local = toDisplayDate(at);
+    const pad = n => String(n).padStart(2, '0');
+    stamp = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`
+          + ` ${pad(local.getHours())}:${pad(local.getMinutes())} ${displayTZLabel(at)}`;
+  }
+  if (el) el.textContent = t('db-stamp', { stamp });
+  updateMobDbBadge(data.version);
+}
+
 function updateMobDbBadge(version) {
   const badge = document.getElementById('mob-db-ts');
-  if (!badge || !version || !/^\d{8}T/.test(version)) return;
-  const dbDate  = version.slice(0, 8); // "20260414"
-  const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
-  const today = fmt(new Date());
-  const yesterday = fmt(new Date(Date.now() - 86400000));
-  const label = `${dbDate.slice(0,4)}-${dbDate.slice(4,6)}-${dbDate.slice(6,8)}`;
+  const at = parseDatasetVersion(version);
+  if (!badge || !at) return;
+  // Freshness is judged on the display zone's calendar, the same basis as
+  // every other day grouping in the app.
+  const label = displayDateKey(at);
+  const today = displayDateKey(new Date());
+  const yesterday = displayDateKey(new Date(Date.now() - 86400000));
   badge.textContent = label;
   badge.className = 'mob-db-ts ' +
-    (dbDate === today ? 'fresh' : dbDate === yesterday ? 'recent' : 'stale');
+    (label === today ? 'fresh' : label === yesterday ? 'recent' : 'stale');
 }
 
 function setMobTab(tab, btn) {
@@ -455,6 +485,9 @@ function applyI18n() {
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     el.title = t(el.dataset.i18nTitle);
+    // Icon-only controls carry the same text as their accessible name; leaving
+    // it in English would strand screen readers on the untranslated string.
+    if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', el.title);
   });
   // Zone names are translated, so the option list is rebuilt with the language.
   renderTZSelect();
@@ -464,6 +497,9 @@ function applyI18n() {
   });
   // re-render all dynamic UI
   setupReadableUI();
+  // setupReadableUI rebuilds .hdr-status by carrying the previous text across,
+  // so the stamp keeps the old language until it is rebuilt here.
+  if (state.baseStats?.version) renderDatasetStamp();
   rebuildDownloadBar();
   renderSatelliteSelect();
   renderSatList();
@@ -526,8 +562,11 @@ const DISPLAY_TZ_DEFAULT = cfgStr('timezone.default', 'Asia/Taipei');
 // zone we ship a translation for stays translated and any other zone the user
 // adds falls back to showing its own name (renderTZSelect handles a missing
 // key). Requiring users to invent an i18n key would make the list un-editable.
+// 'Asia/Taipei' is the IANA identifier and cannot change — only the label the
+// dropdown shows, which reads "Taiwan" because that is the area the zone covers
+// and the subject of this dashboard.
 const DISPLAY_TZ_LABEL_KEYS = {
-  'Asia/Taipei': 'tz-taipei',   'UTC': 'tz-utc',
+  'Asia/Taipei': 'tz-taiwan',   'UTC': 'tz-utc',
   '__local__': 'tz-local',      'Asia/Tokyo': 'tz-tokyo',
   'Asia/Singapore': 'tz-singapore', 'Asia/Kolkata': 'tz-kolkata',
   'Europe/London': 'tz-london', 'Europe/Berlin': 'tz-berlin',
@@ -654,6 +693,9 @@ function applyDisplayTZ() {
   renderTZSelect();
   const badge = document.getElementById('tz-label');
   if (badge) badge.textContent = displayTZLabel();
+  // The database stamp is a time like any other: it moves with the zone, and
+  // its freshness badge is judged on the new zone's calendar day.
+  if (state.baseStats?.version) renderDatasetStamp();
   if (state.rawFrames?.length) applyAdvancedFilters();
   // applyAdvancedFilters() re-renders the map/list but never the open drawer's
   // own text (its "Selected Date" and per-day group headings) — rebuild it in
@@ -1033,6 +1075,152 @@ function ensureAdvancedState() {
       state.filters[key] = new Set(state.filters[key] || []);
     }
   }
+}
+
+// Per-satellite extent of the WHOLE catalog, independent of the date window.
+//
+// The satellite dropdown used to be built from the *filtered* frames, so with
+// the default 7-day window a retired mission had zero rows, never appeared as
+// an option, and none of its archive could be queried at all — S1B carries
+// ~2 600 Taiwan frames from 2016–2021 that were simply unreachable. The
+// dropdown is now built from this index instead, and picking a satellite whose
+// data sits outside the window moves the window onto it (see
+// snapDateWindowToSatellite).
+//
+// Timestamps are kept sorted per satellite so "does this satellite have data in
+// the current window?" is a binary search rather than a displayDateKey() call
+// per frame — S1A alone carries >12 000, and each key costs an Intl format.
+//
+// Cached against the rawFrames array identity: rawFrames is replaced wholesale
+// when a dataset lands, and never mutated in place. Timestamps are zone-free,
+// so this cache survives a display-timezone change.
+function getSatelliteCatalogIndex() {
+  const frames = state.rawFrames || [];
+  const cached = getSatelliteCatalogIndex.cache;
+  if (cached && cached.source === frames) return cached.index;
+
+  const byId = new Map();
+  for (const frame of frames) {
+    const id = frame.satellite_id;
+    if (!id || !frame.date) continue;
+    const ts = Date.parse(frame.date);
+    if (Number.isNaN(ts)) continue;
+    let times = byId.get(id);
+    if (!times) byId.set(id, times = []);
+    times.push(ts);
+  }
+
+  const index = new Map();
+  for (const [id, times] of byId) {
+    times.sort((a, b) => a - b);
+    index.set(id, {
+      count: times.length,
+      times,
+      first: times[0],
+      last: times[times.length - 1],
+    });
+  }
+  getSatelliteCatalogIndex.cache = { source: frames, index };
+  return index;
+}
+
+// The current date window as a half-open instant range [from, to). Derived from
+// the same display-zone day boundaries frameMatchesAdvancedFilters compares
+// against, but resolved once so frame timestamps can be tested numerically.
+function getDateWindowRange() {
+  ensureAdvancedState();
+  const parseKey = key => {
+    const parts = String(key || '').split('-').map(Number);
+    return parts.length === 3 && parts.every(Number.isFinite) ? parts : null;
+  };
+  const startParts = parseKey(state.filters.dateStart);
+  const endParts = parseKey(state.filters.dateEnd);
+  return {
+    from: startParts
+      ? fromDisplayParts(startParts[0], startParts[1] - 1, startParts[2]).getTime()
+      : -Infinity,
+    // Exclusive: the window's last day runs up to the next display midnight.
+    to: endParts
+      ? fromDisplayParts(endParts[0], endParts[1] - 1, endParts[2] + 1).getTime()
+      : Infinity,
+  };
+}
+
+function satelliteHasFramesInWindow(satelliteId) {
+  const entry = getSatelliteCatalogIndex().get(satelliteId);
+  if (!entry) return false;
+  const { from, to } = getDateWindowRange();
+  // Sorted, so the earliest timestamp at or after `from` settles it.
+  let lo = 0, hi = entry.times.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (entry.times[mid] < from) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo < entry.times.length && entry.times[lo] < to;
+}
+
+// How many display-zone days the current window spans.
+function getDateWindowDays() {
+  const start = parseDateInputValue(state.filters.dateStart);
+  const end = parseDateInputValue(state.filters.dateEnd);
+  if (!start || !end) return cfgNum('filters.dateWindowDays', 7, { min: 1, max: 3650 });
+  return Math.max(1, Math.round((end - start) / 864e5) + 1);
+}
+
+// Write a date window to both state and the two inputs. All window changes go
+// through here so the preset buttons' active state is never left stale.
+function setDateWindow(startKey, endKey) {
+  ensureAdvancedState();
+  state.filters.dateStart = startKey;
+  state.filters.dateEnd = endKey;
+  const startInput = document.getElementById('filter-date-start');
+  const endInput = document.getElementById('filter-date-end');
+  if (startInput) startInput.value = startKey;
+  if (endInput) endInput.value = endKey;
+  updateDateShortcutState();
+}
+
+// Move the date window onto a satellite's own data when the current window
+// holds none of it. Returns true when the window was moved. Without this,
+// selecting a retired mission just empties the map with no explanation.
+function snapDateWindowToSatellite(satelliteId) {
+  if (!satelliteId || satelliteId === 'ALL') return false;
+  const entry = getSatelliteCatalogIndex().get(satelliteId);
+  if (!entry || satelliteHasFramesInWindow(satelliteId)) return false;
+
+  // A retired mission has one meaningful window — its whole life — and no
+  // "recent" data to slide onto, so open the full archive. S1B flew Oct 2016 to
+  // Dec 2021 and its ~2 600 Taiwan frames are only reachable this way.
+  if (SATS.find(sat => sat.id === satelliteId)?.status === 'ret') {
+    setDateWindow(displayDateKey(entry.first), displayDateKey(entry.last));
+    return true;
+  }
+
+  // An active satellite that simply has not passed inside this window: keep the
+  // window's length and slide it onto the newest acquisition, so the user's
+  // chosen zoom level survives.
+  const end = toDisplayDate(entry.last);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (getDateWindowDays() - 1));
+  setDateWindow(formatDateInputValue(start), formatDateInputValue(end));
+  return true;
+}
+
+// The newest data the current satellite selection actually has. The date
+// presets anchor here rather than on the dataset end, so "This Week" / "1 Year"
+// mean the last week / year of a retired mission's life instead of a window
+// relative to today that is empty forever.
+function getWindowAnchorDate() {
+  ensureAdvancedState();
+  const datasetEnd = getQueryEndDate();
+  const id = state.filters.satellite;
+  if (!id || id === 'ALL') return datasetEnd;
+  const entry = getSatelliteCatalogIndex().get(id);
+  if (!entry) return datasetEnd;
+  const last = new Date(entry.last);
+  if (Number.isNaN(last.getTime())) return datasetEnd;
+  return last < datasetEnd ? last : datasetEnd;
 }
 
 function rebuildFrameCaches() {
@@ -1419,9 +1607,8 @@ function shouldApplyFullDataset(data) {
 
 function applyFrameData(data, options = {}) {
   if (!Array.isArray(data.taiwan_frames)) return;
-  document.getElementById('hdr-time').textContent = `database: ${data.version || '--'}`;
-  updateMobDbBadge(data.version);
   state.baseStats = data;
+  renderDatasetStamp(data);
   state.rawFrames = reconcileFrameMetadata(
     data.taiwan_frames.map(enhanceFrame).filter(frame => frame.is_open_data)
   );
@@ -1559,6 +1746,9 @@ function bindAdvancedControls() {
   document.getElementById('filter-satellite')?.addEventListener('change', event => {
     state.filters.satellite = event.target.value;
     state.selectedSat = SATS.find(s => s.id === state.filters.satellite) || null;
+    // A retired mission's data sits outside any recent window; move the window
+    // onto it rather than showing an empty map.
+    snapDateWindowToSatellite(state.filters.satellite);
     renderFormatOptions();
     applyAdvancedFilters();
   });
@@ -1609,8 +1799,12 @@ function renderSatelliteSelect() {
   const select = document.getElementById('filter-satellite');
   if (!select) return;
   const counts = state.cache?.satelliteCounts || new Map();
+  const catalog = getSatelliteCatalogIndex();
 
-  const visibleSats = SATS.filter(matchesSidebarFilters).filter(sat => (counts.get(sat.id) || 0) > 0);
+  // Offered from the CATALOG, not from the current window: a satellite whose
+  // data lies outside the window must stay selectable, or it can never be
+  // queried at all (this is what hid retired S1B behind the 7-day default).
+  const visibleSats = SATS.filter(matchesSidebarFilters).filter(sat => catalog.has(sat.id));
   const orderedSats = [
     ...visibleSats.filter(isFeaturedSatellite),
     ...visibleSats.filter(sat => !isFeaturedSatellite(sat)),
@@ -1619,7 +1813,15 @@ function renderSatelliteSelect() {
   const options = [`<option value="ALL">${t('all-satellites')}</option>`];
   for (const sat of orderedSats) {
     const count = counts.get(sat.id) || 0;
-    options.push(`<option value="${sat.id}">${sat.name}${count ? ` (${count})` : ''}</option>`);
+    const entry = catalog.get(sat.id);
+    // Out-of-window satellites show the years they cover rather than a bare
+    // "(0)", so the archive span is visible before selecting.
+    const firstYear = toDisplayDate(entry.first).getFullYear();
+    const lastYear = toDisplayDate(entry.last).getFullYear();
+    const suffix = count
+      ? ` (${count})`
+      : ` (${firstYear}${lastYear === firstYear ? '' : `–${lastYear}`})`;
+    options.push(`<option value="${sat.id}">${getSatName(sat)}${suffix}</option>`);
   }
   select.innerHTML = options.join('');
   if (![...select.options].some(opt => opt.value === state.filters.satellite)) {
@@ -1844,8 +2046,10 @@ function renderNisarFormatChips(pool) {
 function resetAdvancedFilters(apply = true) {
   ensureAdvancedState();
   const allTypes = [...new Set(state.rawFrames.map(frame => frame.product_type_norm).filter(Boolean))];
-  const window = getDefaultWeekWindow();
+  // Satellite first: the default window now anchors on the selected
+  // satellite's newest data, so it has to be read after the reset to ALL.
   state.filters.satellite = 'ALL';
+  const window = getDefaultWeekWindow();
   state.filters.direction = 'ALL';
   state.filters.showSameTrackInDrawer = false;
   state.filters.showOtherSentinelTracks = false;
@@ -1979,6 +2183,7 @@ function selectSatellite(sat, row) {
   state.filters.satellite = sat.id;
   const select = document.getElementById('filter-satellite');
   if (select) select.value = sat.id;
+  snapDateWindowToSatellite(sat.id);
   openDrawer(sat, row, state.rawFrames.some(frame => satMatchesFrame(sat, frame)));
   applyAdvancedFilters();
 }
@@ -2767,7 +2972,7 @@ function parseDateInputValue(text) {
 // length is configurable; the This Week / Month / … buttons are separate and
 // keep their fixed meanings, since their labels state them.
 function getDefaultWeekWindow() {
-  const end = toDisplayDate(getQueryEndDate());
+  const end = toDisplayDate(getWindowAnchorDate());
   const start = new Date(end);
   start.setDate(start.getDate() - (cfgNum('filters.dateWindowDays', 7, { min: 1, max: 3650 }) - 1));
   return {
@@ -2778,8 +2983,10 @@ function getDefaultWeekWindow() {
 
 function getPresetWindow(days) {
   // Window edges are display-timezone calendar dates, matching how the map's
-  // date filter now compares frames (by display day).
-  const end = toDisplayDate(getQueryEndDate());
+  // date filter now compares frames (by display day). The end is the newest
+  // data the current satellite selection has, not always "now" — see
+  // getWindowAnchorDate.
+  const end = toDisplayDate(getWindowAnchorDate());
   const start = new Date(end);
   start.setDate(start.getDate() - (days - 1));
   return {
@@ -2815,13 +3022,7 @@ function updateDateShortcutState() {
 function applyPresetDateWindow(days) {
   ensureAdvancedState();
   const window = getPresetWindow(days);
-  state.filters.dateStart = window.start;
-  state.filters.dateEnd = window.end;
-  const dateStart = document.getElementById('filter-date-start');
-  const dateEnd = document.getElementById('filter-date-end');
-  if (dateStart) dateStart.value = window.start;
-  if (dateEnd) dateEnd.value = window.end;
-  updateDateShortcutState();
+  setDateWindow(window.start, window.end);
   applyAdvancedFilters();
 }
 
@@ -2830,22 +3031,10 @@ function applyTabDateWindow() {
   const dateEnd = document.getElementById('filter-date-end');
   if (!dateStart || !dateEnd) return;
 
-  if (state.tab === 'tw') {
+  if (state.tab === 'tw' || !state.filters.dateStart || !state.filters.dateEnd) {
     const window = getDefaultWeekWindow();
-    state.filters.dateStart = window.start;
-    state.filters.dateEnd = window.end;
-    dateStart.value = window.start;
-    dateEnd.value = window.end;
-    updateDateShortcutState();
+    setDateWindow(window.start, window.end);
     return;
-  }
-
-  if (!state.filters.dateStart || !state.filters.dateEnd) {
-    const window = getDefaultWeekWindow();
-    state.filters.dateStart = window.start;
-    state.filters.dateEnd = window.end;
-    dateStart.value = window.start;
-    dateEnd.value = window.end;
   }
   updateDateShortcutState();
 }
