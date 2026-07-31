@@ -260,6 +260,9 @@ const TRANSLATIONS = {
     'swath':'Swath','launch':'Launch','retired-label':'Retired',
     'status-op':'Operational','status-ret':'Retired','status-up':'Upcoming',
     'track':'Track','frame':'Frame','direction':'Direction','mode':'Mode',
+    'frame-coverage':'Coverage','polarization':'Polarization','bandwidth-mhz':'{bw} MHz',
+    'joint-obs':'Joint L+S','joint-yes':'Yes','joint-no':'L-band only',
+    'cov-Full':'Full','cov-Partial':'Partial',
     'acquisitions':'Acquisitions','files-label':'Files','source':'Source','selected-date':'Selected Date',
     'n-acquisition-dates':'{n} acquisition dates','n-files-in-drawer':'{n} file{s} in drawer',
     'acquisition-files-section':'Acquisition Files Under Track {track} / Frame {frame}',
@@ -334,6 +337,9 @@ const TRANSLATIONS = {
     'swath':'刈幅','launch':'發射','retired-label':'退役',
     'status-op':'運作中','status-ret':'已退役','status-up':'即將發射',
     'track':'軌道','frame':'幀號','direction':'方向','mode':'模式',
+    'frame-coverage':'涵蓋','polarization':'極化','bandwidth-mhz':'{bw} MHz',
+    'joint-obs':'L+S 聯合','joint-yes':'是','joint-no':'僅 L 波段',
+    'cov-Full':'完整','cov-Partial':'部分',
     'acquisitions':'取像次數','files-label':'檔案','source':'來源','selected-date':'選取日期',
     'n-acquisition-dates':'{n} 個取像日期','n-files-in-drawer':'抽屜 {n} 個檔案',
     'acquisition-files-section':'軌道 {track} / 幀號 {frame} 取像檔案',
@@ -2874,6 +2880,42 @@ function buildFrameMetaRows(frame) {
   ];
 }
 
+// The drawer's summary grid carried a Sentinel-1 shaped Mode cell, fed from
+// ASF's beamModeType. NISAR leaves that field null, so the cell rendered blank
+// for every L-SAR granule. NISAR does have a MODE field — in the granule name
+// it is a pair of range-bandwidth codes, '4005' meaning a 40 MHz primary band
+// plus a 5 MHz secondary — so show that, followed by the acquisition fields
+// that only NISAR has. Same principle as buildFrameMetaRows(): present NISAR's
+// own scheme rather than forcing it into Sentinel-1's.
+function buildDrawerModeCells(frame) {
+  const cell = (key, value) =>
+    `<div class="d-item"><div class="k">${escapeHtml(t(key))}</div><div class="v"><small>${escapeHtml(value)}</small></div></div>`;
+
+  if (!isNisarFrame(frame)) return cell('mode', frame.mode || '--');
+
+  // ASF omits rangeBandwidth on the L3 soil-moisture products, but the granule
+  // name still carries the MODE field, so parse it as a fallback.
+  const named = parseNisarGranuleFields(frame.granule);
+  const pick = (...values) =>
+    values.find(value => value !== undefined && value !== null && value !== '' && value !== '--') || '--';
+
+  const bandwidth = pick(frame.range_bandwidth, named.range_bandwidth);
+  const main = pick(frame.main_polarization, named.main_polarization, frame.polarization);
+  const side = pick(frame.side_polarization, named.side_polarization);
+
+  // The per-granule rows keep ASF's own English wording; this grid is
+  // translated, so the coverage value is translated with it.
+  const coverage = pick(frame.frame_coverage, named.frame_coverage);
+  const coverageLabel = coverage === '--' ? '--' : t(`cov-${coverage}`);
+
+  return cell('mode', bandwidth === '--' ? '--' : t('bandwidth-mhz', { bw: bandwidth }))
+    + cell('frame-coverage', coverageLabel)
+    + cell('polarization', side !== '--' && side !== main ? `${main} / ${side}` : main)
+    + cell('joint-obs', frame.joint_observation === undefined || frame.joint_observation === null
+        ? '--'
+        : t(frame.joint_observation ? 'joint-yes' : 'joint-no'));
+}
+
 function parseGranuleMetadata(granule) {
   const text = String(granule || '').replace(/\.SAFE$/i, '').trim();
   if (!text) return [];
@@ -3245,7 +3287,7 @@ function openFrameDrawer(clickedFrame) {
     <div class="d-item"><div class="k">${escapeHtml(t('track'))}</div><div class="v">${escapeHtml(getFramePathNumber(primary) ?? '--')}</div></div>
     <div class="d-item"><div class="k">${escapeHtml(t('frame'))}</div><div class="v">${escapeHtml(frameCenterLabel)}</div></div>
     <div class="d-item"><div class="k">${escapeHtml(t('direction'))}</div><div class="v"><small>${escapeHtml(primary.direction_norm || '--')}</small></div></div>
-    <div class="d-item"><div class="k">${escapeHtml(t('mode'))}</div><div class="v"><small>${escapeHtml(primary.mode || '--')}</small></div></div>
+    ${buildDrawerModeCells(primary)}
     <div class="d-item"><div class="k">${escapeHtml(t('acquisitions'))}</div><div class="v"><small>${escapeHtml(t('n-acquisition-dates', { n: acquisitionCount }))}</small></div></div>
     <div class="d-item"><div class="k">${escapeHtml(t('files-label'))}</div><div class="v"><small>${escapeHtml(t('n-files-in-drawer', { n: entries.length, s: entries.length === 1 ? '' : 's' }))}</small></div></div>
     <div class="d-item span-2"><div class="k">${escapeHtml(t('source'))}</div><div class="v"><small>${escapeHtml(getSourceState(primary))}</small></div></div>
