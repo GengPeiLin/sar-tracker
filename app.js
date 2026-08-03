@@ -121,7 +121,9 @@ const SATS = [
     desc_zh:'超寬刈幅模式達 2000 km，全球覆蓋頻率大幅提升。ScanSAR 模式 14 天可覆蓋台灣多次。' },
 
   // ── NASA/ISRO NISAR (L+S) ────────────────────────────────────────────────
-  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
+  // `band` is the primary radar (badges show one letter); `bands` lists every
+  // band the satellite carries, so the S-Band chip finds NISAR's S-SAR frames.
+  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', bands:['L','S'], freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
     asf_prefix:['NISAR'],
     desc:'Joint NASA/ISRO mission carrying both L-band (JPL) and S-band (ISRO) SAR. 12-day global coverage; all data fully open access.',
     desc_zh:'NASA 與 ISRO 聯合任務，同時搭載 L 波段（JPL）與 S 波段（ISRO）SAR。12 天全球覆蓋，所有資料完全開放。' },
@@ -241,7 +243,7 @@ const TRANSLATIONS = {
     'product-types':'Product Types','loading-types':'Loading...','no-product-types':'No product types in current inventory.',
     'chip-solo-hint':'Click to toggle · double-click to select only this (double-click again to select all)',
     's1-options':'Sentinel-1 Options','nisar-options':'NISAR Options',
-    'frame-coverage':'Frame Coverage','range-bandwidth':'Range Bandwidth',
+    'frame-coverage':'Frame Coverage','range-bandwidth':'Range Bandwidth','nisar-band':'Band',
     'release-beta':'Beta release (Feb 2026) — uncalibrated, not for quantitative use',
     'release-provisional':'Provisional release (20 Jul 2026) — calibration still being refined',
     'release-urgent':'Urgent response product',
@@ -315,7 +317,7 @@ const TRANSLATIONS = {
     'product-types':'產品類型','loading-types':'載入中...','no-product-types':'目前清單無產品類型。',
     'chip-solo-hint':'點擊切換 · 雙擊只選此項（再次雙擊選取全部）',
     's1-options':'Sentinel-1 選項','nisar-options':'NISAR 選項',
-    'frame-coverage':'幀涵蓋範圍','range-bandwidth':'距離向頻寬',
+    'frame-coverage':'幀涵蓋範圍','range-bandwidth':'距離向頻寬','nisar-band':'波段',
     'release-beta':'Beta 版本（2026 年 2 月）— 未校正，不適用於定量分析',
     'release-provisional':'Provisional 版本（2026 年 7 月 20 日）— 校正仍在調整中',
     'release-urgent':'緊急應變產品',
@@ -739,7 +741,9 @@ const NISAR_DIRECTION = { A: 'Ascending', D: 'Descending' };
 const NISAR_SOURCE = { A: 'Acquired, single mode', M: 'Mixed source/mode' };
 const NISAR_ACCURACY = { P: 'Precise', M: 'Medium', N: 'Near Real-Time', F: 'Forecast' };
 const NISAR_COVERAGE = { F: 'Full', P: 'Partial' };
-const NISAR_LOCATION = { J: 'JPL' };
+// Processing location. L-SAR products are produced at JPL; the S-SAR products
+// ISRO released on 24 Jul 2026 are produced at NRSC and carry 'I'.
+const NISAR_LOCATION = { J: 'JPL', I: 'ISRO' };
 // POLE: two 2-char codes, one per band (primary then secondary).
 const NISAR_POL = {
   SH: 'HH', SV: 'VV',
@@ -764,6 +768,25 @@ function formatNisarBandwidth(raw) {
 function isNisarFrame(frame) {
   return String(frame?.satellite_id || frame?.platform || '').toUpperCase().includes('NISAR')
     || /^NISAR_/.test(String(frame?.granule || ''));
+}
+
+// NISAR flies two independent radars: L-SAR (NASA/JPL, distributed by ASF) and
+// S-SAR (ISRO, released 24 Jul 2026 via Bhoonidhi). They share an overpass but
+// are separate instruments with their own products, frame numbering and
+// bandwidths, so band is a dimension of the *frame*, not of the satellite —
+// hence a per-frame satellite_band rather than SATS' single `band`.
+// Both catalogues report it as `sensor` ('L-SAR' / 'S-SAR'); the granule's
+// second field is instrument+level ('L1', 'S2'), used when sensor is missing.
+function getNisarBandCode(frame) {
+  const sensor = String(frame?.sensor || '').toUpperCase();
+  if (/^L[- ]?SAR/.test(sensor)) return 'L';
+  if (/^S[- ]?SAR/.test(sensor)) return 'S';
+  const code = (String(frame?.granule || '').split('_')[1] || '').slice(0, 1).toUpperCase();
+  return NISAR_INSTRUMENT[code] ? code : '';
+}
+
+function getNisarBandLabel(frame) {
+  return NISAR_INSTRUMENT[getNisarBandCode(frame)] || '';
 }
 
 // Frame coverage and bandwidth come from ASF when available, otherwise from
@@ -1030,7 +1053,9 @@ const DEFAULT_PRODUCT_TYPES_BY_SATELLITE = Object.fromEntries(
       return false;
     })
 );
-const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L2_GCOV', 'L2_GUNW', 'L3_SME2', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'SME2', 'RAW', 'SSC', 'OCN', 'ETAD', 'COH12'];
+// RIFG / RUNW / ROFF / GOFF are the interferometric and pixel-offset products
+// ISRO ships for NISAR's S-band; ASF's L-band catalogue publishes none of them.
+const KNOWN_PRODUCT_TYPES = ['L1_RSLC', 'L1_GSLC', 'L1_RIFG', 'L1_RUNW', 'L1_ROFF', 'L2_GCOV', 'L2_GUNW', 'L2_GOFF', 'L3_SME2', 'GSLC', 'RSLC', 'SLC', 'GRD_HD', 'GRD_MS', 'GRD_HS', 'GRD_FD', 'GRD', 'GCOV', 'GUNW', 'GOFF', 'RIFG', 'RUNW', 'ROFF', 'SME2', 'RAW', 'SSC', 'OCN', 'ETAD', 'COH12'];
 
 function ensureAdvancedState() {
   state.rawFrames ||= [];
@@ -1064,13 +1089,14 @@ function ensureAdvancedState() {
     nisarFormats: new Set(),
     nisarCoverage: new Set(),
     nisarBandwidth: new Set(),
+    nisarBand: new Set(),
     // Which chip groups have had their defaults applied. Defaults are seeded
     // exactly once so that deselecting every chip in a group stays deselected
     // instead of snapping back on.
     seeded: new Set(),
   };
   if (!(state.filters.seeded instanceof Set)) state.filters.seeded = new Set();
-  for (const key of ['formats', 'nisarFormats', 'nisarCoverage', 'nisarBandwidth']) {
+  for (const key of ['formats', 'nisarFormats', 'nisarCoverage', 'nisarBandwidth', 'nisarBand']) {
     if (!(state.filters[key] instanceof Set)) {
       state.filters[key] = new Set(state.filters[key] || []);
     }
@@ -1405,6 +1431,11 @@ function normalizeProductType(frame) {
   return 'OCN';
 }
 
+// Every band a satellite carries. Only NISAR declares more than one.
+function satBands(sat) {
+  return Array.isArray(sat?.bands) && sat.bands.length ? sat.bands : [sat?.band].filter(Boolean);
+}
+
 function satMatchesFrame(sat, frame) {
   const haystack = [frame.platform, frame.granule, frame.satellite_name, frame.satellite_id].join(' ').toUpperCase();
   const names = [sat.id, sat.name, ...(sat.asf_prefix || [])].map(v => String(v || '').toUpperCase());
@@ -1466,7 +1497,9 @@ function enhanceFrame(frame) {
     ...frame,
     satellite_id: satelliteId,
     satellite_name: sat.name || frame.platform || 'Unknown',
-    satellite_band: sat.band || '',
+    // NISAR's two radars are filed under one satellite, so the band has to come
+    // from the frame; every other mission carries a single band.
+    satellite_band: (isNisarFrame(frame) ? getNisarBandCode(frame) : '') || sat.band || '',
     sat_status: sat.status || '',
     direction_norm: directionNorm,
     path_number_norm: pathNumberNorm,
@@ -1733,7 +1766,9 @@ async function loadData() {
 function matchesSidebarFilters(sat) {
   ensureAdvancedState();
   if (!isOpenDataSatelliteId(sat.id)) return false;
-  if (state.band !== 'ALL' && sat.band !== state.band) return false;
+  // Multi-band satellites (NISAR: L-SAR + S-SAR) must stay listed under either
+  // band chip, so match against every band the satellite carries.
+  if (state.band !== 'ALL' && !satBands(sat).includes(state.band)) return false;
   if (state.tab === 'op' && sat.status === 'ret') return false;
   if (state.tab === 'tw') return state.filteredFrames.some(frame => satMatchesFrame(sat, frame));
   return true;
@@ -1880,6 +1915,7 @@ const CHIP_SOLO_GROUPS = {
   nisarFormats:     { set: () => state.filters.nisarFormats,   rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
   nisarCoverage:    { set: () => state.filters.nisarCoverage,  rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
   nisarBandwidth:   { set: () => state.filters.nisarBandwidth, rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
+  nisarBand:        { set: () => state.filters.nisarBand,      rerender: () => { renderNisarOptions(); applyAdvancedFilters(); } },
   statsSats:        { set: () => statsState.activeSats,        rerender: () => renderStatsPanel(), universe: () => STATS_CHART_SATS },
   statsTracks:      { set: () => statsState.activeTracks,      rerender: () => renderStatsPanel(), universe: () => STATS_S1_TRACKS, cast: Number },
   statsNisarTracks: { set: () => statsState.activeNisarTracks, rerender: () => renderStatsPanel(), universe: () => STATS_NISAR_TRACKS.map(track => track.key) },
@@ -1974,9 +2010,11 @@ function renderNisarOptions() {
     state.filters.nisarFormats.clear();
     state.filters.nisarCoverage.clear();
     state.filters.nisarBandwidth.clear();
+    state.filters.nisarBand.clear();
     state.filters.seeded.delete('nisarFormats');
     state.filters.seeded.delete('nisarCoverage');
     state.filters.seeded.delete('nisarBandwidth');
+    state.filters.seeded.delete('nisarBand');
     return;
   }
   section.hidden = false;
@@ -1986,6 +2024,10 @@ function renderNisarOptions() {
   // Coverage and bandwidth are explicit selections seeded to "everything", so
   // each chip can be switched off independently — including the last one.
   const groups = [
+    // Band is only worth a chip row once both radars are in the pool; with
+    // L-SAR alone the single chip would just be a label. Its wrapper hides
+    // itself so the sub-heading does not float above an empty row.
+    { id: 'nisar-band-options', key: 'nisarBand', get: getNisarBandLabel, minValues: 2 },
     { id: 'nisar-coverage-options', key: 'nisarCoverage', get: getNisarCoverage },
     { id: 'nisar-bandwidth-options', key: 'nisarBandwidth', get: getNisarBandwidth },
   ];
@@ -1994,13 +2036,26 @@ function renderNisarOptions() {
     if (!wrap) continue;
     const values = [...new Set(pool.map(group.get).filter(Boolean))].sort();
     const selected = state.filters[group.key];
+    const previous = chipUniverse[group.key];
     if (!state.filters.seeded.has(group.key)) {
       state.filters.seeded.add(group.key);
       for (const value of values) selected.add(value);
+    } else if (Array.isArray(previous)) {
+      // These groups seed to "everything" and the user unticks from there, so a
+      // value the user has never seen must arrive selected — otherwise data
+      // that only starts appearing later (a new bandwidth mode, or S-SAR once
+      // ISRO's band reaches the catalog) would be filtered out by a group
+      // nobody touched. Values already in the universe are left alone, so a
+      // deselected chip stays deselected.
+      for (const value of values) if (!previous.includes(value)) selected.add(value);
     }
     // Drop selections that no longer exist in the pool.
     for (const value of [...selected]) if (!values.includes(value)) selected.delete(value);
     chipUniverse[group.key] = values;
+    // Hidden groups stay seeded: an empty Set means "match nothing", so a
+    // group that renders no chips must still hold every value in the pool.
+    const row = document.getElementById(`${group.id}-row`);
+    if (row) row.hidden = values.length < (group.minValues || 1);
     wrap.innerHTML = '';
     for (const value of values) {
       const button = document.createElement('button');
@@ -2065,6 +2120,7 @@ function resetAdvancedFilters(apply = true) {
   state.filters.nisarFormats.clear();
   state.filters.nisarCoverage.clear();
   state.filters.nisarBandwidth.clear();
+  state.filters.nisarBand.clear();
   state.selectedSat = null;
 
   const satSel = document.getElementById('filter-satellite');
@@ -2107,14 +2163,16 @@ function frameMatchesAdvancedFilters(frame) {
   // Every chip group is an explicit selection: deselecting all of them filters
   // everything out, rather than silently meaning "no restriction".
   if (isNisarFrame(frame)) {
-    const { nisarFormats, nisarCoverage, nisarBandwidth } = state.filters;
+    const { nisarFormats, nisarCoverage, nisarBandwidth, nisarBand } = state.filters;
     if (!nisarFormats.has(frame.product_type_norm)) return false;
     // A frame is never excluded on a field it does not carry (SME2 has no
     // range bandwidth, for instance).
     const coverage = getNisarCoverage(frame);
     const bandwidth = getNisarBandwidth(frame);
+    const band = getNisarBandLabel(frame);
     if (coverage && !nisarCoverage.has(coverage)) return false;
     if (bandwidth && !nisarBandwidth.has(bandwidth)) return false;
+    if (band && !nisarBand.has(band)) return false;
   } else if (!state.filters.formats.has(frame.product_type_norm)) {
     return false;
   }
@@ -2861,6 +2919,8 @@ function buildFrameMetaRows(frame) {
     }) + ' ' + displayTZLabel(date);
   };
   return [
+    // L-SAR and S-SAR products are otherwise near-identical in this table.
+    { label: 'Band', value: pick(getNisarBandLabel(frame)) },
     { label: 'Start Time', value: time(pick(frame.date, named.start)) },
     { label: 'Stop Time', value: time(pick(frame.stop_time, named.stop)) },
     { label: 'Track', value: pick(getFramePathNumber(frame), named.track) },
@@ -3304,7 +3364,7 @@ function openFrameDrawer(clickedFrame) {
               // NISAR ships several products per overpass differing only in
               // coverage and bandwidth; without them the cards look identical.
               isNisarFrame(frame)
-                ? [frame.product_type_norm, getNisarCoverage(frame), getNisarBandwidth(frame), size]
+                ? [getNisarBandLabel(frame), frame.product_type_norm, getNisarCoverage(frame), getNisarBandwidth(frame), size]
                     .filter(Boolean).join(' / ')
                 : `${frame.product_type_norm || 'OCN'} / ${size}`
             )}</span>
@@ -4860,8 +4920,10 @@ function applyStatsBucketFilter(satId, bsDate, beDateExclusive, trackNum, dir) {
     // coverage / bandwidth can't hide the jumped frame.
     state.filters.nisarCoverage.clear();
     state.filters.nisarBandwidth.clear();
+    state.filters.nisarBand.clear();
     state.filters.seeded.delete('nisarCoverage');
     state.filters.seeded.delete('nisarBandwidth');
+    state.filters.seeded.delete('nisarBand');
   }
 
   statsState.activeFilter = { satId, track: trackNum ?? null, dir: dir || null };

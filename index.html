@@ -156,6 +156,12 @@
           <span class="filter-section-meta" id="nisar-summary"></span>
         </summary>
         <div class="filter-section-body">
+          <!-- Band only appears once both radars are in the pool; NISAR's
+               S-SAR is distributed by ISRO, not ASF. -->
+          <div id="nisar-band-options-row" hidden>
+            <div class="filter-sub-lbl" data-i18n="nisar-band">Band</div>
+            <div class="format-options" id="nisar-band-options"></div>
+          </div>
           <div class="filter-sub-lbl" data-i18n="product-types">Product Types</div>
           <div class="format-options" id="nisar-format-options"></div>
           <div class="filter-sub-lbl" data-i18n="frame-coverage">Frame Coverage</div>
