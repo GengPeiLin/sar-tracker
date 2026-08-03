@@ -97,15 +97,15 @@ function cfgMap(path, fallback) {
 // ═══════════════════════════════════════════════════════════════════════════
 const SATS = [
   // ── ESA Sentinel-1 (C) ──────────────────────────────────────────────────
-  { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2014-04-03', status:'op',
+  { id:'S1A', name:'Sentinel-1A',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2014-04-03', status:'op', look:'R',
     asf_prefix:['S1A','SENTINEL-1A'],
     desc:'ESA flagship C-band SAR. IW mode 250 km swath, global data freely available. Forms a two-satellite constellation with Sentinel-1C; 6-day revisit over Taiwan.',
     desc_zh:'ESA 旗艦 C 波段 SAR。IW 模式 250 km 掃幅，全球資料免費開放。與 Sentinel-1C 組成雙星座，台灣每 6 天重訪一次。' },
-  { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2024-12-05', status:'op',
+  { id:'S1C', name:'Sentinel-1C',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2024-12-05', status:'op', look:'R',
     asf_prefix:['S1C','SENTINEL-1C'],
     desc:'Launched December 2024 as successor to Sentinel-1B. Restores the 6-day revisit cycle with Sentinel-1A; data freely provided via Copernicus CDSE.',
     desc_zh:'2024 年 12 月接替 Sentinel-1B 發射。與 Sentinel-1A 恢復 6 天重訪週期，資料由 Copernicus CDSE 免費提供。' },
-  { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2025-11-04', status:'op',
+  { id:'S1D', name:'Sentinel-1D',       agency:'ESA',           band:'C', freq:'5.405 GHz', res:'5–20 m',   swath:'80–400 km', launched:'2025-11-04', status:'op', look:'R',
     asf_prefix:['S1D','SENTINEL-1D'],
     desc:'Joined the constellation in November 2025, further reducing revisit time to approximately 3 days for global coverage.',
     desc_zh:'2025 年 11 月加入星座，進一步縮短重訪週期，可達 3 天一次全球覆蓋。' },
@@ -123,7 +123,7 @@ const SATS = [
   // ── NASA/ISRO NISAR (L+S) ────────────────────────────────────────────────
   // `band` is the primary radar (badges show one letter); `bands` lists every
   // band the satellite carries, so the S-Band chip finds NISAR's S-SAR frames.
-  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', bands:['L','S'], freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op',
+  { id:'NISAR',  name:'NISAR',               agency:'NASA/ISRO',   band:'L', bands:['L','S'], freq:'1.257 GHz', res:'3–25 m',   swath:'240 km',    launched:'2024-03-01', status:'op', look:'R',
     asf_prefix:['NISAR'],
     desc:'Joint NASA/ISRO mission carrying both L-band (JPL) and S-band (ISRO) SAR. 12-day global coverage; all data fully open access.',
     desc_zh:'NASA 與 ISRO 聯合任務，同時搭載 L 波段（JPL）與 S 波段（ISRO）SAR。12 天全球覆蓋，所有資料完全開放。' },
@@ -207,7 +207,7 @@ const SATS = [
     desc_zh:'日本商業 SAR 小衛星，專注亞洲市場。與台灣科研機構有合作協議，可提供快速災害應變影像。' },
 
   // ── Retired ─────────────────────────────────────────────────────────────
-  { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5–20 m',  swath:'80–400 km', launched:'2016-04-25', status:'ret', retired:'2022-08-23',
+  { id:'S1B',  name:'Sentinel-1B',             agency:'ESA',         band:'C', freq:'5.405 GHz', res:'5–20 m',  swath:'80–400 km', launched:'2016-04-25', status:'ret', look:'R', retired:'2022-08-23',
     asf_prefix:['S1B','SENTINEL-1B'],
     desc:'Power system anomaly in December 2021 caused SAR instrument failure; officially retired August 2022. Its orbit slot was taken over by Sentinel-1C.',
     desc_zh:'2021 年 12 月電力系統異常，SAR 傳感器失效；2022 年 8 月正式退役。由 Sentinel-1C 接替其軌道。' },
@@ -793,6 +793,21 @@ function getNisarBandCode(frame) {
 
 function getNisarBandLabel(frame) {
   return NISAR_INSTRUMENT[getNisarBandCode(frame)] || '';
+}
+
+// Antenna look side. Neither ASF nor Copernicus reports this — it appears in
+// no field of either catalogue — so it comes from the mission, which is where
+// it is actually decided: a SAR must look sideways, and Sentinel-1 and NISAR
+// both fly a fixed right-looking geometry with no left-looking mode.
+// `look` is therefore set only on satellites whose look side is fixed by
+// design. Missions that can be rolled to look left on request (ALOS-2,
+// RADARSAT-2, SAOCOM) deliberately carry no value: a per-frame answer for
+// those would have to come from the data, and the data does not have it.
+const LOOK_DIRECTIONS = { R: 'Right', L: 'Left' };
+
+function getFrameLookDirection(frame) {
+  const sat = getSatForFrame(frame);
+  return LOOK_DIRECTIONS[sat?.look] || '';
 }
 
 // Radar band for any frame, in the instrument form the granule tables use:
@@ -2986,6 +3001,9 @@ function buildFrameMetaRows(frame) {
     { label: 'Track', value: metaPick(getFramePathNumber(frame), named.track) },
     { label: 'Frame', value: metaPick(frame.frame_number_norm, frame.frame_number, named.frame) },
     { label: 'Flight Direction', value: metaPick(frame.direction_norm, frame.direction, named.direction) },
+    // Pairs with flight direction: together they fix which side of the ground
+    // track the swath falls on.
+    { label: 'Look Direction', value: metaPick(getFrameLookDirection(frame)) },
     { label: 'Product', value: metaPick(frame.product_type_norm, frame.product_type) },
     // NISAR splits polarization across two bands; the main band is the
     // counterpart of Sentinel-1's single value, so it belongs here and only
