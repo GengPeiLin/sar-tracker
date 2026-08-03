@@ -123,15 +123,21 @@ NISAR_PROCESSING_LEVELS = frozenset(
     }
 )
 
-# ── NISAR S-band (ISRO) ─────────────────────────────────────────────────────
+# ── NISAR S-band (ISRO) — OFF ───────────────────────────────────────────────
 # NISAR carries two radars. L-SAR (NASA/JPL) is distributed by ASF and is what
 # every query above fetches; S-SAR (ISRO) is distributed only through
 # Bhoonidhi, whose STAC API (POST /data/search) needs a Bearer access_token.
 # The token is obtained out of band — Bhoonidhi issues one from POST
 # /auth/token with a registered userId/password — and supplied here through the
-# environment, so no credential ever passes through this script. Without a
-# token the S-band fetch is skipped and the run proceeds with L-band only,
-# exactly as before.
+# environment, so no credential ever passes through this script.
+#
+# The whole source is DISABLED by default: the API is not ready to integrate
+# against (unreachable from Taiwan, collection ids and property names
+# unverified), so it must not run merely because a token happens to be present.
+# Turn it on deliberately with BHOONIDHI_ENABLED=1 once the endpoint is
+# confirmed — see docs/nisar-sband.md. Everything below stays exercised by the
+# offline tests, so reactivation is a switch rather than a rewrite.
+BHOONIDHI_ENABLED = os.environ.get("BHOONIDHI_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
 BHOONIDHI_TOKEN = os.environ.get("BHOONIDHI_TOKEN", "").strip()
 BHOONIDHI_API = os.environ.get("BHOONIDHI_API", "https://bhoonidhi-api.nrsc.gov.in/data").rstrip("/")
 # STAC collection ids for the S-band products. Overridable because the ids are
@@ -179,9 +185,10 @@ MISSIONS: dict[str, dict] = {
         "label": "NISAR",
         "catalog": CATALOG_DIR / "nisar.json",
         "earliest": NISAR_LAUNCH,
-        # Bhoonidhi carries the S-band only and needs a token; it contributes
-        # nothing (and writes an empty meta4) when BHOONIDHI_TOKEN is unset.
-        "sources": ("ASF", "Bhoonidhi"),
+        # Bhoonidhi carries the S-band only. Listed as a source solely when
+        # enabled, so a disabled run writes exactly the files it wrote before
+        # the S-band work rather than an empty bhoonidhi_nisar.meta4.
+        "sources": ("ASF", "Bhoonidhi") if BHOONIDHI_ENABLED else ("ASF",),
     },
 }
 
@@ -853,13 +860,17 @@ def process_bhoonidhi_item(item: dict) -> dict:
 
 
 def fetch_bhoonidhi_nisar_frames(start: datetime, end: datetime) -> list[dict]:
-    """NISAR S-band from ISRO's Bhoonidhi STAC API.
+    """NISAR S-band from ISRO's Bhoonidhi STAC API. Disabled by default.
 
-    Skipped without BHOONIDHI_TOKEN: the API publishes no anonymous search
-    endpoint, so an unauthenticated run would only produce 401s. The whole
-    source is best-effort — a failure here must not cost the L-band update, so
-    every error is logged and swallowed.
+    Two gates, in order: the BHOONIDHI_ENABLED switch (the API is not ready to
+    integrate against yet) and then a token, since the API publishes no
+    anonymous search endpoint and an unauthenticated run would only produce
+    401s. The whole source is best-effort — a failure here must not cost the
+    L-band update, so every error is logged and swallowed.
     """
+    if not BHOONIDHI_ENABLED:
+        log("Bhoonidhi: disabled (set BHOONIDHI_ENABLED=1 to fetch NISAR S-band)")
+        return []
     if not BHOONIDHI_TOKEN:
         log("Bhoonidhi: no BHOONIDHI_TOKEN set, skipping NISAR S-band")
         return []
@@ -893,7 +904,7 @@ def fetch_bhoonidhi_nisar_frames(start: datetime, end: datetime) -> list[dict]:
 
 
 def fetch_nisar_frames(start: datetime, end: datetime) -> list[dict]:
-    """Full NISAR workflow: ASF for L-band, Bhoonidhi for S-band."""
+    """Full NISAR workflow: ASF for L-band, Bhoonidhi for S-band (off by default)."""
     return [
         *fetch_asf_nisar_frames(start, end),
         *fetch_bhoonidhi_nisar_frames(start, end),

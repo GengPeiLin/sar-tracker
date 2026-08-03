@@ -26,6 +26,20 @@ anonymous search endpoint regardless.
 So the pipeline stays L-band until a token exists. Nothing about the L-band path
 changed.
 
+## Status: disabled
+
+The Bhoonidhi source is written and unit-tested but **switched off**
+(`BHOONIDHI_ENABLED` unset), because the API is not ready to integrate
+against — unreachable from Taiwan, with unverified collection ids and property
+names. A disabled run logs `Bhoonidhi: disabled` and writes exactly the files
+it wrote before the S-band work: Bhoonidhi is dropped from the NISAR mission's
+`sources`, so no empty `bhoonidhi_nisar.meta4` appears. The switch is checked
+before the token, so a stray token cannot activate it.
+
+Everything else in this document is already live: band detection, the Band chip
+row, the band-split Taiwan gate and the new product types all work on the
+L-band catalog today.
+
 ## Turning S-band on
 
 1. Register at <https://bhoonidhi.nrsc.gov.in> and request API access
@@ -35,13 +49,16 @@ changed.
    credential, only a token.
 3. Store it as the repository secret **`BHOONIDHI_TOKEN`**. Both
    `.github/workflows/update.yml` and the probe workflow read it.
-4. Confirm the collection ids. `BHOONIDHI_COLLECTIONS` defaults to
+4. Set the repository variable **`BHOONIDHI_ENABLED`** to `1`. This is the
+   activation switch; no code change is needed. Locally:
+   `BHOONIDHI_ENABLED=1 BHOONIDHI_TOKEN=… python fetch_sar_data.py`.
+5. Confirm the collection ids. `BHOONIDHI_COLLECTIONS` defaults to
    `nisar_s_rslc,nisar_s_gslc,nisar_s_gcov,nisar_s_gunw`; the real ids are
    listed by `GET /data/collections`, which could not be checked from here.
    `BHOONIDHI_API` overrides the base URL.
 
-Without the secret the source logs `no BHOONIDHI_TOKEN set, skipping NISAR
-S-band` and the run continues on ASF alone.
+Enabled but without the secret, the source logs `no BHOONIDHI_TOKEN set,
+skipping NISAR S-band` and the run continues on ASF alone.
 
 **Token expiry is unhandled.** `/auth/token` returns an `expires_in`; this
 integration takes a static token and has no refresh flow, so a scheduled run
