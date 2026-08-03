@@ -795,6 +795,18 @@ function getNisarBandLabel(frame) {
   return NISAR_INSTRUMENT[getNisarBandCode(frame)] || '';
 }
 
+// Radar band for any frame, in the instrument form the granule tables use:
+// 'C-SAR' for Sentinel-1, 'L-SAR' / 'S-SAR' for NISAR's two radars. Providers
+// already report this as `sensor`; `satellite_band` is the fallback for records
+// that predate it (it carries the letter alone, e.g. 'C').
+function getFrameBandLabel(frame) {
+  if (isNisarFrame(frame)) return getNisarBandLabel(frame);
+  const sensor = String(frame?.sensor || '').toUpperCase().match(/^([CLSXP])[-\s]?SAR/);
+  if (sensor) return `${sensor[1]}-SAR`;
+  const band = String(frame?.satellite_band || '').toUpperCase();
+  return band ? `${band}-SAR` : '';
+}
+
 // Frame coverage and bandwidth come from ASF when available, otherwise from
 // the granule name. Both are NISAR-only concepts.
 function getNisarCoverage(frame) {
@@ -836,15 +848,6 @@ function parseNisarCompactTime(text) {
   if (!match) return null;
   const [, y, mo, d, h, mi, s] = match.map(Number);
   return new Date(Date.UTC(y, mo - 1, d, h, mi, s));
-}
-
-function formatNisarPolarization(raw) {
-  const text = String(raw || '').toUpperCase();
-  const codes = text.length === 4 ? [text.slice(0, 2), text.slice(2)] : [text];
-  const named = codes
-    .filter(code => code && code !== 'NA')
-    .map(code => NISAR_POL[code] || code);
-  return named.length ? named.join(' / ') : '--';
 }
 
 // ASF frame number boundaries for Taiwan Sentinel-1 tracks.
@@ -2894,45 +2897,106 @@ function parseNisarGranuleFields(granule) {
     stop: isPair ? parts[14] : parts[12],
     crid: parts[tail - 5],
     frame_coverage: NISAR_COVERAGE[parts[tail - 3]] || parts[tail - 3],
+    // Fields carried only by the granule name — nothing in ASF's metadata
+    // reports them. The trailing ones are anchored to the end of the array,
+    // which is layout-independent (pair products are longer in the middle).
+    cycle: parts[4],
+    processing_type: NISAR_PROCESSING_TYPE[parts[2]] || parts[2],
+    // SOURCE sits two fields after MODE; pair products describe two
+    // acquisitions and carry no single source code.
+    source: isPair ? '' : (NISAR_SOURCE[parts[10]] || parts[10] || ''),
+    accuracy: NISAR_ACCURACY[parts[tail - 4]] || parts[tail - 4],
+    location: NISAR_LOCATION[parts[tail - 2]] || parts[tail - 2],
   };
 }
 
-// NISAR publishes a different metadata scheme from Sentinel-1 — frame
-// coverage, per-band polarizations, range bandwidth and a CRID, with none of
-// S1's beam mode / single polarization fields. Show NISAR's own fields rather
-// than forcing them into the Sentinel-1 shape.
-function buildFrameMetaRows(frame) {
-  const granule = frame?.granule || '';
-  if (!/^NISAR_/.test(String(granule))) return parseGranuleMetadata(granule);
+// First non-empty value, or '--'. Every meta row goes through it, so a missing
+// field never renders as blank.
+function metaPick(...values) {
+  return values.find(value => value !== undefined && value !== null && value !== '') ?? '--';
+}
 
-  const named = parseNisarGranuleFields(granule);
-  // Prefer values ASF supplied; fall back to the granule name.
-  const pick = (...values) => values.find(value => value !== undefined && value !== null && value !== '') || '--';
-  // UTC, 24-hour, matching how ASF presents NISAR acquisition times.
-  const time = value => {
-    if (!value) return '--';
-    const date = parseNisarCompactTime(value) || new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return formatDisplayTime(date, {
-      hour12: false,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }) + ' ' + displayTZLabel(date);
-  };
+// Acquisition times, in the display timezone. Accepts both an ISO string and
+// the compact YYYYMMDDTHHMMSS form NISAR granule names carry.
+function metaTime(value) {
+  if (!value) return '--';
+  const date = parseNisarCompactTime(value) || new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return formatDisplayTime(date, {
+    hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }) + ' ' + displayTZLabel(date);
+}
+
+// Sentinel-1's own fields, from the frame and from the granule name:
+//   S1C_IW_GRDH_1SDV_<start>_<stop>_<absOrbit>_<dataTake>_<uniqueId>
+// Everything a NISAR granule also carries is left to the common rows.
+function buildS1MetaRows(frame) {
+  const parts = String(frame?.granule || '').replace(/\.SAFE$/i, '').trim().split('_').filter(Boolean);
+  if (!/^S1[ABCD]$/.test(parts[0] || '')) return [];
+  const v = index => parts[index] || '';
   return [
-    // L-SAR and S-SAR products are otherwise near-identical in this table.
-    { label: 'Band', value: pick(getNisarBandLabel(frame)) },
-    { label: 'Start Time', value: time(pick(frame.date, named.start)) },
-    { label: 'Stop Time', value: time(pick(frame.stop_time, named.stop)) },
-    { label: 'Track', value: pick(getFramePathNumber(frame), named.track) },
-    { label: 'Frame', value: pick(frame.frame_number_norm, frame.frame_number, named.frame) },
-    { label: 'Flight Direction', value: pick(frame.direction_norm, frame.direction, named.direction) },
-    { label: 'Frame Coverage', value: pick(frame.frame_coverage, named.frame_coverage) },
-    { label: 'Main Polarization', value: pick(frame.main_polarization, named.main_polarization) },
-    { label: 'Side Polarization', value: pick(frame.side_polarization, named.side_polarization) },
-    { label: 'Range Bandwidth', value: pick(frame.range_bandwidth, named.range_bandwidth) },
-    { label: 'CRID', value: pick(frame.crid, named.crid) },
+    { label: 'Beam Mode', value: metaPick(frame.mode, v(1)) },
+    { label: 'Level/Class/Pol', value: metaPick(v(3)) },
+    // The granule name is the authority here, not frame.orbit: ASF puts the
+    // absolute orbit in that field but Copernicus puts the *relative* orbit
+    // there, so preferring it printed the track number as the absolute orbit
+    // for every CDSE record. Leading zeros are dropped to match ASF's form.
+    { label: 'Absolute Orbit', value: metaPick(v(6).replace(/^0+(?=\d)/, ''), frame.orbit) },
+    { label: 'Data-take', value: metaPick(v(7)) },
+    { label: 'Unique ID', value: metaPick(v(8)) },
   ];
+}
+
+// NISAR's own scheme: frame coverage, a per-band polarization pair, range
+// bandwidth and a CRID. ASF leaves several of these null on some product
+// levels, so each falls back to the granule name.
+function buildNisarMetaRows(frame, named) {
+  return [
+    { label: 'Frame Coverage', value: metaPick(frame.frame_coverage, named.frame_coverage) },
+    { label: 'Side Polarization', value: metaPick(frame.side_polarization, named.side_polarization) },
+    { label: 'Range Bandwidth', value: metaPick(frame.range_bandwidth, named.range_bandwidth) },
+    { label: 'Cycle', value: metaPick(named.cycle) },
+    { label: 'Processing Type', value: metaPick(named.processing_type) },
+    { label: 'Source', value: metaPick(named.source) },
+    { label: 'Orbit Accuracy', value: metaPick(named.accuracy) },
+    { label: 'Produced By', value: metaPick(named.location) },
+    { label: 'CRID', value: metaPick(frame.crid, named.crid) },
+  ];
+}
+
+// One granule table for every mission. Sentinel-1 and NISAR name their fields
+// differently but describe the same acquisition, so the fields both carry come
+// first, in the same order and under the same labels — two cards from different
+// missions line up row for row — and each mission's own fields follow under a
+// divider. Band leads because it is the one property that distinguishes NISAR's
+// two radars from each other and from Sentinel-1's C-SAR.
+function buildFrameMetaRows(frame) {
+  const nisar = isNisarFrame(frame);
+  const named = nisar ? parseNisarGranuleFields(frame?.granule) : {};
+  const common = [
+    { label: 'Band', value: metaPick(getFrameBandLabel(frame)) },
+    // satellite_name first: ASF reports 'Sentinel-1C' and Copernicus 'S1C' for
+    // the same spacecraft, and the point of a shared template is that two
+    // cards read alike.
+    { label: 'Platform', value: metaPick(frame.satellite_name, frame.platform, frame.satellite_id) },
+    { label: 'Start Time', value: metaTime(metaPick(frame.date, named.start)) },
+    { label: 'Stop Time', value: metaTime(metaPick(frame.stop_time, named.stop)) },
+    { label: 'Track', value: metaPick(getFramePathNumber(frame), named.track) },
+    { label: 'Frame', value: metaPick(frame.frame_number_norm, frame.frame_number, named.frame) },
+    { label: 'Flight Direction', value: metaPick(frame.direction_norm, frame.direction, named.direction) },
+    { label: 'Product', value: metaPick(frame.product_type_norm, frame.product_type) },
+    // NISAR splits polarization across two bands; the main band is the
+    // counterpart of Sentinel-1's single value, so it belongs here and only
+    // the side band stays mission-specific.
+    { label: 'Polarization', value: nisar
+        ? metaPick(frame.main_polarization, named.main_polarization, frame.polarization)
+        : metaPick(frame.polarization) },
+  ];
+  const unique = nisar ? buildNisarMetaRows(frame, named) : buildS1MetaRows(frame);
+  if (!unique.length) return common;
+  return [...common, { section: nisar ? 'NISAR Detail' : 'Sentinel-1 Detail' }, ...unique];
 }
 
 // The drawer's summary grid carried a Sentinel-1 shaped Mode cell, fed from
@@ -2969,78 +3033,6 @@ function buildDrawerModeCells(frame) {
     + cell('joint-obs', frame.joint_observation === undefined || frame.joint_observation === null
         ? '--'
         : t(frame.joint_observation ? 'joint-yes' : 'joint-no'));
-}
-
-function parseGranuleMetadata(granule) {
-  const text = String(granule || '').replace(/\.SAFE$/i, '').trim();
-  if (!text) return [];
-
-  if (/^S1[ABCD]_/.test(text)) {
-    const parts = text.split('_').filter(Boolean);
-    const start = parts[4] || '';
-    const stop = parts[5] || '';
-    return [
-      { label: 'Mission', value: parts[0] || '--' },
-      { label: 'Beam', value: parts[1] || '--' },
-      { label: 'Product', value: parts[2] || '--' },
-      { label: 'Level/Class/Pol', value: parts[3] || '--' },
-      { label: 'Start', value: start || '--' },
-      { label: 'Stop', value: stop || '--' },
-      { label: 'Absolute Orbit', value: parts[6] || '--' },
-      { label: 'Data-take', value: parts[7] || '--' },
-      { label: 'Unique ID', value: parts[8] || '--' },
-    ];
-  }
-
-  if (/^NISAR_/.test(text)) {
-    const parts = text.split('_');
-    // NISAR granules use two layouts. Interferograms (GUNW) describe a pair of
-    // acquisitions, so they carry an extra cycle number and a second date pair:
-    //   standard (18): ..frame_frameGroup_pol_procType_start_end_crid_..
-    //   GUNW     (20): ..frame_secCycle_frameGroup_pol_refStart_refEnd_secStart_secEnd_crid_..
-    // Field positions verified against ASF metadata: parts[5] is the track
-    // (relative orbit) and parts[7] the frame -- not the other way round.
-    const isPair = parts.length >= 20;
-    const v = index => parts[index] || '--';
-    const decode = (map, raw) => (map[raw] ? `${raw} (${map[raw]})` : raw || '--');
-    const instrument = (parts[1] || '').slice(0, 1);
-    const level = (parts[1] || '').slice(1);
-    const rows = [
-      { label: 'Mission', value: v(0) },
-      { label: 'Beam Mode', value: decode(NISAR_INSTRUMENT, instrument) },
-      { label: 'Level', value: level || '--' },
-      { label: 'Processing Type', value: decode(NISAR_PROCESSING_TYPE, v(2)) },
-      { label: 'Product', value: v(3) },
-      { label: 'Cycle', value: v(4) },
-      { label: 'Track', value: v(5) },
-      { label: 'Direction', value: decode(NISAR_DIRECTION, v(6)) },
-      { label: 'Frame', value: v(7) },
-    ];
-    // Index of the first field after the frame number, which is where the
-    // two layouts diverge.
-    let i = 8;
-    if (isPair) rows.push({ label: 'Secondary Cycle', value: v(i++) });
-    rows.push({ label: 'Range Bandwidth', value: formatNisarBandwidth(v(i++)) });
-    rows.push({ label: 'Polarization', value: formatNisarPolarization(v(i++)) });
-    if (!isPair) rows.push({ label: 'Source', value: decode(NISAR_SOURCE, v(i++)) });
-    if (isPair) {
-      rows.push({ label: 'Ref Start', value: v(i++) });
-      rows.push({ label: 'Ref Stop', value: v(i++) });
-      rows.push({ label: 'Sec Start', value: v(i++) });
-      rows.push({ label: 'Sec Stop', value: v(i++) });
-    } else {
-      rows.push({ label: 'Start', value: v(i++) });
-      rows.push({ label: 'Stop', value: v(i++) });
-    }
-    rows.push({ label: 'CRID', value: v(i++) });
-    rows.push({ label: 'Accuracy', value: decode(NISAR_ACCURACY, v(i++)) });
-    rows.push({ label: 'Coverage', value: decode(NISAR_COVERAGE, v(i++)) });
-    rows.push({ label: 'Location', value: decode(NISAR_LOCATION, v(i++)) });
-    rows.push({ label: 'Counter', value: v(i++) });
-    return rows;
-  }
-
-  return [{ label: 'Granule', value: text }];
 }
 
 function getQueryEndDate() {
@@ -3377,8 +3369,12 @@ function openFrameDrawer(clickedFrame) {
       const asfUrl = frame.asf_url || '';
       const cdseUrl = frame.copernicus_url || frame.download_url || '';
       const size = frame.file_size_mb ? `${frame.file_size_mb} MB` : '--';
+      // A row carrying `section` instead of a label/value pair is the divider
+      // between the fields every mission shares and that mission's own.
       const granuleMeta = buildFrameMetaRows(frame)
-        .map(item => `<div class="d-link-meta-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`)
+        .map(item => (item.section
+          ? `<div class="d-link-meta-sec">${escapeHtml(item.section)}</div>`
+          : `<div class="d-link-meta-row"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`))
         .join('');
       const actions = [
         asfUrl ? createDrawerCopyButton('Copy ASF', asfUrl, 'asf') : '',
