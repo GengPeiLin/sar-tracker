@@ -146,7 +146,7 @@ window.SAR_CONFIG = {
 
     // Width of one chart bar, in hours. Must be one of:
     // 1, 3, 6, 12, 24, 48, 72, 120, 168, 336, 720   (24 = one day)
-    cellSizeHours: 24,
+    cellSizeHours: 12,
 
     // choices: 'ALL' | 'ASCENDING' | 'DESCENDING'
     pass: 'ALL',
