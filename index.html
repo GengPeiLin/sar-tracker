@@ -63,14 +63,19 @@
     </div>
   </div>
   <!-- Source link. Outside .hdr-controls on purpose: that block is hidden at
-       ≤640px, and the repo link should stay reachable on mobile too. -->
-  <a class="hdr-repo" id="hdr-repo" href="https://github.com/GengPeiLin/sar-tracker"
-     target="_blank" rel="noopener noreferrer"
-     title="View source on GitHub" data-i18n-title="repo-link" aria-label="View source on GitHub">
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="currentColor">
-      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
-    </svg>
-  </a>
+       ≤640px, and the repo link should stay reachable on mobile too. It still
+       wears .control-field with the same spacer label the Stats tab uses, so
+       the icon lines up with the selects rather than centring on label+input. -->
+  <div class="control-field hdr-repo-field">
+    <label aria-hidden="true" class="hdr-tabs-spacer">&nbsp;</label>
+    <a class="hdr-repo" id="hdr-repo" href="https://github.com/GengPeiLin/sar-tracker"
+       target="_blank" rel="noopener noreferrer"
+       title="View source on GitHub" data-i18n-title="repo-link" aria-label="View source on GitHub">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+      </svg>
+    </a>
+  </div>
   <div id="bg-load-bar" class="bg-load-bar" hidden></div>
 </header>
 
@@ -171,15 +176,9 @@
         </div>
       </details>
       <div class="filter-actions">
-        <div class="filter-hl-row">
-          <span class="filter-hl-lbl" data-i18n="highlight-label">Highlight</span>
-          <div class="filter-hl-btns" id="hl-btns">
-            <button class="legend-hl-btn" id="hl-ring"  onclick="setHighlightStyle('ring')" data-i18n="highlight-solid">Solid</button>
-            <button class="legend-hl-btn" id="hl-dash"  onclick="setHighlightStyle('dash')" data-i18n="highlight-dash">Dash</button>
-            <button class="legend-hl-btn" id="hl-color" onclick="setHighlightStyle('color')" data-i18n="highlight-color">Color</button>
-            <button class="legend-hl-btn" id="hl-gold"  onclick="setHighlightStyle('gold')" data-i18n="highlight-gold">Gold</button>
-          </div>
-        </div>
+        <!-- Highlight style lives on the map's Visible Data overlay only. It
+             sits next to the legend it restyles, so a second copy here was
+             the same four buttons twice on one screen. -->
         <button class="dl-btn csv" type="button" onclick="resetAdvancedFilters()" data-i18n="reset-filters">Reset Filters</button>
         <label class="filter-toggle" for="filter-show-same-track">
           <input id="filter-show-same-track" type="checkbox">
