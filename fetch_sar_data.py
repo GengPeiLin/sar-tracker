@@ -126,8 +126,8 @@ S1_PROCESSING_LEVELS = "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD"
 # These bounds are calibrated to Sentinel-1 frame geometry and must not be
 # applied to NISAR, whose frames span ~2.7 deg of latitude.
 S1_CENTROID_LAT_MIN = 21.5   # south of Taiwan's southernmost tip (Eluanbi 21.9N)
-S1_CENTROID_LAT_MAX = 26.85  # keeps F82/T69 (Matsu + northern Taiwan, centroid ~26.6N);
-                             # drops F83/F84 (centred north of Matsu, centroid >= 27.0N)
+S1_CENTROID_LAT_MAX = 26.0   # keeps F79/T69 (northern Taiwan, centroid ~25.7N);
+                             # drops F80+ (centroid >=26.1N, north of main island / sea)
 # Longitude bounds matter now that the ASF query is track-based rather than
 # geographic: without them a mis-specified orbit would admit scenes at the same
 # latitude anywhere on Earth. Wide enough for the neighbouring tracks whose
