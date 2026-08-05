@@ -1011,67 +1011,124 @@ async function exportMapPNG() {
   const btn = document.querySelector('.map-snap-btn');
   if (btn) btn.disabled = true;
   try {
-    const scale = Math.max(window.devicePixelRatio || 1, 2);
+    const DPI = 300;
+    const SCALE = DPI / 96;   // ~3.125× → 300 DPI print resolution
     const mapRect = mapEl.getBoundingClientRect();
     const W = Math.round(mapRect.width);
     const H = Math.round(mapRect.height);
 
     const canvas = document.createElement('canvas');
-    canvas.width  = W * scale;
-    canvas.height = H * scale;
+    canvas.width  = Math.round(W * SCALE);
+    canvas.height = Math.round(H * SCALE);
     const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
+    ctx.scale(SCALE, SCALE);
 
-    // Background matching the dark basemap
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, W, H);
 
-    // Draw each loaded tile image at its current screen position
-    for (const img of mapEl.querySelectorAll('.leaflet-tile-pane img.leaflet-tile-loaded')) {
-      const r = img.getBoundingClientRect();
-      ctx.drawImage(img, r.left - mapRect.left, r.top - mapRect.top, r.width, r.height);
+    // Traverse all Leaflet panes in DOM order so every tile layer (base,
+    // label-only overlay, custom panes) and every SVG layer renders in its
+    // correct visual stacking order.
+    const root = mapEl.querySelector('.leaflet-map-pane') || mapEl;
+    const tasks = [];
+    const collect = node => {
+      const tag = node.tagName && node.tagName.toUpperCase();
+      if (tag === 'IMG' && node.classList.contains('leaflet-tile-loaded') && node.complete) {
+        const r = node.getBoundingClientRect();
+        tasks.push({ type: 'img', el: node,
+          x: r.left - mapRect.left, y: r.top - mapRect.top, w: r.width, h: r.height });
+        return;
+      }
+      if (tag === 'SVG') {
+        const r = node.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          const clone = node.cloneNode(true);
+          clone.setAttribute('width',  r.width);
+          clone.setAttribute('height', r.height);
+          tasks.push({ type: 'svg',
+            str: new XMLSerializer().serializeToString(clone),
+            x: r.left - mapRect.left, y: r.top - mapRect.top, w: r.width, h: r.height });
+        }
+        return;  // don't recurse into SVG children
+      }
+      for (const child of node.children) collect(child);
+    };
+    collect(root);
+
+    for (const task of tasks) {
+      if (task.type === 'img') {
+        ctx.drawImage(task.el, task.x, task.y, task.w, task.h);
+      } else {
+        const url = URL.createObjectURL(
+          new Blob([task.str], { type: 'image/svg+xml;charset=utf-8' }),
+        );
+        await new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, task.x, task.y, task.w, task.h);
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          img.src = url;
+        });
+      }
     }
 
-    // Serialize and draw the SVG overlay (Taiwan outline + frame polygons)
-    const svgEl = mapEl.querySelector('.leaflet-overlay-pane svg');
-    if (svgEl) {
-      const svgRect = svgEl.getBoundingClientRect();
-      const cloned = svgEl.cloneNode(true);
-      cloned.setAttribute('width',  svgRect.width);
-      cloned.setAttribute('height', svgRect.height);
-      const svgBlob = new Blob(
-        [new XMLSerializer().serializeToString(cloned)],
-        { type: 'image/svg+xml;charset=utf-8' },
-      );
-      const svgUrl = URL.createObjectURL(svgBlob);
-      await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, svgRect.left - mapRect.left, svgRect.top - mapRect.top,
-                            svgRect.width, svgRect.height);
-          URL.revokeObjectURL(svgUrl);
-          resolve();
-        };
-        img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(); };
-        img.src = svgUrl;
-      });
-    }
-
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sar-map-${new Date().toISOString().slice(0, 10)}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }, 'image/png');
+    const rawBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const outBlob = await injectPngDpi(rawBlob, DPI);
+    const url = URL.createObjectURL(outBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sar-map-${new Date().toISOString().slice(0, 10)}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (e) {
     alert('Map snapshot failed — refresh the page and try again.');
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+// Inject a PNG pHYs chunk (DPI metadata) right after the IHDR chunk (offset 33).
+// pHYs must precede IDAT; IHDR is always first so inserting at byte 33 is safe.
+async function injectPngDpi(blob, dpi) {
+  const PPM = Math.round(dpi / 0.0254);  // pixels per metre (300 DPI → 11811)
+  const src = new Uint8Array(await blob.arrayBuffer());
+  const phys = new Uint8Array(21);
+  // Chunk length field = 9 (big-endian)
+  phys[3] = 9;
+  // Chunk type = 'pHYs'
+  phys[4] = 0x70; phys[5] = 0x48; phys[6] = 0x59; phys[7] = 0x73;
+  // X pixels-per-unit (big-endian uint32)
+  phys[8]  = PPM >>> 24; phys[9]  = (PPM >>> 16) & 0xFF;
+  phys[10] = (PPM >>> 8) & 0xFF;  phys[11] = PPM & 0xFF;
+  // Y pixels-per-unit
+  phys[12] = PPM >>> 24; phys[13] = (PPM >>> 16) & 0xFF;
+  phys[14] = (PPM >>> 8) & 0xFF;  phys[15] = PPM & 0xFF;
+  // Unit specifier = 1 (metre)
+  phys[16] = 1;
+  // CRC over type + data (bytes 4–16)
+  const crc = _pngCrc32(phys, 4, 17) >>> 0;
+  phys[17] = crc >>> 24; phys[18] = (crc >>> 16) & 0xFF;
+  phys[19] = (crc >>> 8) & 0xFF;  phys[20] = crc & 0xFF;
+  // Splice after the 33-byte IHDR block (8 sig + 4 len + 4 type + 13 data + 4 crc)
+  const out = new Uint8Array(src.length + 21);
+  out.set(src.slice(0, 33));
+  out.set(phys, 33);
+  out.set(src.slice(33), 54);
+  return new Blob([out], { type: 'image/png' });
+}
+
+function _pngCrc32(data, start, end) {
+  let c = 0xFFFFFFFF;
+  for (let i = start; i < end; i++) {
+    c ^= data[i];
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+  }
+  return c ^ 0xFFFFFFFF;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
