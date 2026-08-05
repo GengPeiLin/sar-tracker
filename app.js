@@ -1765,6 +1765,7 @@ function applyFrameData(data, options = {}) {
   if (options.preserveFilters) renderFormatOptions();
   else resetAdvancedFilters(false);
   applyAdvancedFilters();
+  focusMapOnCurrentFrames();
 }
 
 // data/sar_status.js is a JS assignment (`window.__SAR_DATA={...};`) rather
@@ -1898,6 +1899,7 @@ function bindAdvancedControls() {
     snapDateWindowToSatellite(state.filters.satellite);
     renderFormatOptions();
     applyAdvancedFilters();
+    focusMapOnCurrentFrames();
   });
 
   document.getElementById('filter-direction')?.addEventListener('change', event => {
@@ -3266,6 +3268,16 @@ function updateNextExpected() {
     : `<span class="nx-empty">${escapeHtml(t('need-history'))}</span>`;
 }
 
+function focusMapOnCurrentFrames() {
+  if (!state.selectedFrameKey) {
+    focusMapOnFrames(state.filteredFrames, {
+      withDrawer: false,
+      maxZoom: cfgNum('map.frameFocusMaxZoom', 8, { min: 1, max: 19 }),
+      pad:     cfgNum('map.frameFocusPadding', 0.2, { min: 0, max: 2 }),
+    });
+  }
+}
+
 function renderFrames() {
   ensureAdvancedState();
   state.frameLayer.clearLayers();
@@ -3319,9 +3331,6 @@ function renderFrames() {
   }
 
   updateMapSelectionState();
-  if (!state.selectedFrameKey) {
-    focusMapOnFrames(state.filteredFrames, { withDrawer: false, maxZoom: cfgNum('map.frameFocusMaxZoom', 8, { min: 1, max: 19 }), pad: cfgNum('map.frameFocusPadding', 0.2, { min: 0, max: 2 }) });
-  }
 }
 
 function escapeHtml(value) {
