@@ -1205,10 +1205,16 @@ function _renderEl(el, ctx, mapRect) {
     // the right horizontal position inside the content area.
     ctx.textBaseline = 'middle';
     if ('letterSpacing' in ctx) ctx.letterSpacing = cs.letterSpacing;
-    ctx.fillText(text,
-      x + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0),
-      y + r.height / 2,
-    );
+    // Clip to this element's box so canvas glyph widths (which can differ
+    // slightly from the browser's CSS layout measurement at fractional scale)
+    // never bleed into a neighbouring element's area — e.g. .nx-trk into .nx-date.
+    const tx = x + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, r.width, r.height);
+    ctx.clip();
+    ctx.fillText(text, tx, y + r.height / 2);
+    ctx.restore();
   }
 
   // Recurse into child elements
