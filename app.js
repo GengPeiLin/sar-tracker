@@ -945,6 +945,7 @@ function initMap() {
   });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: cfgNum('map.basemapMaxZoom', 19, { min: 1, max: 22 }),
+    crossOrigin: 'anonymous',
   }).addTo(state.map);
 
   // Taiwan outline
@@ -960,6 +961,20 @@ function initMap() {
       closeDrawer();
     }
   });
+
+  // Snapshot control — bottom-right, matches zoom button look
+  const SnapCtrl = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd() {
+      const btn = L.DomUtil.create('button', 'leaflet-bar map-snap-btn');
+      btn.title = 'Save map as PNG';
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+      L.DomEvent.disableClickPropagation(btn);
+      L.DomEvent.on(btn, 'click', exportMapPNG);
+      return btn;
+    },
+  });
+  new SnapCtrl().addTo(state.map);
 }
 
 function getFrameLatLngBounds(frame) {
@@ -988,6 +1003,75 @@ function focusMapOnFrames(frames, options = {}) {
     paddingTopLeft: options.paddingTopLeft ?? [16, 16],
     paddingBottomRight: options.paddingBottomRight ?? [options.withDrawer ? 420 : 16, 110],
   });
+}
+
+async function exportMapPNG() {
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  const btn = document.querySelector('.map-snap-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const scale = Math.max(window.devicePixelRatio || 1, 2);
+    const mapRect = mapEl.getBoundingClientRect();
+    const W = Math.round(mapRect.width);
+    const H = Math.round(mapRect.height);
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // Background matching the dark basemap
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw each loaded tile image at its current screen position
+    for (const img of mapEl.querySelectorAll('.leaflet-tile-pane img.leaflet-tile-loaded')) {
+      const r = img.getBoundingClientRect();
+      ctx.drawImage(img, r.left - mapRect.left, r.top - mapRect.top, r.width, r.height);
+    }
+
+    // Serialize and draw the SVG overlay (Taiwan outline + frame polygons)
+    const svgEl = mapEl.querySelector('.leaflet-overlay-pane svg');
+    if (svgEl) {
+      const svgRect = svgEl.getBoundingClientRect();
+      const cloned = svgEl.cloneNode(true);
+      cloned.setAttribute('width',  svgRect.width);
+      cloned.setAttribute('height', svgRect.height);
+      const svgBlob = new Blob(
+        [new XMLSerializer().serializeToString(cloned)],
+        { type: 'image/svg+xml;charset=utf-8' },
+      );
+      const svgUrl = URL.createObjectURL(svgBlob);
+      await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, svgRect.left - mapRect.left, svgRect.top - mapRect.top,
+                            svgRect.width, svgRect.height);
+          URL.revokeObjectURL(svgUrl);
+          resolve();
+        };
+        img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(); };
+        img.src = svgUrl;
+      });
+    }
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sar-map-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }, 'image/png');
+  } catch (e) {
+    alert('Map snapshot failed — refresh the page and try again.');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

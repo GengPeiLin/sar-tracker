@@ -1281,6 +1281,22 @@ header {
 }
 .leaflet-popup-tip { background: var(--border2) !important; }
 .leaflet-control-zoom a { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border2) !important; }
+.map-snap-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 30px !important;
+  height: 30px !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border2) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  line-height: 1;
+  box-shadow: 0 1px 5px rgba(0,0,0,.4);
+}
+.map-snap-btn:hover:not(:disabled) { background: rgba(255,255,255,.07) !important; }
+.map-snap-btn:disabled { opacity: .45; cursor: wait; }
 
 :root[data-theme="paper-radar"] .leaflet-tile-pane {
   filter: saturate(.45) brightness(1.35) contrast(.9);
