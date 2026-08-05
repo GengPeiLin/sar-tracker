@@ -1075,14 +1075,10 @@ async function exportMapPNG() {
       }
     }
 
-    // Capture the HTML overlay panels that sit above the Leaflet map.
-    // .map-stats (top-left) and .map-legend (bottom-left) are siblings of #map
-    // inside .map-wrap, not inside the Leaflet DOM, so the tile/SVG traversal
-    // above never touches them.
-    for (const sel of ['.map-stats', '.map-legend']) {
-      const el = document.querySelector(sel);
-      if (el) await captureHtmlOverlay(el, ctx, mapRect);
-    }
+    // Capture the HTML overlay panels (.map-stats, .map-legend) that sit above
+    // the Leaflet map but outside its DOM.  foreignObject SVG would taint the
+    // canvas and break toBlob(); instead we paint them directly with Canvas 2D.
+    drawHtmlOverlays(ctx, mapRect);
 
     const rawBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     const outBlob = await injectPngDpi(rawBlob, DPI);
@@ -1140,90 +1136,69 @@ function _pngCrc32(data, start, end) {
   return c ^ 0xFFFFFFFF;
 }
 
-// Render an arbitrary HTML element (e.g. .map-stats, .map-legend) onto an
-// existing canvas context at the element's current screen position.
-// Computed styles are inlined so CSS variables (--ov-*) resolve correctly in
-// the isolated SVG rendering context; backdrop-filter is dropped (it has no
-// effect in that context but its dark solid background colour is preserved).
-async function captureHtmlOverlay(el, ctx, mapRect) {
+// Paint the map's HTML overlay panels (.map-stats stat-cards and .map-legend)
+// directly onto ctx using the browser's computed bounding rects and styles.
+// This avoids SVG <foreignObject>, which taints the canvas and breaks toBlob().
+function drawHtmlOverlays(ctx, mapRect) {
+  for (const card of document.querySelectorAll('.map-stats .stat-card')) {
+    _renderEl(card, ctx, mapRect);
+  }
+  const legend = document.querySelector('.map-legend');
+  if (legend) _renderEl(legend, ctx, mapRect);
+}
+
+// Recursive Canvas 2D renderer for a DOM element subtree.
+// Draws background, border, inline text nodes, then recurses into children.
+function _renderEl(el, ctx, mapRect) {
   const r = el.getBoundingClientRect();
   if (r.width <= 0 || r.height <= 0) return;
   const x = r.left - mapRect.left;
   const y = r.top  - mapRect.top;
-
-  const clone = _cloneWithStyles(el);
-  // Reset absolute/fixed positioning — the clone sits at (0,0) inside the
-  // foreignObject box; its actual position on the canvas is set by drawImage.
-  clone.style.position  = 'static';
-  clone.style.top       = '';
-  clone.style.left      = '';
-  clone.style.bottom    = '';
-  clone.style.right     = '';
-  clone.style.backdropFilter        = 'none';
-  clone.style.webkitBackdropFilter  = 'none';
-  clone.style.zIndex    = '';
-
-  const svgStr = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${r.width}" height="${r.height}">`,
-    `<foreignObject x="0" y="0" width="${r.width}" height="${r.height}">`,
-    `<div xmlns="http://www.w3.org/1999/xhtml"`,
-    ` style="width:${r.width}px;height:${r.height}px;overflow:visible;">`,
-    clone.outerHTML,
-    `</div></foreignObject></svg>`,
-  ].join('');
-
-  const url = URL.createObjectURL(
-    new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' }),
-  );
-  await new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, x, y, r.width, r.height);
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-    img.src = url;
-  });
-}
-
-// Clone an element and inline all computed styles so CSS variables resolve.
-// Uses a targeted property list rather than cssText (which returns '' in Chrome).
-const _CLONE_STYLE_PROPS = [
-  'display','visibility','overflow','overflow-x','overflow-y','box-sizing',
-  'flex-direction','flex-wrap','align-items','align-self',
-  'justify-content','justify-self',
-  'gap','row-gap','column-gap',
-  'grid-template-columns','grid-template-rows','grid-column','grid-row',
-  'background-color',
-  'color',
-  'font-family','font-size','font-weight','font-style',
-  'letter-spacing','line-height','text-transform','text-align',
-  'white-space','word-break','text-overflow',
-  'padding-top','padding-right','padding-bottom','padding-left',
-  'margin-top','margin-right','margin-bottom','margin-left',
-  'border-top-width','border-right-width','border-bottom-width','border-left-width',
-  'border-top-color','border-right-color','border-bottom-color','border-left-color',
-  'border-top-style','border-right-style','border-bottom-style','border-left-style',
-  'border-top-left-radius','border-top-right-radius',
-  'border-bottom-left-radius','border-bottom-right-radius',
-  'width','min-width','max-width','height','min-height','max-height',
-  'opacity',
-];
-function _cloneWithStyles(el) {
-  const clone = el.cloneNode(false);
   const cs = window.getComputedStyle(el);
-  clone.setAttribute('style',
-    _CLONE_STYLE_PROPS.map(p => `${p}:${cs.getPropertyValue(p)}`).join(';'),
-  );
-  for (const node of el.childNodes) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      clone.appendChild(document.createTextNode(node.textContent));
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      clone.appendChild(_cloneWithStyles(node));
-    }
+
+  // Background fill (skip transparent)
+  const bg = cs.backgroundColor;
+  if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+    const rad = parseFloat(cs.borderTopLeftRadius) || 0;
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, r.width, r.height, rad);
+    else ctx.rect(x, y, r.width, r.height);
+    ctx.fill();
   }
-  return clone;
+
+  // Border stroke (assumes uniform border; uses top-side values)
+  const bw = parseFloat(cs.borderTopWidth) || 0;
+  if (bw > 0) {
+    const bc = cs.borderTopColor;
+    const rad = parseFloat(cs.borderTopLeftRadius) || 0;
+    ctx.strokeStyle = bc;
+    ctx.lineWidth = bw;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x + bw / 2, y + bw / 2, r.width - bw, r.height - bw, rad);
+    else ctx.rect(x + bw / 2, y + bw / 2, r.width - bw, r.height - bw);
+    ctx.stroke();
+  }
+
+  // Text nodes that are direct children of this element
+  for (const node of el.childNodes) {
+    if (node.nodeType !== Node.TEXT_NODE) continue;
+    const raw = node.textContent.replace(/\s+/g, ' ').trim();
+    if (!raw) continue;
+    const text = cs.textTransform === 'uppercase' ? raw.toUpperCase() : raw;
+    const fs   = parseFloat(cs.fontSize) || 13;
+    ctx.fillStyle    = cs.color;
+    ctx.font         = `${cs.fontWeight} ${fs}px monospace`;
+    ctx.textBaseline = 'top';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = cs.letterSpacing;
+    ctx.fillText(text,
+      x + (parseFloat(cs.paddingLeft) || 0),
+      y + (parseFloat(cs.paddingTop)  || 0),
+    );
+  }
+
+  // Recurse into child elements
+  for (const child of el.children) _renderEl(child, ctx, mapRect);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
