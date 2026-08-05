@@ -3600,10 +3600,10 @@ const CHART_STYLE_BUILTIN = {
 const CHART_STYLE_RANGES = {
   // Above 100% the chart overflows its container and scrolls, which is the
   // only way to give dense ranges (a year at 1 h cells) usable bar spacing.
-  chartWidth:  { min: 100, max: 800, step: 10, unit: '%' },
+  chartWidth:  { min: 1, step: 10, unit: '%', free: true },
   // Scales the layout-derived height rather than replacing it, so the
   // stacked / split / chart-focus modes keep their relative proportions.
-  chartHeight: { min: 40,  max: 400, step: 10, unit: '%' },
+  chartHeight: { min: 1, step: 10, unit: '%', free: true },
   // Bar width may exceed 100%: on a sparse chart the bucket is far wider than
   // the data needs, and overlapping bars are a legitimate way to make isolated
   // acquisitions visible. Bars are centred on their bucket so growing the
@@ -3765,11 +3765,15 @@ function renderStatsStylePanel() {
   const sliders = Object.entries(CHART_STYLE_RANGES).filter(([key]) => key !== 'axisTitles').map(([key, range]) => `
     <div class="sty-row">
       <span class="sty-lbl">${t('style-' + key)}</span>
-      <input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
-             value="${style[key]}"
-             oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
-             onchange="statsSetChartStyle('${key}', this.value)">
-      <span class="sty-val">${style[key]}${range.unit}</span>
+      ${range.free
+        ? `<input type="number" class="sty-num" min="${range.min}" step="${range.step}"
+                 value="${style[key]}"
+                 onchange="statsSetChartStyle('${key}', Math.max(${range.min}, +this.value || ${CHART_STYLE_BUILTIN[key]}))">`
+        : `<input type="range" min="${range.min}" max="${range.max}" step="${range.step}"
+                 value="${style[key]}"
+                 oninput="this.nextElementSibling.textContent=this.value+'${range.unit}'"
+                 onchange="statsSetChartStyle('${key}', this.value)">`}
+      <span class="sty-val">${range.free ? range.unit : style[key] + range.unit}</span>
     </div>
     ${key === 'chartHeight' ? ratioHTML : ''}`).join('');
 
