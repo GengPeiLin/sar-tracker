@@ -964,7 +964,7 @@ function initMap() {
 
   // Snapshot control — bottom-right, matches zoom button look
   const SnapCtrl = L.Control.extend({
-    options: { position: 'bottomright' },
+    options: { position: 'topright' },
     onAdd() {
       const btn = L.DomUtil.create('button', 'leaflet-bar map-snap-btn');
       btn.title = 'Save map as PNG';
