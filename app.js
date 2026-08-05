@@ -1075,6 +1075,15 @@ async function exportMapPNG() {
       }
     }
 
+    // Capture the HTML overlay panels that sit above the Leaflet map.
+    // .map-stats (top-left) and .map-legend (bottom-left) are siblings of #map
+    // inside .map-wrap, not inside the Leaflet DOM, so the tile/SVG traversal
+    // above never touches them.
+    for (const sel of ['.map-stats', '.map-legend']) {
+      const el = document.querySelector(sel);
+      if (el) await captureHtmlOverlay(el, ctx, mapRect);
+    }
+
     const rawBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     const outBlob = await injectPngDpi(rawBlob, DPI);
     const url = URL.createObjectURL(outBlob);
@@ -1129,6 +1138,92 @@ function _pngCrc32(data, start, end) {
     for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
   }
   return c ^ 0xFFFFFFFF;
+}
+
+// Render an arbitrary HTML element (e.g. .map-stats, .map-legend) onto an
+// existing canvas context at the element's current screen position.
+// Computed styles are inlined so CSS variables (--ov-*) resolve correctly in
+// the isolated SVG rendering context; backdrop-filter is dropped (it has no
+// effect in that context but its dark solid background colour is preserved).
+async function captureHtmlOverlay(el, ctx, mapRect) {
+  const r = el.getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return;
+  const x = r.left - mapRect.left;
+  const y = r.top  - mapRect.top;
+
+  const clone = _cloneWithStyles(el);
+  // Reset absolute/fixed positioning — the clone sits at (0,0) inside the
+  // foreignObject box; its actual position on the canvas is set by drawImage.
+  clone.style.position  = 'static';
+  clone.style.top       = '';
+  clone.style.left      = '';
+  clone.style.bottom    = '';
+  clone.style.right     = '';
+  clone.style.backdropFilter        = 'none';
+  clone.style.webkitBackdropFilter  = 'none';
+  clone.style.zIndex    = '';
+
+  const svgStr = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${r.width}" height="${r.height}">`,
+    `<foreignObject x="0" y="0" width="${r.width}" height="${r.height}">`,
+    `<div xmlns="http://www.w3.org/1999/xhtml"`,
+    ` style="width:${r.width}px;height:${r.height}px;overflow:visible;">`,
+    clone.outerHTML,
+    `</div></foreignObject></svg>`,
+  ].join('');
+
+  const url = URL.createObjectURL(
+    new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' }),
+  );
+  await new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, x, y, r.width, r.height);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+    img.src = url;
+  });
+}
+
+// Clone an element and inline all computed styles so CSS variables resolve.
+// Uses a targeted property list rather than cssText (which returns '' in Chrome).
+const _CLONE_STYLE_PROPS = [
+  'display','visibility','overflow','overflow-x','overflow-y','box-sizing',
+  'flex-direction','flex-wrap','align-items','align-self',
+  'justify-content','justify-self',
+  'gap','row-gap','column-gap',
+  'grid-template-columns','grid-template-rows','grid-column','grid-row',
+  'background-color',
+  'color',
+  'font-family','font-size','font-weight','font-style',
+  'letter-spacing','line-height','text-transform','text-align',
+  'white-space','word-break','text-overflow',
+  'padding-top','padding-right','padding-bottom','padding-left',
+  'margin-top','margin-right','margin-bottom','margin-left',
+  'border-top-width','border-right-width','border-bottom-width','border-left-width',
+  'border-top-color','border-right-color','border-bottom-color','border-left-color',
+  'border-top-style','border-right-style','border-bottom-style','border-left-style',
+  'border-top-left-radius','border-top-right-radius',
+  'border-bottom-left-radius','border-bottom-right-radius',
+  'width','min-width','max-width','height','min-height','max-height',
+  'opacity',
+];
+function _cloneWithStyles(el) {
+  const clone = el.cloneNode(false);
+  const cs = window.getComputedStyle(el);
+  clone.setAttribute('style',
+    _CLONE_STYLE_PROPS.map(p => `${p}:${cs.getPropertyValue(p)}`).join(';'),
+  );
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      clone.appendChild(document.createTextNode(node.textContent));
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      clone.appendChild(_cloneWithStyles(node));
+    }
+  }
+  return clone;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
