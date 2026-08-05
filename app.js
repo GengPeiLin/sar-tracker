@@ -1045,6 +1045,14 @@ async function exportMapPNG() {
           const clone = node.cloneNode(true);
           clone.setAttribute('width',  r.width);
           clone.setAttribute('height', r.height);
+          // Leaflet positions the SVG element itself via L.DomUtil.setPosition,
+          // which writes `transform: translate3d(x,y,0)` inline on the element.
+          // getBoundingClientRect() bakes that shift into r.left/r.top (our draw
+          // coordinates), so the clone must NOT carry the transform — otherwise
+          // the browser applies it a second time and the polygons shift west.
+          clone.style.transform = 'none';
+          clone.style.top  = '';
+          clone.style.left = '';
           tasks.push({ type: 'svg',
             str: new XMLSerializer().serializeToString(clone),
             x: r.left - mapRect.left, y: r.top - mapRect.top, w: r.width, h: r.height });
