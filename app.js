@@ -1195,13 +1195,20 @@ function _renderEl(el, ctx, mapRect) {
     if (!raw) continue;
     const text = cs.textTransform === 'uppercase' ? raw.toUpperCase() : raw;
     const fs   = parseFloat(cs.fontSize) || 13;
+    // CSS places text vertically centred in the line box; textBaseline 'top'
+    // draws from the top of the em square, which sits halfLeading px below the
+    // line-box top.  Without this correction small text floats above its box.
+    const lhPx = parseFloat(cs.lineHeight);   // 'normal' → NaN
+    const halfLeading = Math.max(0, ((isNaN(lhPx) ? fs * 1.2 : lhPx) - fs) / 2);
     ctx.fillStyle    = cs.color;
-    ctx.font         = `${cs.fontWeight} ${fs}px monospace`;
+    // Use the element's actual computed font so web fonts (IBM Plex Mono) are
+    // used instead of a generic monospace fallback.
+    ctx.font         = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
     ctx.textBaseline = 'top';
     if ('letterSpacing' in ctx) ctx.letterSpacing = cs.letterSpacing;
     ctx.fillText(text,
       x + (parseFloat(cs.paddingLeft) || 0),
-      y + (parseFloat(cs.paddingTop)  || 0),
+      y + (parseFloat(cs.paddingTop)  || 0) + halfLeading,
     );
   }
 
