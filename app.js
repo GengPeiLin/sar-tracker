@@ -234,7 +234,7 @@ const TRANSLATIONS = {
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
     'other-missions-note':'Commercial and access-restricted missions stay collapsed by default so the sidebar stays centered on Sentinel-1 and NISAR.',
-    'all-satellites':'All satellites','satellite-label':'Satellite','orbit-direction':'Orbit Direction',
+    'all-satellites':'All satellites','no-data-band':'No data','satellite-label':'Satellite','orbit-direction':'Orbit Direction',
     'dir-all':'All','dir-asc':'Ascending','dir-desc':'Descending',
     'date-start':'Date Start','date-end':'Date End',
     'track-min':'Track Min','track-max':'Track Max','frame-min':'Frame Min','frame-max':'Frame Max',
@@ -311,7 +311,7 @@ const TRANSLATIONS = {
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
     'other-missions-note':'商業及限制存取任務預設收折，讓側邊欄聚焦於 Sentinel-1 與 NISAR。',
-    'all-satellites':'全部衛星','satellite-label':'衛星','orbit-direction':'軌道方向',
+    'all-satellites':'全部衛星','no-data-band':'無資料','satellite-label':'衛星','orbit-direction':'軌道方向',
     'dir-all':'全部','dir-asc':'升軌','dir-desc':'降軌',
     'date-start':'開始日期','date-end':'結束日期',
     'track-min':'軌道最小值','track-max':'軌道最大值','frame-min':'幀號最小值','frame-max':'幀號最大值',
@@ -2043,7 +2043,23 @@ function renderSatelliteSelect() {
     ...visibleSats.filter(sat => !isFeaturedSatellite(sat)),
   ];
 
-  const options = [`<option value="ALL">${t('all-satellites')}</option>`];
+  // When a specific band is active, label the "All" option with the mission
+  // family name + total count so the user can see the filter changed.
+  // For bands with no open-data satellites (X, S currently) show "No data"
+  // and disable the select entirely.
+  const BAND_FAMILY = { C: 'Sentinel-1', L: 'NISAR', S: 'NISAR' };
+  const totalCount = orderedSats.reduce((sum, s) => sum + (counts.get(s.id) || 0), 0);
+  let allLabel;
+  if (state.band === 'ALL') {
+    allLabel = t('all-satellites');
+  } else if (orderedSats.length === 0) {
+    allLabel = t('no-data-band');
+  } else {
+    const family = BAND_FAMILY[state.band] || t('all-satellites');
+    allLabel = totalCount ? `${family} (${totalCount})` : family;
+  }
+
+  const options = [`<option value="ALL">${allLabel}</option>`];
   for (const sat of orderedSats) {
     const count = counts.get(sat.id) || 0;
     const entry = catalog.get(sat.id);
@@ -2057,6 +2073,7 @@ function renderSatelliteSelect() {
     options.push(`<option value="${sat.id}">${getSatName(sat)}${suffix}</option>`);
   }
   select.innerHTML = options.join('');
+  select.disabled = state.band !== 'ALL' && orderedSats.length === 0;
   if (![...select.options].some(opt => opt.value === state.filters.satellite)) {
     state.filters.satellite = 'ALL';
   }
