@@ -2635,6 +2635,24 @@ function openDrawer(sat, row, thisWeek) {
 
 function setFilter(band, el) {
   state.band = band;
+  ensureAdvancedState();
+
+  if (band !== 'ALL') {
+    const catalog = getSatelliteCatalogIndex();
+    const bandSats = SATS.filter(s => isOpenDataSatelliteId(s.id) && s.band === band && catalog.has(s.id));
+    // Clear any satellite selection that belongs to the previous band.
+    if (state.filters.satellite !== 'ALL') {
+      const cur = SATS.find(s => s.id === state.filters.satellite);
+      if (cur && cur.band !== band) state.filters.satellite = 'ALL';
+    }
+    // Auto-select and snap the window when exactly one satellite serves this band —
+    // otherwise the satellite list is blank whenever no frames fall in the current window.
+    if (bandSats.length === 1 && state.filters.satellite === 'ALL') {
+      state.filters.satellite = bandSats[0].id;
+      snapDateWindowToSatellite(bandSats[0].id);
+    }
+  }
+
   document.querySelectorAll('.chip').forEach(chip => chip.classList.remove('on'));
   el.classList.add('on');
   renderSatelliteSelect();
