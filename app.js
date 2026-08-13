@@ -2645,11 +2645,22 @@ function setFilter(band, el) {
       const cur = SATS.find(s => s.id === state.filters.satellite);
       if (cur && cur.band !== band) state.filters.satellite = 'ALL';
     }
-    // Auto-select and snap the window when exactly one satellite serves this band —
-    // otherwise the satellite list is blank whenever no frames fall in the current window.
-    if (bandSats.length === 1 && state.filters.satellite === 'ALL') {
-      state.filters.satellite = bandSats[0].id;
-      snapDateWindowToSatellite(bandSats[0].id);
+    // Snap the window so the satellite list is never left blank when the band
+    // changes and the current window holds no frames for that band.
+    // For a single-satellite band (e.g. L → NISAR) also auto-select it.
+    const snapTarget = bandSats.length === 1
+      ? bandSats[0]
+      : bandSats.reduce((best, s) => {
+          const e = catalog.get(s.id);
+          if (!e) return best;
+          const be = best ? catalog.get(best.id) : null;
+          return (!be || e.last > be.last) ? s : best;
+        }, null);
+    if (snapTarget) {
+      if (bandSats.length === 1 && state.filters.satellite === 'ALL') {
+        state.filters.satellite = snapTarget.id;
+      }
+      snapDateWindowToSatellite(snapTarget.id);
     }
   }
 
