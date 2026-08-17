@@ -144,15 +144,48 @@ If this dashboard supported a paper, report, or presentation, please cite both t
 
 ### The data
 
-Frames indexed here come from two archives, each with its own attribution requirement:
+Frames indexed here come from two archives, each with its own attribution requirement. Use the official wording below rather than paraphrasing it — for Copernicus the notice is a licence condition, not a courtesy.
 
-| Source | Attribution |
+#### Sentinel-1 (ESA / Copernicus)
+
+EU law grants free and open access to Sentinel data on the condition that the source is named. The required notice is `Copernicus Sentinel data [Year]`, and where the data has been adapted or modified you must say so:
+
+> Contains modified Copernicus Sentinel data [years].
+
+Cite the year range you actually used — this catalog spans 2014 to present. The condition comes from the [Legal Notice on the Use of Copernicus Sentinel Data and Service Information](https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice) (ESA/EC); the [Copernicus Data Space Ecosystem Terms and Conditions](https://dataspace.copernicus.eu/terms-and-conditions) point at the same notice for products retrieved from CDSE.
+
+For the mission itself, the standard reference is:
+
+> Torres, R., Snoeij, P., Geudtner, D., Bibby, D., Davidson, M., Attema, E., et al. (2012). GMES Sentinel-1 mission. *Remote Sensing of Environment*, 120, 9–24. https://doi.org/10.1016/j.rse.2011.05.028
+
+Sentinel-1 SLC granules distributed through ASF carry no ASF DOI ([SENTINEL-1C_SLC at NASA Earthdata](https://www.earthdata.nasa.gov/data/catalog/asf-sentinel-1c-slc-1)); the Copernicus notice above is the attribution, whichever of the two archives you downloaded from.
+
+#### NISAR (NASA / ISRO)
+
+Cite the specific product collection by its ASF DAAC DOI. This catalog holds **L-SAR RSLC** granules in two release tiers, which have **different DOIs** — the tier is not recoverable from the granule name, so pick the one matching the badge in the drawer:
+
+| Tier | Recommended citation |
 |---|---|
-| **Sentinel-1** (ESA / Copernicus) | "Contains modified Copernicus Sentinel data [years]." Cite the year range you used — this catalog spans 2014 to present. |
-| **NISAR** (NASA / ISRO) | Cite the NASA-ISRO SAR mission and the granules' release tier. Distributed by ASF DAAC. |
-| **ASF DAAC** (distributor for both) | Cite the Alaska Satellite Facility DAAC as the distributor of the granules you downloaded. |
+| Beta | NASA/JPL/NISAR. (2026). *NISAR Beta Range Doppler Single Look Complex Product (Version 1)* [Dataset]. NASA Alaska Satellite Facility Distributed Active Archive Center. https://doi.org/10.5067/NIL1RSLC-B1 |
+| Provisional | NASA/JPL/NISAR. (2026). *NISAR Provisional Range Doppler Single Look Complex Product (Version 1)* [Dataset]. NASA Alaska Satellite Facility Distributed Active Archive Center. https://doi.org/10.5067/NIL1RSLC-P1 |
 
-Individual granules carry their own DOIs, issued by the archive rather than by this project. Take the DOI from ASF Vertex or the Copernicus Data Space entry for the specific product — the detail drawer links to both — rather than citing a DOI for the dashboard, which has none.
+Landing pages: [beta RSLC](https://www.earthdata.nasa.gov/data/catalog/asf-nisar-l1-rslc-beta-v1-1) · [provisional RSLC](https://www.earthdata.nasa.gov/data/catalog/asf-nisar-l1-rslc-provisional-v1-1). Other NISAR products (GSLC, GCOV, RUNW, GUNW, ROFF, SME2) each have their own DOI in the [NASA Earthdata catalog](https://www.earthdata.nasa.gov/data/catalog).
+
+For the mission:
+
+> Kellogg, K., Hoffman, P., Standley, S., Shaffer, S., Rosen, P., Edelstein, W., et al. (2020). NASA-ISRO Synthetic Aperture Radar (NISAR) Mission. *2020 IEEE Aerospace Conference*, 1–21. https://doi.org/10.1109/AERO47225.2020.9172638
+
+Product definitions and conventions used by this dashboard come from the [NISAR Data User Guide](https://nisar-docs.asf.alaska.edu/), itself citable:
+
+> Kristenson, H., Smale, J., Johnston, A., Herrmann, J., Gens, R., Kennedy, J. H., White, J., Lewandowski, A., Horn, W., & Fattahi, H. (2026). *NISAR Data User Guide*. Zenodo. https://doi.org/10.5281/zenodo.20218145
+
+S-SAR (ISRO) granules are **not** in this catalog — the Bhoonidhi source is written but disabled (see [docs/data-sources.md](docs/data-sources.md)) — so no ISRO/NRSC attribution is owed for anything you obtain here.
+
+#### ASF DAAC (distributor)
+
+Name the [Alaska Satellite Facility DAAC](https://www.earthdata.nasa.gov/centers/asf-daac) as the distributor of the granules you downloaded, and follow NASA's [Data Use and Citation Guidance](https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance) — the dataset DOI above already encodes it for NISAR. ASF asks that published works using its data be sent to `uso@asf.alaska.edu`.
+
+Take DOIs from ASF Vertex or the Copernicus Data Space entry for the specific product — the detail drawer links to both — rather than citing a DOI for the dashboard, which has none.
 
 **A caution specific to NISAR.** Products are published in release tiers, shown in the drawer as a badge beside the granule name. **Beta products are uncalibrated** and were released for familiarisation rather than for science; provisional products supersede them. If your work rests on beta granules, say so explicitly and state the tier — the distinction is not recoverable from the granule name alone, and conclusions drawn from uncalibrated radiometry may not survive reprocessing.
 
