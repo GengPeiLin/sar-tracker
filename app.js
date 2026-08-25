@@ -4161,7 +4161,14 @@ const statsState = {
 // the axis labels show regardless of the viewer's own timezone.
 function getChartDateRange() {
   const today = toDisplayDate(new Date());
-  const end = fromDisplayParts(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  // FUTURAMA is the only thing that pushes the chart past today; with the
+  // mode off the range ends tomorrow exactly as it always has.
+  let end = fromDisplayParts(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  if (typeof futureState !== 'undefined' && futureState.on) {
+    // Same span the map draws, however the user set it — chip or typed date.
+    const forecastEnd = new Date(futureForecastEndMs());
+    if (forecastEnd > end) end = forecastEnd;
+  }
   if (statsState.chartPreset === 'custom' && statsState.chartStart && statsState.chartEnd) {
     const [sy, sm, sd] = statsState.chartStart.split('-').map(Number);
     const [ey, em, ed] = statsState.chartEnd.split('-').map(Number);
@@ -4370,6 +4377,22 @@ function buildChartBuckets() {
   });
   const tileKeyMap = buildTileKeyMap(relevant);
 
+  // Predicted passes are appended AFTER the tile-key map is built from real
+  // acquisitions: they borrow their geometry from those frames, so they must
+  // not get a say in how frame positions are keyed.
+  const charted = relevant.slice();
+  if (typeof futureState !== 'undefined' && futureState.on) {
+    for (const f of futureState.frames) {
+      if (!f.date || !activeSats.has(f.satellite_id)) continue;
+      const tf = Date.parse(f.date);
+      if (!Number.isFinite(tf) || tf < startMs || tf >= endMs) continue;
+      if (pass !== 'ALL' && f.direction_norm !== pass) continue;
+      if (!statsTrackAllowed(f)) continue;
+      charted.push(f);
+    }
+  }
+
+  const nowMs = Date.now();
   const count = Math.max(1, Math.ceil((endMs - startMs) / cellMs));
   const buckets = Array.from({ length: count }, (_, i) => {
     const bStart = new Date(startMs + i * cellMs);
@@ -4380,6 +4403,9 @@ function buildChartBuckets() {
       start: bStart,
       end: new Date(Math.min(startMs + (i + 1) * cellMs, endMs)),
       counts, total: 0,
+      // A bucket wholly after now can only hold predicted passes, which is what
+      // lets the renderer style them without a parallel set of counts.
+      isFuture: bStart.getTime() >= nowMs,
       firstMs: {},  // satId -> earliest actual acquisition instant in this bucket
     };
   });
@@ -4388,7 +4414,7 @@ function buildChartBuckets() {
   // every bucket is far too slow once cells are hour-sized (a year at 1 h is
   // ~8 800 buckets).
   const seen = new Set();
-  for (const f of relevant) {
+  for (const f of charted) {
     const index = Math.floor((Date.parse(f.date) - startMs) / cellMs);
     if (index < 0 || index >= count) continue;
     // Deduplicate: the same physical acquisition appears from multiple sources
@@ -4529,6 +4555,9 @@ function buildStatsPanelHTML() {
           <button class="sec-tool" onclick="statsExportChartPNG(this)">PNG</button>
           <button class="sec-tool" onclick="statsExportChartSVG(this)">SVG</button>
           <button class="sec-tool" onclick="statsExportChartCSV(this)">CSV</button>
+          ${(typeof futureState !== 'undefined' && futureState.on)
+            ? `<button class="sec-tool sec-tool-future" onclick="statsExportFutureCSV(this)">${t('fm-export')}</button>`
+            : ''}
         </span>
       </div>
       <div class="stats-ctrls">
@@ -4866,6 +4895,7 @@ function renderStatsChart() {
     }
   });
 
+
   // Axis frame: baseline plus the y scale. Tick labels are right-aligned in the
   // left gutter and vertically centred on their gridline, so they never sit on
   // top of it — the previous layout drew them inside the plot area.
@@ -4876,6 +4906,15 @@ function renderStatsChart() {
     gridSVG += `<line x1="0" y1="${y.toFixed(1)}" x2="${plotW}" y2="${y.toFixed(1)}" class="schart-grid"/>`;
     gridSVG += `<line x1="-4" y1="${y.toFixed(1)}" x2="0" y2="${y.toFixed(1)}" class="schart-axis"/>`;
     gridSVG += `<text x="-7" y="${y.toFixed(1)}" class="schart-glabel" text-anchor="end" dominant-baseline="central">${tick}</text>`;
+  }
+  // The boundary between what was recorded and what is only predicted. Drawn
+  // only while FUTURAMA is on, because otherwise it sits on the last bucket
+  // and reads as a chart edge rather than as an instant.
+  if (typeof futureState !== 'undefined' && futureState.on) {
+    const nowX = xOfTime(Date.now());
+    if (nowX > 0 && nowX < svgW) {
+      gridSVG += `<line x1="${nowX.toFixed(2)}" y1="0" x2="${nowX.toFixed(2)}" y2="${barH}" class="schart-now"/>`;
+    }
   }
 
   const barSatColors = getSatColors();
@@ -4897,7 +4936,10 @@ function renderStatsChart() {
       const barTimeLabel = (cellHours <= 24 && b.firstMs[satId] !== undefined)
         ? statsInstantLabel(b.firstMs[satId])
         : b.label;
-      barsSVG += `<rect x="${bx.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}" fill="${clr}" class="schart-bar" onclick="statsBarClick(event,${i},'${satId}')"><title>${barTimeLabel} · ${satId}: ${cnt}</title></rect>`;
+      const futureAttrs = b.isFuture
+        ? ` fill="none" stroke="${clr}" class="schart-bar schart-bar-future"`
+        : ` fill="${clr}" class="schart-bar"`;
+      barsSVG += `<rect x="${bx.toFixed(2)}" y="${stackY}" width="${w.toFixed(2)}" height="${h}"${futureAttrs} onclick="statsBarClick(event,${i},'${satId}')"><title>${barTimeLabel} · ${satId}: ${cnt}</title></rect>`;
     }
     if (twoRowAxis) {
       // Top row: hour only; the date is carried by the row beneath.
@@ -5499,6 +5541,45 @@ function statsExportChartCSV(button) {
   triggerDownload(
     `sar_chart_${rangeTag2}_${cellTag}.csv`,
     '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n'),
+    'text/csv;charset=utf-8'
+  );
+}
+
+// One row per predicted PASS, not per predicted frame: a single overpass is
+// templated from several frames along the same track, which differ only in
+// latitude and so land seconds apart. The table is about when a satellite comes
+// over, so those collapse into the earliest instant of the pass.
+function statsExportFutureCSV(button) {
+  if (typeof futureState === 'undefined' || !futureState.on) return;
+
+  const passes = new Map();
+  for (const f of futureState.frames) {
+    const ms = getFrameTimestamp(f);
+    if (ms === null) continue;
+    const dir = (f.direction_norm || '').startsWith('ASC') ? 'A'
+              : (f.direction_norm || '').startsWith('DESC') ? 'D' : '';
+    const track = dir + (f.path_number_norm ?? '');
+    // Frames of one pass are seconds apart; a 10-minute key groups them
+    // without ever merging two real overpasses of the same track.
+    const key = [f.satellite_id, track, Math.floor(ms / 600000)].join('|');
+    const current = passes.get(key);
+    if (!current || ms < current.ms) {
+      passes.set(key, { ms, satellite: f.satellite_name || f.satellite_id, track });
+    }
+  }
+
+  const rows = [...passes.values()]
+    .sort((a, b) => a.ms - b.ms)
+    .map(p => [futureFormatWhen(new Date(p.ms).toISOString()), p.satellite, p.track]);
+
+  const headers = [t('fm-col-datetime'), t('fm-col-satellite'), t('fm-col-track')];
+  const csvCell = (v) => {
+    const text = String(v);
+    return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  };
+  triggerDownload(
+    `sar_forecast_${futureState.horizonDays}d.csv`,
+    '﻿' + [headers, ...rows].map(r => r.map(csvCell).join(',')).join('\n'),
     'text/csv;charset=utf-8'
   );
 }
