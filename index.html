@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="styles.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- SGP4 propagation for FUTURAMA. Loaded eagerly like Leaflet: app.js is
+     deferred, so this is parsed first and `satellite` exists before init. -->
+<script src="https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js"></script>
 </head>
 <body data-mob-tab="map">
 
@@ -26,6 +29,15 @@
   <div class="hdr-sep"></div>
   <div class="hdr-status">
     <b id="hdr-time">—</b>&nbsp;·&nbsp;ASF DAAC &amp; Copernicus CDSE
+  </div>
+  <!-- FUTURAMA state. Centred in the header because that is the only chrome
+       that survives every breakpoint, panel and mobile tab. Hidden until the
+       mode is entered. It wears .control-field with the same spacer label the
+       Stats tab uses, so it sits on the controls' baseline rather than on the
+       centre of label+control. -->
+  <div class="control-field fm-badge-field" id="fm-badge-field" hidden>
+    <label aria-hidden="true" class="hdr-tabs-spacer">&nbsp;</label>
+    <div class="fm-badge" id="fm-badge" hidden></div>
   </div>
   <div class="hdr-controls">
     <div class="control-field">
@@ -104,6 +116,8 @@
           <button class="date-shortcut" id="preset-year"    type="button" onclick="applyPresetDateWindow(365, this)" data-i18n="1-year">1 Year</button>
         </div>
       </div>
+      <!-- FUTURAMA controls. Absent from the DOM's flow until the mode is on. -->
+      <div id="fm-section" hidden></div>
       <div class="filter-grid">
         <label class="filter-field span-2">
           <span class="filter-label" data-i18n="satellite-label">Satellite</span>

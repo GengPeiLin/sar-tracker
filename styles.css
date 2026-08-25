@@ -2596,3 +2596,347 @@ header {
 
 /* Timezone note in the header: all displayed times are UTC+8. */
 .hdr-tz { color: var(--cyan-dim); letter-spacing: .02em; }
+
+/* ═══ FUTURE MODE ═════════════════════════════════════════════════════════ */
+/* One accent for "this is a prediction", distinct from every band chip
+   (C cyan / L purple / X orange / S amber) so a forecast is never mistaken
+   for a band. Predicted footprints themselves keep their platform hue and
+   change only the stroke — see renderFutureFrames(). */
+:root                            { --fm: #7c9cff; --fm-dim: #2b3f63; }
+:root[data-theme="night-ops"]    { --fm: #7c9cff; --fm-dim: #2b3f63; }
+:root[data-theme="paper-radar"]  { --fm: #4a5fa8; --fm-dim: #b9bed6; }
+:root[data-theme="field-survey"] { --fm: #9fb0ff; --fm-dim: #38466b; }
+
+/* ── header badge ── */
+/* Centred by flex, not by `position: absolute`. The header is a flex row whose
+   right-hand .hdr-controls already carries margin-left:auto; an absolutely
+   centred badge ignored that and sat on top of the Lang switch. Auto margins
+   on both sides let it settle in the middle of the space that is actually
+   free, so it can never overlap either side at any width. */
+/* The field owns the centring; the badge itself is just the pill. */
+.fm-badge-field { margin-left: auto; margin-right: auto; flex-shrink: 0; }
+.fm-badge-field[hidden] { display: none; }
+
+/* The header is `flex-wrap: wrap`, so a new in-flow item pushes the trailing
+   repo link onto a second row once the line is full — which is exactly what
+   adding the badge did. On wide layouts the header is meant to be one row, so
+   while the mode is on it stops wrapping and lets .hdr-status ellipsise
+   instead. Scoped to .future-mode: with the mode off the header behaves
+   exactly as it always has. */
+@media (min-width: 981px) {
+  :root.future-mode header { flex-wrap: nowrap; }
+  :root.future-mode .hdr-status { flex: 0 1 auto; min-width: 0; }
+  :root.future-mode .hdr-controls { flex-shrink: 0; }
+}
+
+.fm-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px 5px 12px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--fm) 85%, transparent);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--fm) 16%, transparent),
+      color-mix(in srgb, var(--fm) 7%, transparent));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fm) 12%, transparent),
+    0 0 22px color-mix(in srgb, var(--fm) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--fm) 22%, transparent);
+}
+.fm-badge[hidden] { display: none; }
+
+/* Slow sweep across the pill. Low contrast on purpose: the badge should read
+   as live instrumentation, not as a notification demanding attention. */
+.fm-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 35%,
+    color-mix(in srgb, var(--fm) 22%, transparent) 50%,
+    transparent 65%);
+  transform: translateX(-120%);
+  animation: fm-sweep 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes fm-sweep {
+  0%, 62% { transform: translateX(-120%); }
+  100%    { transform: translateX(120%); }
+}
+
+.fm-dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--fm);
+  box-shadow: 0 0 8px var(--fm);
+  flex-shrink: 0;
+  animation: fm-pulse 2.4s ease-in-out infinite;
+}
+@keyframes fm-pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 8px var(--fm); }
+  50%      { opacity: .45; box-shadow: 0 0 3px var(--fm); }
+}
+
+.fm-label {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--fm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--fm) 45%, transparent);
+}
+.fm-sep {
+  width: 1px; height: 15px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--fm) 40%, transparent);
+}
+.fm-exit {
+  border: none; background: transparent; cursor: pointer;
+  color: color-mix(in srgb, var(--fm) 75%, transparent);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  line-height: 1; padding: 3px 4px;
+  border-radius: 2px;
+  transition: color .12s, background .12s;
+}
+.fm-exit:hover { color: var(--text-hi); background: color-mix(in srgb, var(--fm) 22%, transparent); }
+.fm-exit:focus-visible { outline: 1px solid var(--fm); outline-offset: 1px; }
+
+.fm-badge.loading,
+.fm-badge.error { animation: none; }
+.fm-badge.loading::after,
+.fm-badge.error::after { display: none; }
+.fm-badge.loading {
+  border-color: var(--border2);
+  background: transparent;
+  box-shadow: none;
+}
+.fm-badge.loading .fm-dot { background: var(--muted); box-shadow: none; }
+.fm-badge.loading .fm-label { color: var(--muted); letter-spacing: .08em; text-shadow: none; }
+.fm-badge.error {
+  border-color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 12%, transparent);
+  box-shadow: none;
+}
+.fm-badge.error .fm-dot { background: var(--orange); box-shadow: none; animation: none; }
+.fm-badge.error .fm-label {
+  color: var(--orange); letter-spacing: .04em;
+  text-transform: none; text-shadow: none;
+}
+
+/* The mode is a state of the whole page, so the header carries a hairline of
+   it too — enough to notice from the map, not enough to compete with the data. */
+:root.future-mode header { border-bottom-color: color-mix(in srgb, var(--fm) 55%, var(--border)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-badge::after { animation: none; opacity: 0; }
+  .fm-dot { animation: none; }
+}
+
+/* The glow is the only hint the logo carries a second gesture, and it shows
+   only once the mode is on — before that the header stays exactly as it is. */
+.fm-logo-target { cursor: pointer; user-select: none; }
+.fm-logo-target:focus-visible { outline: 1px solid var(--fm); outline-offset: 3px; }
+:root.future-mode .hdr-logo { text-shadow: 0 0 14px color-mix(in srgb, var(--fm) 55%, transparent); }
+
+/* ── sidebar panel ── */
+#fm-section[hidden] { display: none; }
+.fm-panel { border: 1px solid var(--fm-dim); background: color-mix(in srgb, var(--fm) 5%, transparent); }
+.fm-panel-hd {
+  padding: 8px 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-family: var(--mono);
+}
+.fm-panel-title { font-size: calc(9px + var(--font-bump) - 1px); color: var(--text-hi); }
+.fm-panel-hint  { font-size: calc(8px + var(--font-bump) - 2px); color: var(--muted); text-align: right; }
+.fm-panel-body  { padding: 0 10px 10px; }
+/* Mirrors .chip, but under its own name so the band filter's global
+   `.chip` reset cannot clear the horizon selection. */
+.fm-chip {
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  letter-spacing: .5px;
+  padding: 3px 10px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .12s;
+}
+.fm-chip:hover { color: var(--text-hi); border-color: var(--fm); }
+.fm-chip.on {
+  border-color: var(--fm);
+  color: var(--fm);
+  background: color-mix(in srgb, var(--fm) 8%, transparent);
+}
+
+.fm-src-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--fm-dim);
+  background: color-mix(in srgb, var(--fm) 6%, transparent);
+}
+.fm-src-line { width: 18px; height: 0; border-top: 2px dashed var(--fm); flex-shrink: 0; }
+.fm-src-name { font-family: var(--mono); font-size: calc(9px + var(--font-bump) - 1px); color: var(--text); flex: 1; }
+.fm-src-count { font-family: var(--mono); font-size: calc(9px + var(--font-bump) - 1px); color: var(--fm); font-weight: 600; }
+
+.fm-note {
+  margin-top: 9px; padding: 7px 8px;
+  border-left: 2px solid var(--fm-dim);
+  background: rgba(255,255,255,.02);
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  line-height: 1.65;
+  color: var(--muted);
+}
+.fm-note.fm-warn { color: var(--amber); border-left-color: var(--amber); }
+.fm-note .fm-dim  { opacity: .8; }
+
+/* The provenance line is always visible and must stay on ONE line; the
+   caveats behind it are collapsed by default. A plain button + class rather
+   than <details>, whose content stayed laid out while closed here. */
+.fm-src { margin-top: 9px; }
+.fm-src-hd {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-left: 2px solid var(--fm-dim);
+  background: rgba(255,255,255,.02);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 3px);
+  color: var(--muted);
+}
+.fm-src-hd:hover { color: var(--text); }
+.fm-src-hd:focus-visible { outline: 1px solid var(--fm); outline-offset: -1px; }
+/* The line names where the orbit data comes from, so it must never be cut. */
+.fm-src-txt { flex: 1; min-width: 0; white-space: nowrap; }
+.fm-src-caret {
+  flex-shrink: 0;
+  width: 7px; height: 7px;
+  border-right: 1px solid var(--fm);
+  border-bottom: 1px solid var(--fm);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform .15s;
+}
+.fm-src.open .fm-src-caret { transform: rotate(-135deg) translate(-2px, -2px); }
+.fm-src-body {
+  display: none;
+  padding: 7px 8px;
+  border-left: 2px solid var(--fm-dim);
+  background: rgba(255,255,255,.02);
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  line-height: 1.65;
+  color: var(--muted);
+}
+.fm-src.open .fm-src-body { display: block; }
+
+/* ── legend group ── */
+.legend-sep { height: 1px; background: rgba(122,146,173,.3); margin: 9px 0 7px; }
+
+/* ── drawer next-pass block ── */
+.fm-drawer {
+  border: 1px solid var(--fm-dim);
+  background: color-mix(in srgb, var(--fm) 5%, transparent);
+  border-radius: 6px;
+  padding: 9px 10px;
+  margin-bottom: 12px;
+}
+.fm-drawer-hd {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--fm);
+  margin-bottom: 8px;
+}
+.fm-pass {
+  border: 1px solid var(--drawer-card-border);
+  background: var(--drawer-meta-bg);
+  border-radius: 6px;
+  padding: 8px 9px 1px;
+  margin-bottom: 7px;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  line-height: 1.55;
+}
+.fm-pass:last-of-type { margin-bottom: 0; }
+.fm-pass-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.fm-pass-when { font-size: calc(11px + var(--font-bump) - 2px); color: var(--text-hi); font-weight: 500; }
+.fm-pass-tag {
+  font-size: calc(7px + var(--font-bump) - 1px);
+  letter-spacing: .5px; padding: 1px 6px;
+  border: 1px solid var(--fm); color: var(--fm); border-radius: 2px;
+  white-space: nowrap;
+}
+.fm-drawer-empty,
+.fm-drawer-note {
+  font-family: var(--mono);
+  font-size: calc(8px + var(--font-bump) - 2px);
+  line-height: 1.6;
+  color: var(--muted);
+}
+.fm-drawer-note { margin-top: 8px; }
+
+/* ── map tooltip ── */
+.leaflet-tooltip.fm-tip {
+  background: var(--ov-bg);
+  border: 1px solid var(--fm);
+  color: var(--ov-text);
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 2px);
+  line-height: 1.5;
+  box-shadow: none;
+}
+.leaflet-tooltip.fm-tip::before { border-top-color: var(--fm); }
+.fm-tip-err { color: var(--ov-muted); }
+.fm-tip-tag { color: var(--fm); }
+
+/* ── mobile ── */
+@media (max-width: 640px) {
+  /* The header is tight here and .hdr-controls is already hidden; keep the
+     badge readable by dropping to the dot and the exit control only. */
+  .fm-badge { max-width: none; padding: 3px 6px 3px 8px; gap: 6px; }
+  .fm-label { font-size: calc(7px + var(--font-bump) - 1px); letter-spacing: .1em; max-width: 34vw; }
+  .fm-panel-hint { display: none; }
+}
+
+/* ── FUTURAMA: stats chart ── */
+/* Same rule as the map: predicted keeps the series hue and changes only the
+   stroke, so one glance separates recorded from forecast without a legend. */
+.schart-bar-future {
+  fill: none;
+  stroke-width: 1.4;
+  /* Follows the FUTURAMA dash choice; the fallback matches its default. */
+  stroke-dasharray: var(--fm-dash, 16 10);
+  opacity: .85;
+}
+.schart-now {
+  stroke: var(--sc-now, var(--orange));
+  stroke-width: 1.5;
+}
+
+/* Dash picker: the chip IS the sample, so it carries no text padding. */
+.fm-dash-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  color: var(--muted);
+}
+.fm-dash-chip.on { color: var(--fm); }
+.fm-dash-chip svg { display: block; }
+
+/* Colour-style picker: a stack of swatches, then the label. */
+.fm-color-chip { display: inline-flex; align-items: center; gap: 6px; }
+.fm-sw { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.fm-sw i { width: 5px; height: 11px; display: block; border-radius: 1px; }

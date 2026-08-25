@@ -303,6 +303,21 @@ const TRANSLATIONS = {
     'stats-edit-color':'Edit color','stats-reset-colors':'Reset all to defaults',
     'stats-frame-unit':'fr','stats-frames-word':'frames','stats-frame-word':'frame','stats-last':'last','stats-no-track-data':'No track data','stats-view-on-map':'View on map',
     'this-week-map':'THIS WEEK',
+    // ── FUTURAMA ──────────────────────────────────────────────────────
+    'fm-title':'FUTURAMA','fm-on':'FUTURAMA','fm-exit':'Leave FUTURAMA',
+    'fm-horizon':'Horizon','fm-source':'Source','fm-dash':'Predicted line','fm-color':'Predicted colour',
+    'fm-color-track':'Track','fm-color-band':'Band','fm-color-dir':'Direction','fm-color-mono':'Neutral','fm-predicted':'Predicted','fm-scheduled':'Scheduled',
+    'fm-sgp4':'SGP4 orbit propagation','fm-forecast-group':'Forecast · next {n} d',
+    'fm-next-passes':'Next passes · {track}','fm-in':'In','fm-uncertainty':'Uncertainty',
+    'fm-tle-age':'TLE {stamp} · age {age}','fm-loading':'Loading orbit data…',
+    'fm-orbit-source':'TLE · celestrak.org · {stamp} · {age}',
+    'fm-failed':'Could not load orbit data — FUTURAMA stays off.',
+    'fm-stale':'Orbit data is {age} old; times shown to the day only.',
+    'fm-count':'+{n} predicted','fm-note':'A predicted pass is an orbital opportunity, not a guaranteed acquisition.',
+    'fm-hint':'Double-click the logo to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
+    'fm-excluded':'Predicted frames are excluded from downloads, CSV export and the statistics table.',
+    'fm-export':'Forecast CSV','fm-col-datetime':'Date / Time','fm-col-satellite':'Satellite','fm-col-track':'Track',
+    'fm-templated-from':'Footprint from','fm-capped':'Forecast stops {n} days ahead; the window reaches further.',
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
@@ -380,6 +395,21 @@ const TRANSLATIONS = {
     'stats-edit-color':'編輯顏色','stats-reset-colors':'重設為預設顏色',
     'stats-frame-unit':'幀','stats-frames-word':'幀','stats-frame-word':'幀','stats-last':'最近','stats-no-track-data':'無軌道資料','stats-view-on-map':'在地圖上顯示',
     'this-week-map':'本週',
+    // ── FUTURAMA ──────────────────────────────────────────────────────
+    'fm-title':'FUTURAMA','fm-on':'FUTURAMA','fm-exit':'離開 FUTURAMA',
+    'fm-horizon':'預測範圍','fm-source':'來源','fm-dash':'預測線條','fm-color':'預測配色',
+    'fm-color-track':'依軌道','fm-color-band':'依波段','fm-color-dir':'依升降軌','fm-color-mono':'單色','fm-predicted':'軌道預測','fm-scheduled':'已排程',
+    'fm-sgp4':'SGP4 軌道推算','fm-forecast-group':'預報 · 未來 {n} 天',
+    'fm-next-passes':'下次過境 · {track}','fm-in':'還有','fm-uncertainty':'誤差',
+    'fm-tle-age':'軌道根數 {stamp} · 已過 {age}','fm-loading':'載入軌道資料…',
+    'fm-orbit-source':'軌道根數 · celestrak.org · {stamp} · {age}',
+    'fm-failed':'無法載入軌道資料——FUTURAMA 維持關閉。',
+    'fm-stale':'軌道資料已過 {age}，僅顯示到日期。',
+    'fm-count':'+{n} 筆預測','fm-note':'預測過境代表軌道會經過，不代表一定會取像。',
+    'fm-hint':'連點兩下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
+    'fm-excluded':'預測影像不納入下載、CSV 匯出與統計表。',
+    'fm-export':'預測 CSV','fm-col-datetime':'日期時間','fm-col-satellite':'衛星','fm-col-track':'軌道',
+    'fm-templated-from':'足跡取自','fm-capped':'預測只推算到 {n} 天後，視窗超出此範圍。',
   },
 };
 
@@ -514,6 +544,9 @@ function applyI18n() {
   updateFilterHints();
   updateNextExpected();
   renderMobileFeed();
+  renderFutureBadge();
+  renderFutureSection();
+  renderFutureFrames();
   if (document.getElementById('stats-panel')?.classList.contains('open')) renderStatsPanel();
 }
 
@@ -1417,6 +1450,13 @@ function setDateWindow(startKey, endKey) {
 // selecting a retired mission just empties the map with no explanation.
 function snapDateWindowToSatellite(satelliteId) {
   if (!satelliteId || satelliteId === 'ALL') return false;
+  // FUTURAMA owns the date window: it points at a span that has not happened
+  // yet, so it holds no observed frames for ANY satellite by construction. That
+  // is the intended state, not the empty-map problem this function exists to
+  // fix — snapping here dragged the window back onto the archive the moment a
+  // band or satellite was picked, which put stale acquisitions back on the map
+  // and threw away the horizon the user had chosen.
+  if (typeof futureState !== 'undefined' && futureState.on) return false;
   const entry = getSatelliteCatalogIndex().get(satelliteId);
   if (!entry || satelliteHasFramesInWindow(satelliteId)) return false;
 
@@ -1994,6 +2034,7 @@ function bindAdvancedControls() {
   document.getElementById('filter-show-other-tracks')?.addEventListener('change', event => {
     state.filters.showOtherSentinelTracks = !!event.target.checked;
     applyAdvancedFilters();
+    if (typeof futureState !== 'undefined' && futureState.on) futureRefreshAll();
   });
 
   document.getElementById('filter-show-same-track')?.addEventListener('change', event => {
@@ -2015,7 +2056,12 @@ function bindAdvancedControls() {
       if (id === 'filter-date-end') key = 'dateEnd';
       if (key) {
         state.filters[key] = event.target.value.trim();
-        if (key === 'dateStart' || key === 'dateEnd') updateDateShortcutState();
+        if (key === 'dateStart' || key === 'dateEnd') {
+          updateDateShortcutState();
+          // In FUTURAMA the window also sets how far ahead to predict, so a
+          // hand-edited DATE END has to rebuild the forecast, not just filter.
+          if (typeof futureState !== 'undefined' && futureState.on) futureRecompute();
+        }
         applyAdvancedFilters();
       }
     });
@@ -2493,6 +2539,7 @@ function updateLegend() {
   const frames = summarizeSelectedFrames();
   if (!frames.length) {
     wrap.innerHTML = hlRow + `<div class="legend-empty">${t('no-visible-data')}</div>`;
+    renderFutureLegendGroup();
     return;
   }
 
@@ -2516,6 +2563,7 @@ function updateLegend() {
       </div>
     `);
   wrap.innerHTML = hlRow + items.join('');
+  renderFutureLegendGroup();
 }
 
 function renderMobileFeed() {
@@ -2929,6 +2977,19 @@ function updateMapSelectionState() {
       item.polygon.setStyle({ color, weight: 1, fillColor: color, fillOpacity: 0.03, opacity: 0.2, dashArray: null });
     } else {
       item.polygon.setStyle({ color, weight: 1.6, fillColor: color, fillOpacity: 0.1, opacity: 0.82, dashArray: null });
+    }
+  }
+  // Predicted frames are styled in their own pass: the loop above resets
+  // dashArray, which is the one thing that marks them as predictions.
+  for (const item of (futureState?.polygons || [])) {
+    const color = item.polygon.options.baseColor;
+    if (item.key === state.selectedFrameKey) {
+      item.polygon.setStyle({ color, weight: 3, fillColor: color, fillOpacity: 0.14, opacity: 1, dashArray: futureDashArray() });
+      item.polygon.bringToFront();
+    } else if (hasSelection) {
+      item.polygon.setStyle({ color, weight: 1, fillColor: color, fillOpacity: 0, opacity: 0.18, dashArray: futureDashArray() });
+    } else {
+      item.polygon.setStyle({ color, weight: 1.6, fillColor: color, fillOpacity: 0, opacity: 0.8, dashArray: futureDashArray() });
     }
   }
   updateLegend();
@@ -3461,6 +3522,7 @@ function renderFrames() {
   }
 
   updateMapSelectionState();
+  renderFutureFrames();
 }
 
 function escapeHtml(value) {
@@ -3557,7 +3619,7 @@ function openFrameDrawer(clickedFrame) {
 
   document.getElementById('d-name').textContent = `Track ${getFramePathNumber(primary) ?? '--'} · Frame ${frameCenterLabel}`;
   document.getElementById('d-agency').textContent = `${primary.satellite_name || primary.platform || '--'} · ${primary.track_label || '--'} · ${getSourceState(primary)}`;
-  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-week-wrap').innerHTML = futureNextPassBlockHTML(clickedFrame);
   document.getElementById('d-grid').innerHTML = `
     <div class="d-item"><div class="k">${escapeHtml(t('track'))}</div><div class="v">${escapeHtml(getFramePathNumber(primary) ?? '--')}</div></div>
     <div class="d-item"><div class="k">${escapeHtml(t('frame'))}</div><div class="v">${escapeHtml(frameCenterLabel)}</div></div>
@@ -5527,4 +5589,982 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Safety net: ensure loading overlay is gone even if loadData resolved early
   document.getElementById('loading')?.classList.add('gone');
+
+  initFutureMode();
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FUTURAMA
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Predicts upcoming Taiwan overpasses by propagating a fresh Celestrak TLE
+// with SGP4 (satellite.js). Off by default; entered by double-clicking the
+// header logo, and always announced by the centre-of-header badge.
+//
+// TIME comes from SGP4. GEOMETRY comes from the catalog: a predicted frame
+// reuses the most recent observed footprint on the same track, because the
+// orbit repeats and that polygon already encodes look side, swath width and
+// frame numbering. Rebuilding it from swath geometry would re-derive — less
+// accurately — what the archive already states exactly.
+//
+// Predicted frames live in `futureState.frames` and their own Leaflet layer.
+// They are deliberately NOT merged into `state.filteredFrames`, which is the
+// single source for the frame counts, the download bar, meta4, CSV export and
+// the statistics table — keeping them out of it is what guarantees a
+// prediction can never be counted as, or downloaded as, an acquisition.
+
+const FUTURE_MODE_SATS = {
+  // Sentinel-1A is deliberately absent: its mission has ended, so it is no
+  // longer manoeuvred and has drifted off the reference orbit — its TLE mean
+  // motion (14.5975 rev/day) already differs from the operational pair
+  // (14.5920), and retrodiction against this catalog drifts 31.8 s per day
+  // against 0.07-3.05 s/day for the satellites below. Commercial and
+  // on-demand missions are absent for a different reason: an overpass says
+  // nothing about whether they image.
+  // driftSPerDay / baseErrS are measured, not assumed — see docs/futurama.md
+  S1C:   { norad: 62261, driftSPerDay: 3.05, baseErrS: 22 },
+  S1D:   { norad: 66315, driftSPerDay: 0.07, baseErrS: 8  },
+  NISAR: { norad: 65053, driftSPerDay: 0.76, baseErrS: 29 },
+};
+
+const FUTURE_HORIZONS = [3, 7, 14, 30];
+// How a predicted footprint is drawn. Hue stays the platform's, so the dash is
+// the whole signal — and it reads very differently on a 300 px footprint than
+// on a legend swatch, which is why it is a choice rather than a constant.
+const FUTURE_DASH_STYLES = [
+  { id: 'dot',    label: '· · ·', pattern: '1 7'   },
+  { id: 'fine',   label: '‥ ‥ ‥', pattern: '3 7'   },
+  { id: 'even',   label: '– – –', pattern: '9 9'   },
+  { id: 'long',   label: '—  —',  pattern: '16 10' },
+  { id: 'sparse', label: '—   —', pattern: '20 18' },
+];
+const FUTURE_DASH_DEFAULT = 'long';
+
+// How predicted footprints are COLOURED. The default keeps each track's own
+// hue so a prediction sits in the same colour language as the observed frames
+// under it; the others re-cut the same set by a different question, which is
+// what makes a screen full of overlapping forecasts readable.
+// Band colours are the sidebar's band-chip colours, so the two agree.
+const FUTURE_BAND_COLORS = { C: '#00b4d8', L: '#ce93d8', X: '#ff7043', S: '#ffc107' };
+const FUTURE_COLOR_STYLES = [
+  {
+    id: 'track', labelKey: 'fm-color-track', swatch: ['#00e5ff', '#ff7043', '#b388ff'],
+    of: (f) => getFrameVisualInfo(f),
+  },
+  {
+    id: 'band', labelKey: 'fm-color-band', swatch: ['#00b4d8', '#ce93d8', '#ffc107'],
+    of: (f) => {
+      const band = String(f.satellite_band || '').split(',')[0].trim() || '?';
+      return { label: band === '?' ? t('fm-predicted') : band + '-Band',
+               color: FUTURE_BAND_COLORS[band] || '#93a7bb' };
+    },
+  },
+  {
+    id: 'dir', labelKey: 'fm-color-dir', swatch: ['#7c9cff', '#ffb74d'],
+    of: (f) => (f.direction_norm === 'ASCENDING'
+      ? { label: t('dir-asc'), color: '#7c9cff' }
+      : { label: t('dir-desc'), color: '#ffb74d' }),
+  },
+  {
+    id: 'mono', labelKey: 'fm-color-mono', swatch: ['#93a7bb'],
+    of: () => ({ label: t('fm-predicted'), color: '#93a7bb' }),
+  },
+];
+const FUTURE_COLOR_DEFAULT = 'track';
+// Propagation cost is linear in the span, so a hand-typed DATE END of 2035
+// would otherwise try to propagate a decade. Nothing beyond this is forecast.
+const FUTURE_MAX_HORIZON_DAYS = 180;
+const FUTURE_TLE_CACHE_KEY  = 'sar_tle_cache';
+const FUTURE_TLE_REFRESH_MS = 12 * 3600 * 1000;   // refetch after this
+const FUTURE_TLE_STALE_MS   = 3 * 86400 * 1000;   // past this, dates only
+// A template must be recent enough that today's TLE still retrodicts its
+// acquisition, because that retrodiction is how the track's reference
+// ground-track longitude is calibrated. Retrodiction stays accurate to a
+// median 14-20 s out to 60 days for these three satellites (only the retired
+// S1A drifts, and it is not forecast) — a timing error that size moves the
+// ground track well under a tenth of a degree, far inside FUTURE_LON_TOL_DEG.
+// 30 days was too tight once templates were restricted to the canonical
+// product: NISAR's newest RSLC frame on a track can be older than its newest
+// frame overall, which silently dropped whole tracks from the forecast.
+const FUTURE_TEMPLATE_MAX_AGE_MS = 60 * 86400 * 1000;
+const FUTURE_COARSE_S = 300;       // coarse scan step
+const FUTURE_FINE_STEPS = 16;      // samples inside a candidate bracket
+const FUTURE_LAT_BAND = [19, 28];  // Taiwan frames, with margin
+const FUTURE_REF_LON = 121;        // Taiwan
+const FUTURE_LON_PREFILTER_DEG = 15;
+const FUTURE_LON_TOL_DEG = 1.5;    // reject crossings on a neighbouring track
+
+const futureState = {
+  on: false,
+  horizonDays: 7,
+  loading: false,
+  error: '',
+  tle: {},        // satId -> { line1, line2, epochMs }
+  satrec: {},     // satId -> satrec
+  frames: [],
+  layer: null,
+  polygons: [],       // {key, polygon} for selection styling
+  notesOpen: false,   // the caveats behind the provenance line
+  dash: FUTURE_DASH_DEFAULT,
+  color: FUTURE_COLOR_DEFAULT,
+  savedWindow: null,   // the date window to restore on the way out
+};
+
+function futureDashArray() {
+  const found = FUTURE_DASH_STYLES.find(d => d.id === futureState.dash);
+  return (found || FUTURE_DASH_STYLES.find(d => d.id === FUTURE_DASH_DEFAULT)).pattern;
+}
+
+function setFutureDash(id) {
+  if (!FUTURE_DASH_STYLES.some(d => d.id === id)) return;
+  futureState.dash = id;
+  try { localStorage.setItem('sar_future_dash', id); } catch {}
+  futureRefreshAll();
+}
+
+// Label and colour for one predicted frame under the active colour style.
+// Both come from the same place so the legend can never disagree with the map.
+function futureFrameStyle(frame) {
+  const style = FUTURE_COLOR_STYLES.find(c => c.id === futureState.color)
+    || FUTURE_COLOR_STYLES.find(c => c.id === FUTURE_COLOR_DEFAULT);
+  return style.of(frame);
+}
+
+function setFutureColor(id) {
+  if (!FUTURE_COLOR_STYLES.some(c => c.id === id)) return;
+  futureState.color = id;
+  try { localStorage.setItem('sar_future_color', id); } catch {}
+  futureRefreshAll();
+}
+
+function futureModeAvailable() {
+  return typeof satellite !== 'undefined' && satellite
+    && typeof satellite.twoline2satrec === 'function';
+}
+
+// ── TLE loading ───────────────────────────────────────────────────────────
+
+function parseTleEpochMs(line1) {
+  const yy = parseInt(line1.slice(18, 20), 10);
+  const doy = parseFloat(line1.slice(20, 32));
+  if (!Number.isFinite(yy) || !Number.isFinite(doy)) return null;
+  return Date.UTC(2000 + yy, 0, 1) + (doy - 1) * 86400000;
+}
+
+function readTleCache() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FUTURE_TLE_CACHE_KEY) || 'null');
+    if (!raw || typeof raw !== 'object') return null;
+    if (!Number.isFinite(raw.fetchedAt)) return null;
+    if (Date.now() - raw.fetchedAt > FUTURE_TLE_REFRESH_MS) return null;
+    return raw;
+  } catch { return null; }
+}
+
+async function loadFutureTLEs() {
+  const cached = readTleCache();
+  if (cached && cached.tle && Object.keys(cached.tle).length) {
+    futureState.tle = cached.tle;
+    return true;
+  }
+
+  const entries = await Promise.all(Object.keys(FUTURE_MODE_SATS).map(async (satId) => {
+    const { norad } = FUTURE_MODE_SATS[satId];
+    try {
+      const res = await fetch(
+        'https://celestrak.org/NORAD/elements/gp.php?CATNR=' + norad + '&FORMAT=TLE',
+        { cache: 'no-cache' }
+      );
+      if (!res.ok) return null;
+      const lines = (await res.text()).trim().split('\n').map(s => s.trim());
+      const l1 = lines.find(l => l.startsWith('1 '));
+      const l2 = lines.find(l => l.startsWith('2 '));
+      if (!l1 || !l2) return null;
+      return [satId, { line1: l1, line2: l2, epochMs: parseTleEpochMs(l1) }];
+    } catch { return null; }
+  }));
+
+  const tle = {};
+  for (const entry of entries) if (entry) tle[entry[0]] = entry[1];
+  if (!Object.keys(tle).length) return false;
+
+  futureState.tle = tle;
+  futureState.satrec = {};
+  try {
+    localStorage.setItem(FUTURE_TLE_CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), tle }));
+  } catch { /* quota — the fetch itself still succeeded */ }
+  return true;
+}
+
+function futureTleAgeMs() {
+  const epochs = Object.values(futureState.tle).map(e => e.epochMs).filter(Number.isFinite);
+  if (!epochs.length) return null;
+  return Date.now() - Math.max(...epochs);
+}
+
+function futureTleIsStale() {
+  const age = futureTleAgeMs();
+  return age === null || age > FUTURE_TLE_STALE_MS;
+}
+
+// ── Orbit propagation ─────────────────────────────────────────────────────
+
+function futureSatrec(satId) {
+  if (futureState.satrec[satId]) return futureState.satrec[satId];
+  const tle = futureState.tle[satId];
+  if (!tle) return null;
+  try {
+    const rec = satellite.twoline2satrec(tle.line1, tle.line2);
+    futureState.satrec[satId] = rec;
+    return rec;
+  } catch { return null; }
+}
+
+function futureSubpoint(satrec, date) {
+  const pv = satellite.propagate(satrec, date);
+  if (!pv || !pv.position) return null;
+  const gmst = satellite.gstime(date);
+  const geo = satellite.eciToGeodetic(pv.position, gmst);
+  return {
+    lat: satellite.degreesLat(geo.latitude),
+    lon: satellite.degreesLong(geo.longitude),
+  };
+}
+
+// One coarse lat/lon time series per satellite. Everything else is derived
+// from it by interpolation: propagating once per template per crossing was
+// measured at 21 s for a 7-day horizon, almost all of it spent re-solving the
+// same orbit for frames that differ only in latitude.
+function futureBuildSeries(satId, startMs, endMs) {
+  const satrec = futureSatrec(satId);
+  if (!satrec) return null;
+  const series = [];
+  for (let t = startMs; t <= endMs; t += FUTURE_COARSE_S * 1000) {
+    const sp = futureSubpoint(satrec, new Date(t));
+    if (sp) series.push({ t, lat: sp.lat, lon: sp.lon });
+  }
+  return series.length > 2 ? series : null;
+}
+
+// A coarse bracket spans ~18 deg of latitude but only ~4 deg of longitude, so
+// the two endpoint longitudes are enough to tell a Taiwan pass from one over
+// the other side of the world before paying for any fine sampling.
+function futureBracketIsCandidate(a, b) {
+  const lo = Math.min(a.lat, b.lat), hi = Math.max(a.lat, b.lat);
+  if (hi < FUTURE_LAT_BAND[0] || lo > FUTURE_LAT_BAND[1]) return false;
+  const near = (lon) => {
+    let d = lon - FUTURE_REF_LON;
+    while (d > 180) d -= 360;
+    while (d < -180) d += 360;
+    return Math.abs(d) <= FUTURE_LON_PREFILTER_DEG;
+  };
+  return near(a.lon) || near(b.lon);
+}
+
+// Sample one candidate bracket finely, once, and let every template on that
+// satellite read its own crossing out of the same samples.
+function futureSampleBracket(satrec, tA, tB) {
+  const out = [];
+  for (let i = 0; i <= FUTURE_FINE_STEPS; i++) {
+    const t = tA + ((tB - tA) * i) / FUTURE_FINE_STEPS;
+    const sp = futureSubpoint(satrec, new Date(t));
+    if (sp) out.push({ t, lat: sp.lat, lon: sp.lon });
+  }
+  return out.length > 1 ? out : null;
+}
+
+// Linear interpolation inside a ~19 s fine step; the residual is far below the
+// 8-30 s uncertainty the prediction already carries.
+function futureCrossingInSamples(samples, targetLat, ascending) {
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1], b = samples[i];
+    if (a.lat === b.lat) continue;
+    if ((b.lat > a.lat) !== ascending) continue;
+    if ((a.lat - targetLat) * (b.lat - targetLat) > 0) continue;
+    const f = (targetLat - a.lat) / (b.lat - a.lat);
+    let dLon = b.lon - a.lon;
+    while (dLon > 180) dLon -= 360;
+    while (dLon < -180) dLon += 360;
+    return { t: a.t + (b.t - a.t) * f, lon: a.lon + dLon * f };
+  }
+  return null;
+}
+
+// ── Templates: geometry borrowed from the archive ─────────────────────────
+
+function futureBuildTemplates() {
+  const frames = state.rawFrames || [];
+  const cutoff = Date.now() - FUTURE_TEMPLATE_MAX_AGE_MS;
+
+  // Two different jobs, so two different picks per (track, frame):
+  //
+  //   geom  — the polygon to draw. For NISAR this must be a FULL-coverage
+  //           frame: one overpass ships Full and Partial versions of the same
+  //           frame, and a Partial footprint is a clipped slice of the real
+  //           one. Predicting with it would draw a pass as smaller than it
+  //           will be. Sentinel-1 carries no coverage field and is unaffected.
+  //   calib — the frame whose acquisition instant calibrates this track's
+  //           ground-track longitude. Coverage is irrelevant here and only
+  //           recency matters, so it takes the newest frame at this latitude
+  //           whatever its coverage. Keeping the two apart means an older Full
+  //           frame costs geometry nothing and timing nothing.
+  const geom = new Map();
+  const calib = new Map();
+
+  for (const frame of frames) {
+    if (!FUTURE_MODE_SATS[frame.satellite_id]) continue;
+    // One overpass ships several products with different geometry: NISAR's L3
+    // SME2 footprint is nothing like its RSLC one, so templating on whichever
+    // product happened to be newest drew wrongly-shaped predicted frames, and
+    // templating on all of them emitted the same pass once per product.
+    if (!statsIsCanonicalProduct(frame)) continue;
+    const ts = getFrameTimestamp(frame);
+    if (ts === null || ts < cutoff) continue;
+    const g = normalizeFootprint(frame.footprint);
+    if (!g || g.type !== 'Polygon') continue;
+
+    const key = getFrameSeriesKey(frame);
+    const cal = calib.get(key);
+    if (!cal || ts > cal.ts) calib.set(key, { frame, ts });
+
+    if (frame.frame_coverage && frame.frame_coverage !== 'Full') continue;
+    const cur = geom.get(key);
+    if (!cur || ts > cur.ts) geom.set(key, { frame, ts, geom: g });
+  }
+
+  const templates = [];
+  for (const [key, entry] of geom) {
+    const ring = entry.geom.coordinates[0] || [];
+    if (ring.length < 4) continue;
+    let sumLat = 0, sumLon = 0, n = 0;
+    for (const coord of ring) {
+      const lon = coord[0], lat = coord[1];
+      if (Number.isFinite(lat) && Number.isFinite(lon)) { sumLat += lat; sumLon += lon; n++; }
+    }
+    if (!n) continue;
+
+    const satrec = futureSatrec(entry.frame.satellite_id);
+    if (!satrec) continue;
+    // Calibrated at the newest acquisition of THIS frame, so the reference
+    // longitude is matched to this latitude as well as being recent.
+    const refAt = (calib.get(key) || entry).ts;
+    const refSp = futureSubpoint(satrec, new Date(refAt));
+    if (!refSp) continue;
+
+    templates.push({
+      satId: entry.frame.satellite_id,
+      frame: entry.frame,
+      geom: entry.geom,
+      lastTs: entry.ts,
+      centroidLat: sumLat / n,
+      refLon: refSp.lon,
+      ascending: (entry.frame.direction_norm || '') === 'ASCENDING',
+    });
+  }
+  return templates;
+}
+
+// ── Prediction ────────────────────────────────────────────────────────────
+
+function futureUncertaintyS(satId, targetMs) {
+  const cfg = FUTURE_MODE_SATS[satId];
+  if (!cfg) return null;
+  const tle = futureState.tle[satId];
+  const days = tle && Number.isFinite(tle.epochMs)
+    ? Math.abs(targetMs - tle.epochMs) / 86400000
+    : 0;
+  return Math.round(cfg.baseErrS + cfg.driftSPerDay * days);
+}
+
+function futureMakeFrame(tpl, tMs) {
+  const src = tpl.frame;
+  const iso = new Date(Math.round(tMs)).toISOString();
+  return {
+    ...src,
+    granule: '',
+    asf_url: '',
+    copernicus_url: '',
+    download_url: '',
+    file_size_mb: null,
+    date: iso,
+    stop_time: iso,
+    is_future: true,
+    forecast_source: 'sgp4',
+    forecast_uncertainty_s: futureUncertaintyS(tpl.satId, tMs),
+    forecast_from_granule: src.granule || '',
+    future_key: 'FM|' + tpl.satId + '|' + getFrameSeriesKey(src) + '|' + iso,
+  };
+}
+
+function futurePredictPasses() {
+  if (!futureModeAvailable()) return [];
+  const startMs = Date.now();
+  const endMs = futureForecastEndMs();
+  if (endMs <= startMs) return [];
+
+  const templates = futureBuildTemplates();
+  if (!templates.length) return [];
+
+  const bySat = new Map();
+  for (const tpl of templates) {
+    if (!bySat.has(tpl.satId)) bySat.set(tpl.satId, []);
+    bySat.get(tpl.satId).push(tpl);
+  }
+
+  const out = [];
+  for (const [satId, satTemplates] of bySat) {
+    const series = futureBuildSeries(satId, startMs, endMs);
+    if (!series) continue;
+    const satrec = futureSatrec(satId);
+
+    for (let i = 1; i < series.length; i++) {
+      const a = series[i - 1], b = series[i];
+      if (!futureBracketIsCandidate(a, b)) continue;
+
+      const samples = futureSampleBracket(satrec, a.t, b.t);
+      if (!samples) continue;
+
+      for (const tpl of satTemplates) {
+        const hit = futureCrossingInSamples(samples, tpl.centroidLat, tpl.ascending);
+        if (!hit) continue;
+        // The same latitude on a neighbouring orbit is a different track,
+        // ~2300 km away. This longitude gate is what keeps those out — and it
+        // is also what makes the repeat cycle implicit: a track only produces
+        // a pass when the elapsed time is a near-multiple of its repeat.
+        let dLon = hit.lon - tpl.refLon;
+        while (dLon > 180) dLon -= 360;
+        while (dLon < -180) dLon += 360;
+        if (Math.abs(dLon) > FUTURE_LON_TOL_DEG) continue;
+
+        out.push(futureMakeFrame(tpl, hit.t));
+      }
+    }
+  }
+
+  out.sort((a, b) => (getFrameTimestamp(a) ?? 0) - (getFrameTimestamp(b) ?? 0));
+  return out;
+}
+
+// ── Rendering: map ────────────────────────────────────────────────────────
+
+function futureFrameVisible(frame) {
+  // Predicted frames follow the sidebar's band and satellite choices so the
+  // map never shows a future track the user has filtered away. They ignore
+  // the date window on purpose: sitting beyond its end is the whole point.
+  if (state.band && state.band !== 'ALL') {
+    const bands = String(frame.satellite_band || '').split(',').map(s => s.trim());
+    if (!bands.includes(state.band)) return false;
+  }
+  const chosen = state.filters && state.filters.satellite;
+  if (chosen && chosen !== 'ALL' && frame.satellite_id !== chosen) return false;
+  // Same rule frameMatchesAdvancedFilters applies to observed frames: the
+  // rarer Taiwan Sentinel-1 tracks stay hidden unless asked for. A forecast
+  // that showed tracks the map hides in normal mode would contradict it.
+  if (frame.track_label === 'OTHER_S1' && !state.filters?.showOtherSentinelTracks) return false;
+  return true;
+}
+
+function renderFutureFrames() {
+  if (!state.map) return;
+  if (!futureState.layer) futureState.layer = L.layerGroup().addTo(state.map);
+  futureState.layer.clearLayers();
+  futureState.polygons = [];
+  if (!futureState.on) return;
+
+  for (const frame of futureState.frames) {
+    if (!futureFrameVisible(frame)) continue;
+    const geom = normalizeFootprint(frame.footprint);
+    if (!geom || geom.type !== 'Polygon') continue;
+
+    const rings = geom.coordinates.map(ring => ring.map(c => [c[1], c[0]]));
+    const info = futureFrameStyle(frame);
+    const key = frame.future_key;
+
+    const polygon = L.polygon(rings, {
+      color: info.color,
+      baseColor: info.color,
+      weight: 1.6,
+      opacity: 0.8,
+      // Predicted frames keep their platform hue and change only the stroke,
+      // so history and forecast stay separable where they overlap. Fill is on
+      // but transparent so selection can raise it the way it does for real
+      // frames, without the resting state ever reading as recorded data.
+      fill: true,
+      fillColor: info.color,
+      fillOpacity: 0,
+      dashArray: futureDashArray(),
+    });
+
+    // Same interaction as a real frame: hover to preview, click to select and
+    // open the drawer. A hover-only tooltip made predicted frames behave
+    // unlike everything else on the map.
+    polygon.on('mouseover', function () {
+      if (state.selectedFrameKey === key) return;
+      this.setStyle({ weight: 2.6, opacity: 1, fillOpacity: 0.12 });
+    });
+    polygon.on('mouseout', function () {
+      if (state.selectedFrameKey === key) return;
+      const hasSelection = !!state.selectedFrameKey;
+      this.setStyle({
+        weight: hasSelection ? 1 : 1.6,
+        opacity: hasSelection ? 0.18 : 0.8,
+        fillOpacity: 0,
+      });
+    });
+    polygon.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      if (state.selectedFrameKey === key) {
+        state.selectedFrameKey = null;
+        closeDrawer();
+      } else {
+        state.selectedFrameKey = key;
+        openFuturePredictionDrawer(frame);
+      }
+      updateMapSelectionState();
+    });
+
+    futureState.layer.addLayer(polygon);
+    futureState.polygons.push({ key, polygon });
+  }
+}
+
+// Deliberately lighter than openFrameDrawer: a prediction has no granule, no
+// file list and no source history to show, so the card carries only what is
+// actually known — when the pass is, how sure that is, and where it came from.
+function openFuturePredictionDrawer(frame) {
+  document.querySelectorAll('.sat-row').forEach(r => r.classList.remove('active'));
+  const satRow = document.querySelector('.sat-row[data-sat-id="' + frame.satellite_id + '"]');
+  if (satRow) satRow.classList.add('active');
+  state.selectedSat = null;
+
+  const sat = getSatForFrame(frame) || {};
+  const info = getFrameVisualInfo(frame);
+  const stale = futureTleIsStale();
+  const when = stale ? displayDateKey(frame.date) : futureFormatWhen(frame.date);
+
+  const ms = getFrameTimestamp(frame) || 0;
+  const deltaH = Math.max(0, (ms - Date.now()) / 3600000);
+  const inLabel = deltaH >= 24
+    ? Math.floor(deltaH / 24) + ' d ' + Math.floor(deltaH % 24) + ' h'
+    : Math.floor(deltaH) + ' h ' + Math.floor((deltaH % 1) * 60) + ' m';
+
+  const cell = (label, value, span) =>
+    '<div class="d-item' + (span ? ' span-2' : '') + '"><div class="k">' + escapeHtml(label) +
+    '</div><div class="v"><small>' + escapeHtml(value) + '</small></div></div>';
+
+  document.getElementById('d-name').innerHTML =
+    escapeHtml(info.label) +
+    ' <span class="fm-pass-tag">' + escapeHtml(t('fm-predicted')) + '</span>';
+  document.getElementById('d-agency').textContent =
+    [sat.agency, frame.satellite_name, frame.sensor].filter(Boolean).join(' · ');
+
+  document.getElementById('d-week-wrap').innerHTML = '';
+  document.getElementById('d-grid').innerHTML =
+    '<div class="d-item span-2"><div class="k">' + escapeHtml(t('fm-col-datetime')) +
+      '</div><div class="v">' + escapeHtml(when) + '</div></div>' +
+    cell(t('fm-in'), inLabel) +
+    (stale || frame.forecast_uncertainty_s === null
+      ? cell(t('fm-uncertainty'), '--')
+      : cell(t('fm-uncertainty'), '±' + frame.forecast_uncertainty_s + ' s')) +
+    cell(t('track'), String(frame.path_number_norm ?? '--')) +
+    cell(t('frame'), String(frame.frame_number_norm || '--')) +
+    cell(t('direction'), frame.direction_norm || '--') +
+    cell(t('fm-source'), t('fm-sgp4')) +
+    cell(t('fm-templated-from'), frame.forecast_from_granule || '--', true);
+
+  const section = document.querySelector('.d-section');
+  if (section) section.textContent = t('fm-title');
+
+  document.getElementById('d-desc').innerHTML =
+    '<div class="fm-drawer-note">' + escapeHtml(t('fm-note')) + '</div>' +
+    '<div class="fm-drawer-note">' + escapeHtml(t('fm-excluded')) + '</div>';
+
+  document.getElementById('drawer').classList.add('open');
+}
+
+// ── Rendering: header badge ───────────────────────────────────────────────
+
+function renderFutureBadge() {
+  const logo = document.querySelector('.hdr-logo');
+  if (logo) logo.title = t('fm-title');
+  const badge = document.getElementById('fm-badge');
+  if (!badge) return;
+  // The field carries the spacer label that lines the badge up with the header
+  // controls, so it has to hide with the badge or it reserves an empty column.
+  const field = document.getElementById('fm-badge-field');
+
+  if (!futureState.on && !futureState.loading && !futureState.error) {
+    badge.hidden = true;
+    if (field) field.hidden = true;
+    badge.innerHTML = '';
+    return;
+  }
+  badge.hidden = false;
+  if (field) field.hidden = false;
+
+  if (futureState.loading) {
+    badge.className = 'fm-badge loading';
+    badge.innerHTML = '<span class="fm-dot"></span><span class="fm-label">'
+      + escapeHtml(t('fm-loading')) + '</span>';
+    return;
+  }
+  if (futureState.error) {
+    badge.className = 'fm-badge error';
+    badge.innerHTML = '<span class="fm-dot"></span><span class="fm-label">'
+      + escapeHtml(futureState.error) + '</span>';
+    return;
+  }
+  badge.className = 'fm-badge';
+  badge.innerHTML =
+    '<span class="fm-dot"></span>' +
+    '<span class="fm-label">' + escapeHtml(t('fm-on')) + '</span>';
+}
+
+// ── Rendering: sidebar controls ───────────────────────────────────────────
+
+// The app prints instants as `2026-08-27 10:00` in the display zone.
+// formatDisplayTime forwards its options straight to toLocaleString, so the
+// date half has to come from displayDateKey rather than an invented flag.
+// The date window decides which observed frames the map draws, so in Future
+// Mode it has to move with the horizon. Otherwise the window still ends today
+// and the map mixes the forecast with whatever the archive happens to hold —
+// a NISAR record from 8/10 sitting under passes predicted for September.
+// The window it replaces is put back on the way out.
+function futureDateWindowKeys() {
+  const today = toDisplayDate(new Date());
+  const end = fromDisplayParts(today.getFullYear(), today.getMonth(),
+                               today.getDate() + futureState.horizonDays);
+  return { startKey: displayDateKey(new Date()), endKey: displayDateKey(end) };
+}
+
+// The window is the source of truth for how far ahead the forecast runs: the
+// horizon chips are shortcuts that write it, and typing a DATE END by hand is
+// just as valid a way to set it. Reading it back here is what makes both the
+// map and the chart follow a hand-edited field.
+function futureForecastEndMs() {
+  const endKey = state.filters?.dateEnd;
+  const parts = String(endKey || '').split('-').map(Number);
+  const capMs = Date.now() + FUTURE_MAX_HORIZON_DAYS * 86400000;
+  if (parts.length !== 3 || !parts.every(Number.isFinite)) {
+    return Date.now() + futureState.horizonDays * 86400000;
+  }
+  // The window's end day is inclusive, so the forecast runs to its last instant.
+  const end = fromDisplayParts(parts[0], parts[1] - 1, parts[2] + 1).getTime();
+  return Math.max(Date.now(), Math.min(end, capMs));
+}
+
+// A chip is active only when the window still matches exactly what it writes;
+// a hand-typed date leaves none of them lit rather than lighting the wrong one.
+function futureForecastIsCapped() {
+  const parts = String(state.filters?.dateEnd || '').split('-').map(Number);
+  if (parts.length !== 3 || !parts.every(Number.isFinite)) return false;
+  const wanted = fromDisplayParts(parts[0], parts[1] - 1, parts[2] + 1).getTime();
+  return wanted > Date.now() + FUTURE_MAX_HORIZON_DAYS * 86400000;
+}
+
+function futureActiveHorizon() {
+  const today = toDisplayDate(new Date());
+  for (const d of FUTURE_HORIZONS) {
+    const end = fromDisplayParts(today.getFullYear(), today.getMonth(), today.getDate() + d);
+    if (displayDateKey(end) === state.filters?.dateEnd) return d;
+  }
+  return null;
+}
+
+function futureApplyDateWindow() {
+  const { startKey, endKey } = futureDateWindowKeys();
+  setDateWindow(startKey, endKey);
+  applyAdvancedFilters();
+}
+
+function futureSaveDateWindow() {
+  ensureAdvancedState();
+  futureState.savedWindow = { start: state.filters.dateStart, end: state.filters.dateEnd };
+}
+
+function futureRestoreDateWindow() {
+  const saved = futureState.savedWindow;
+  futureState.savedWindow = null;
+  if (!saved) return;
+  setDateWindow(saved.start, saved.end);
+  applyAdvancedFilters();
+}
+
+function futureFormatWhen(value) {
+  const day = displayDateKey(value);
+  const time = formatDisplayTime(value, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return day && time !== '--' ? day + ' ' + time : (day || '--');
+}
+
+function futureFormatAge(ms) {
+  if (!Number.isFinite(ms)) return '--';
+  const h = ms / 3600000;
+  return h < 48 ? Math.round(h) + ' h' : Math.round(h / 24) + ' d';
+}
+
+function renderFutureSection() {
+  const host = document.getElementById('fm-section');
+  if (!host) return;
+  if (!futureState.on) { host.hidden = true; host.innerHTML = ''; return; }
+  host.hidden = false;
+
+  // Deliberately NOT `.chip`: setFilter() clears `.on` from every `.chip` on the
+  // page when the band changes, which silently deselected the horizon the user
+  // had picked while the mode stayed on that horizon internally.
+  const activeHorizon = futureActiveHorizon();
+  const chips = FUTURE_HORIZONS.map(d =>
+    '<button type="button" class="fm-chip' + (d === activeHorizon ? ' on' : '') + '"' +
+    ' onclick="setFutureHorizon(' + d + ')">+' + d + ' d</button>'
+  ).join('');
+
+  const epochs = Object.values(futureState.tle).map(e => e.epochMs).filter(Number.isFinite);
+  const stamp = epochs.length
+    ? futureFormatWhen(new Date(Math.max.apply(null, epochs)).toISOString())
+    : '--';
+  const ageMs = futureTleAgeMs();
+  const srcLine = t('fm-orbit-source', { stamp, age: futureFormatAge(ageMs) });
+  const visible = futureState.frames.filter(futureFrameVisible).length;
+
+  host.innerHTML =
+    '<div class="fm-panel">' +
+      '<div class="fm-panel-hd">' +
+        '<span class="fm-panel-title">' + escapeHtml(t('fm-title')) + '</span>' +
+        '<span class="fm-panel-hint">' + escapeHtml(t('fm-hint')) + '</span>' +
+      '</div>' +
+      '<div class="fm-panel-body">' +
+        '<div class="filter-sub-lbl">' + escapeHtml(t('fm-horizon')) + '</div>' +
+        '<div class="format-options">' + chips + '</div>' +
+        '<div class="filter-sub-lbl">' + escapeHtml(t('fm-color')) + '</div>' +
+        '<div class="format-options">' + FUTURE_COLOR_STYLES.map(c =>
+          '<button type="button" class="fm-chip fm-color-chip' + (c.id === futureState.color ? ' on' : '') + '"' +
+          ' onclick="setFutureColor(' + escapeInlineJsArg(c.id) + ')">' +
+          '<span class="fm-sw">' + c.swatch.map(h =>
+            '<i style="background:' + h + '"></i>').join('') + '</span>' +
+          escapeHtml(t(c.labelKey)) + '</button>'
+        ).join('') + '</div>' +
+        '<div class="filter-sub-lbl">' + escapeHtml(t('fm-dash')) + '</div>' +
+        '<div class="format-options">' + FUTURE_DASH_STYLES.map(d =>
+          '<button type="button" class="fm-chip fm-dash-chip' + (d.id === futureState.dash ? ' on' : '') + '"' +
+          ' onclick="setFutureDash(' + escapeInlineJsArg(d.id) + ')" title="' + escapeHtml(d.pattern) + '">' +
+          '<svg width="30" height="6" aria-hidden="true"><line x1="0" y1="3" x2="30" y2="3"' +
+          ' stroke="currentColor" stroke-width="2" stroke-dasharray="' + d.pattern + '"></line></svg></button>'
+        ).join('') + '</div>' +
+        '<div class="filter-sub-lbl">' + escapeHtml(t('fm-source')) + '</div>' +
+        '<div class="fm-src-row">' +
+          '<span class="fm-src-line"></span>' +
+          '<span class="fm-src-name">' + escapeHtml(t('fm-sgp4')) + '</span>' +
+          '<span class="fm-src-count">' + visible + '</span>' +
+        '</div>' +
+        (futureTleIsStale()
+          ? '<div class="fm-note fm-warn">' + escapeHtml(t('fm-stale', { age: futureFormatAge(ageMs) })) + '</div>'
+          : '') +
+        (futureForecastIsCapped()
+          ? '<div class="fm-note fm-warn">' + escapeHtml(t('fm-capped', { n: FUTURE_MAX_HORIZON_DAYS })) + '</div>'
+          : '') +
+        '<div class="fm-src' + (futureState.notesOpen ? ' open' : '') + '">' +
+          '<button type="button" class="fm-src-hd" onclick="toggleFutureNotes()"' +
+          ' title="' + escapeHtml(srcLine) + '">' +
+            '<span class="fm-src-txt">' + escapeHtml(srcLine) + '</span>' +
+            '<span class="fm-src-caret" aria-hidden="true"></span>' +
+          '</button>' +
+          '<div class="fm-src-body">' +
+            escapeHtml(t('fm-note')) + '<br>' +
+            '<span class="fm-dim">' + escapeHtml(t('fm-excluded')) + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── Rendering: legend group ───────────────────────────────────────────────
+
+function renderFutureLegendGroup() {
+  const wrap = document.getElementById('legend-items');
+  if (!wrap || !futureState.on) return;
+  const frames = futureState.frames.filter(futureFrameVisible);
+  if (!frames.length) return;
+
+  const groups = new Map();
+  for (const frame of frames) {
+    const info = futureFrameStyle(frame);
+    const current = groups.get(info.label) || { label: info.label, color: info.color, count: 0 };
+    current.count += 1;
+    groups.set(info.label, current);
+  }
+
+  const items = [...groups.values()].sort((a, b) => b.count - a.count).map(item =>
+    '<div class="legend-item">' +
+      '<div class="legend-main">' +
+        '<svg class="legend-swatch" width="24" height="6" aria-hidden="true"><line x1="0" y1="3" x2="24" y2="3"' +
+        ' stroke="' + item.color + '" stroke-width="2.5" stroke-dasharray="' + futureDashArray() + '"></line></svg>' +
+        '<span>' + escapeHtml(item.label) + '</span>' +
+      '</div>' +
+      '<div class="legend-value">' + item.count + '</div>' +
+    '</div>'
+  ).join('');
+
+  wrap.insertAdjacentHTML('beforeend',
+    '<div class="legend-sep"></div>' +
+    '<div class="legend-title">' + escapeHtml(t('fm-forecast-group', { n: futureState.horizonDays })) + '</div>' +
+    items);
+}
+
+// ── Rendering: drawer next-pass block ─────────────────────────────────────
+
+function futureNextPassBlockHTML(clickedFrame) {
+  if (!futureState.on || !clickedFrame) return '';
+  const seriesKey = getFrameSeriesKey(clickedFrame);
+  const matches = futureState.frames
+    .filter(f => getFrameSeriesKey(f) === seriesKey)
+    .slice(0, 3);
+
+  const label = getFrameVisualInfo(clickedFrame).label;
+  const head = '<div class="fm-drawer-hd">' + escapeHtml(t('fm-next-passes', { track: label })) + '</div>';
+
+  if (!matches.length) {
+    return '<div class="fm-drawer">' + head +
+      '<div class="fm-drawer-empty">' + escapeHtml(t('fm-no-passes')) + '</div></div>';
+  }
+
+  const stale = futureTleIsStale();
+  const rows = matches.map(f => {
+    const ms = getFrameTimestamp(f) || 0;
+    const deltaH = Math.max(0, (ms - Date.now()) / 3600000);
+    const inLabel = deltaH >= 24
+      ? Math.floor(deltaH / 24) + ' d ' + Math.floor(deltaH % 24) + ' h'
+      : Math.floor(deltaH) + ' h ' + Math.floor((deltaH % 1) * 60) + ' m';
+    const when = stale ? displayDateKey(f.date) : futureFormatWhen(f.date);
+    return '<div class="fm-pass">' +
+      '<div class="fm-pass-hd">' +
+        '<span class="fm-pass-when">' + escapeHtml(when) + '</span>' +
+        '<span class="fm-pass-tag">' + escapeHtml(t('fm-predicted')) + '</span>' +
+      '</div>' +
+      '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-in')) + '</span><strong>' + escapeHtml(inLabel) + '</strong></div>' +
+      (stale || f.forecast_uncertainty_s === null ? '' :
+        '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-uncertainty')) + '</span><strong>&plusmn;' + f.forecast_uncertainty_s + ' s</strong></div>') +
+      '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-source')) + '</span><strong>' + escapeHtml(t('fm-sgp4')) + '</strong></div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="fm-drawer">' + head + rows +
+    '<div class="fm-drawer-note">' + escapeHtml(t('fm-note')) + '</div></div>';
+}
+
+// ── Mode switching ────────────────────────────────────────────────────────
+
+async function setFutureMode(on) {
+  const want = !!on;
+
+  if (!want) {
+    const wasOn = futureState.on;
+    futureState.on = false;
+    futureState.error = '';
+    futureState.frames = [];
+    try { localStorage.setItem('sar_future_mode', '0'); } catch {}
+    if (wasOn) futureRestoreDateWindow();
+    futureRefreshAll();
+    return;
+  }
+  if (futureState.on || futureState.loading) return;
+
+  if (!futureModeAvailable()) {
+    futureFlashError();
+    return;
+  }
+
+  futureState.loading = true;
+  futureState.error = '';
+  renderFutureBadge();
+
+  const ok = await loadFutureTLEs();
+  futureState.loading = false;
+  if (!ok) {
+    // No orbit data means no honest answer, so the mode does not engage
+    // rather than falling back to a guess.
+    futureState.on = false;
+    futureFlashError();
+    return;
+  }
+
+  futureState.on = true;
+  try { localStorage.setItem('sar_future_mode', '1'); } catch {}
+  futureSaveDateWindow();
+  futureApplyDateWindow();
+  futureRecompute();
+}
+
+function futureFlashError() {
+  futureState.error = t('fm-failed');
+  renderFutureBadge();
+  setTimeout(() => { futureState.error = ''; renderFutureBadge(); }, 5000);
+}
+
+function toggleFutureMode() {
+  setFutureMode(!futureState.on);
+}
+
+function setFutureHorizon(days) {
+  if (!FUTURE_HORIZONS.includes(days)) return;
+  futureState.horizonDays = days;
+  try { localStorage.setItem('sar_future_horizon', String(days)); } catch {}
+  if (!futureState.on) return;
+  futureApplyDateWindow();
+  futureRecompute();
+}
+
+function toggleFutureNotes() {
+  futureState.notesOpen = !futureState.notesOpen;
+  renderFutureSection();
+}
+
+function futureRecompute() {
+  futureState.frames = futureState.on ? futurePredictPasses() : [];
+  futureRefreshAll();
+}
+
+function futureRefreshAll() {
+  document.documentElement.classList.toggle('future-mode', futureState.on);
+  // The chart's forecast bars are styled in CSS, so the choice reaches them
+  // as a variable rather than being duplicated in the SVG builder.
+  document.documentElement.style.setProperty('--fm-dash', futureDashArray());
+  renderFutureBadge();
+  renderFutureSection();
+  renderFutureFrames();
+  updateLegend();
+  // The stats panel's header and chart are built once per render, so an open
+  // panel would otherwise keep the horizon it was opened with — and never grow
+  // the forecast export button.
+  if (document.getElementById('stats-panel')?.classList.contains('open')) {
+    renderStatsPanel();
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+
+function initFutureMode() {
+  const dash = localStorage.getItem('sar_future_dash');
+  if (FUTURE_DASH_STYLES.some(d => d.id === dash)) futureState.dash = dash;
+  const color = localStorage.getItem('sar_future_color');
+  if (FUTURE_COLOR_STYLES.some(c => c.id === color)) futureState.color = color;
+
+  const stored = parseInt(localStorage.getItem('sar_future_horizon') || '', 10);
+  if (FUTURE_HORIZONS.includes(stored)) futureState.horizonDays = stored;
+
+  const logo = document.querySelector('.hdr-logo');
+  if (logo) {
+    logo.classList.add('fm-logo-target');
+    logo.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      toggleFutureMode();
+    });
+    // A double-click cannot be produced by keyboard or by most assistive
+    // input, so the gesture is a shortcut and never the only way in.
+    logo.tabIndex = 0;
+    logo.setAttribute('role', 'button');
+    logo.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFutureMode(); }
+    });
+  }
+
+  if (localStorage.getItem('sar_future_mode') === '1') setFutureMode(true);
+}
