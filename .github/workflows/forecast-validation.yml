@@ -1,0 +1,72 @@
+# This file only does anything once it is on `main`. GitHub fires `schedule:`
+# triggers only for workflows on the repository's default branch — a cron sitting
+# on feature/futurama never runs, whatever it says. So to let the branch collect
+# 90 days of evidence on its own, this one small file has to be merged to main;
+# everything it needs (forecast_validation.py, the FUTURAMA code) stays on the
+# branch, and nothing it does touches the published site.
+#
+# Until then, run it by hand:  python forecast_validation.py
+
+name: FUTURAMA forecast validation
+
+on:
+  schedule:
+    # 01:30 UTC, half an hour after the 01:00-ish data update, so the catalog
+    # it scores against already has the night's acquisitions in it.
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Score yesterday's forecast, record the next 90 days
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/futurama
+          fetch-depth: 0
+
+      - name: Borrow the freshest catalog from main
+        # The daily data job commits to main, so the branch's own copy of
+        # data/sar_status.js goes stale the moment it is cut. Only the two
+        # output files are committed below, so this borrowed copy never
+        # lands on the branch.
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- data/sar_status.js
+          ls -la data/sar_status.js
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The data pipeline is deliberately stdlib-only; this job is the one
+      # exception, because SGP4 is not something to reimplement by hand.
+      - name: Install sgp4
+        run: pip install 'sgp4==2.23'
+
+      - name: Run validation
+        run: python forecast_validation.py
+
+      - name: Commit the log and the report
+        run: |
+          git config user.name  "SAR Monitor Bot"
+          git config user.email "sar-monitor[bot]@users.noreply.github.com"
+          git add data/forecast_log.json docs/forecast-accuracy.md
+          if git diff --staged --quiet; then
+            echo "No change, skipping commit"
+          else
+            git commit -m "data: forecast validation $(date -u '+%Y-%m-%d')"
+            git fetch origin feature/futurama
+            git rebase origin/feature/futurama
+            git push origin HEAD:feature/futurama
+          fi
