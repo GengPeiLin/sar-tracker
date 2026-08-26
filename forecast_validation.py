@@ -6,8 +6,8 @@ catalog it scores against is already up to date. Each run does two things:
 
   1. PREDICT (once per UTC day) — propagate a fresh Celestrak TLE and record
      every Taiwan overpass it expects, into data/forecast_log.json.
-  2. SCORE — take predictions whose time has now passed and look for the real
-     acquisition that answers them, then rewrite docs/forecast-accuracy.md.
+  2. SCORE — take predictions the archive has caught up past and look for the
+     real acquisition that answers them, then rewrite docs/forecast-accuracy.md.
 
 A prediction is kept twice: `first` is the estimate made at the longest lead
 time, `last` the most recent one. Scoring both is the point — re-predicting a
@@ -83,7 +83,13 @@ LON_TOL_DEG = 1.5
 # ── validation policy ────────────────────────────────────────────────────────
 HORIZON_DAYS = 90          # how far ahead each run records
 MATCH_WINDOW_H = 12        # an actual this close counts as answering a prediction
-SETTLE_HOURS = 36          # wait this long past a prediction before scoring it
+# A prediction is only scored once the archive demonstrably covers its instant:
+# that satellite must already have published an acquisition LATER than it. A
+# fixed wait cannot do this job — products appear days after acquisition and the
+# lag differs per mission — and scoring too early turns "not published yet" into
+# a permanent miss. Measured 2026-08-26: the newest acquisition was 2.4 d old for
+# S1C but 5.8 d for S1D, so a 36 h wait was marking live predictions as failed.
+SETTLE_MARGIN_H = 2        # the later acquisition must clear the prediction by this
 PRUNE_AFTER_DAYS = 400     # keep the log bounded
 
 RE_EARTH = 6378.137
@@ -380,15 +386,36 @@ def record(log, predictions, now):
     return added, updated
 
 
+def acquisition_midpoint(frame):
+    """The instant a prediction actually targets.
+
+    A prediction is the moment the ground track crosses the footprint's CENTROID
+    latitude, so the acquisition's mid-time is what answers it. Scoring against
+    frame['date'] — the START of the acquisition — biases every hit early by half
+    a frame: 13.5 s for Sentinel-1, 16 s for NISAR. Measured as a -10.2 s mean
+    bias across 28 hits before this was fixed, which is not a forecast error at
+    all, only the wrong instant to compare against."""
+    start = parse_iso(frame.get("date"))
+    stop = parse_iso(frame.get("stop_time"))
+    if start is None:
+        return None
+    if stop is None or stop <= start:
+        return start
+    return start + (stop - start) / 2
+
+
 def score(log, frames, now):
     actuals = {}
+    newest_per_sat = {}
     for frame in frames:
         sat = frame_sat(frame)
         if sat not in FUTURE_MODE_SATS or not is_canonical(frame):
             continue
-        when = parse_iso(frame.get("date"))
+        when = acquisition_midpoint(frame)
         if when is None:
             continue
+        if sat not in newest_per_sat or when > newest_per_sat[sat]:
+            newest_per_sat[sat] = when
         key = (sat, str(frame.get("path_number")), str(frame.get("frame_number")))
         actuals.setdefault(key, []).append((when, frame.get("granule") or ""))
 
@@ -397,7 +424,11 @@ def score(log, frames, now):
         if row.get("status") != "pending":
             continue
         predicted = parse_iso(row["predicted"])
-        if predicted is None or predicted > now - timedelta(hours=SETTLE_HOURS):
+        if predicted is None:
+            continue
+        # Only judge a prediction the archive has caught up past.
+        newest = newest_per_sat.get(row["satellite"])
+        if newest is None or predicted > newest - timedelta(hours=SETTLE_MARGIN_H):
             continue
 
         key = (row["satellite"], str(row["track"]), str(row["frame"]))
