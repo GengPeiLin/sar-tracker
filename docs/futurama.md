@@ -316,12 +316,12 @@ deterministic.
 `forecast_validation.py`, run daily by `.github/workflows/forecast-validation.yml`.
 
 Each run records every overpass the forecast expects into
-`data/forecast_log.json`, then takes predictions whose time has passed and
-looks for the real acquisition that answers them, rewriting
-`docs/forecast-accuracy.md`.
+`data/forecast_log.json`, then scores the ones the archive has caught up past,
+rewriting `docs/forecast-accuracy.md`.
 
-- **hit** — a real acquisition of the same `(satellite, track, frame)` arrived
-  within 12 h of the predicted instant; the error is the signed difference
+- **hit** — a real acquisition of the same `(satellite, track)` arrived on the
+  same day; the error is the signed difference between the median predicted
+  instant and the median actual one
 - **miss** — the pass was predicted and nothing was acquired: the satellite
   flew over and did not image
 
@@ -331,6 +331,64 @@ second is why this is a 90-day record rather than a one-off check.
 Each pass keeps **both** its first estimate and its latest. Re-predicting a
 pass the day before it happens and reporting only that would flatter the
 result, when the question is how far ahead the forecast stays useful.
+
+### Two scoring rules that had to be corrected
+
+**The unit is a pass, not a frame.** Sentinel-1 frame numbers come from where a
+datatake was cut, so the same ground is numbered differently on different
+passes — S1D track 69 ran frames 68/74/79 through June and July, then 71/76,
+then 72/78. Scoring per frame counted a perfectly regular 12-day forecast as a
+miss: **8% against 56% for the same predictions over the same 90 days**. NISAR's
+frames are stable and were unaffected. How many frame numbers still line up is
+kept as `frames_matched`, because the renumbering is worth watching separately.
+
+**A prediction targets the acquisition mid-time, not its start.** The predicted
+instant is when the ground track crosses the footprint's *centroid* latitude.
+Comparing that against `frame['date']` — the acquisition start — biased every
+hit early by half a frame, 13.5 s for Sentinel-1 and 16 s for NISAR. Measured
+as a −10.2 s mean bias over 28 hits; correcting it moved the bias to +1.2 s.
+
+**A fixed settling time cannot decide when to score.** Products appear days
+after acquisition and the lag differs per mission — on 2026-08-26 the newest
+acquisition was 2.4 d old for S1C but 5.8 d for S1D. A 36 h wait turned "not
+published yet" into a permanent miss. A prediction is now scored only once that
+satellite has published something *later* than it, which is self-calibrating.
+
+### What the past 90 days already say
+
+`retrodict.py` runs the same forecast over a window that has already happened.
+`--roll` walks a cutoff through the period, rebuilding templates from only the
+data available at each one, so it aggregates many realistic short forecasts
+rather than one implausible 90-day-ahead guess. Over 2026-05-28 → 2026-08-26,
+a fresh forecast every 6 days looking 14 days ahead:
+
+| | |
+|---|---|
+| predicted passes | 71 |
+| actual passes | 57 |
+| hit / miss | 40 / 31 — **56%** |
+| acquired but never predicted | 17 |
+| timing on hits | median **13.7 s**, p90 27.4 s, max 56.7 s, bias +4.2 s |
+
+Per satellite: S1D 13.4 s (71% hit), S1C 14.4 s (44%), NISAR 18.7 s (57%).
+
+So the timing half is solid and matches the numbers in [Measured
+accuracy](#measured-accuracy). **The imaging half is roughly a coin flip** —
+predicting an overpass is right about the geometry and only about half right
+about whether an image results. That is the number behind the UI's "an orbital
+opportunity, not a guaranteed acquisition", and it is the strongest argument
+for the Scheduled tier under [Not implemented](#not-implemented).
+
+Three limits on those figures, none of which the forward log shares:
+
+- **Celestrak serves only the current TLE.** A forecast made 90 days ago would
+  have used the orbit as known then; this propagates today's backwards. Rolling
+  keeps each lead time to 3–14 days, which limits but does not remove the
+  effect.
+- **40 hits is a small sample.** Taiwan sees a few dozen overpasses a month;
+  that is the ceiling the data imposes, not a flaw in the method.
+- **Lead times are unevenly spread** — 38 of 40 hits fall in the 7–14 day
+  bucket, so this data cannot yet show error growing with lead time.
 
 ### Why the workflow lives on `main`
 

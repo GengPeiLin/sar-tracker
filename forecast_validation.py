@@ -14,11 +14,21 @@ time, `last` the most recent one. Scoring both is the point — re-predicting a
 pass the day before it happens and reporting only that would flatter the
 result, because the whole question is how far ahead the forecast is useful.
 
-A HIT is an actual acquisition of the same (satellite, track, frame) within
-MATCH_WINDOW_H of the predicted instant; the error is the signed difference.
-A MISS is a predicted pass with no such acquisition — the satellite flew over
-and did not image, which is exactly the half SGP4 cannot answer and the half
-this log exists to quantify.
+The unit is one PASS — one (satellite, track) on one day — not one frame.
+Frame numbers are not stable for Sentinel-1: they come from where a datatake
+was cut, so the same ground is numbered differently on different passes (S1D
+track 69 ran frames 68/74/79 through June and July, then 71/76, then 72/78).
+Scoring per frame therefore counts a perfectly good forecast as a miss —
+measured 8% against 56% for the same predictions over the same 90 days. How
+many frame numbers did line up is still recorded, as `frames_matched`,
+because the renumbering is worth watching in its own right.
+
+A HIT is an actual acquisition of the same (satellite, track) on the same day;
+the error is the signed difference between the median predicted instant and
+the median actual one. A MISS is a predicted pass with no such acquisition —
+the satellite flew over and did not image, which is exactly the half SGP4
+cannot answer and the half this log exists to quantify. Retrodiction over the
+90 days to 2026-08-26 put that at 56%.
 
 IMPORTANT: the prediction rule here mirrors the FUTURAMA section of app.js
 (search for "FUTURAMA"). The two are separate implementations of one method,
@@ -343,44 +353,59 @@ def crossing(samples, target_lat, ascending):
 
 # ── log ──────────────────────────────────────────────────────────────────────
 
-def pass_key(entry):
-    """One overpass of one frame. The 12-day repeat means a (satellite, track,
-    frame) pair passes at most once a day, so the date pins the pass without
-    ever merging two of them."""
-    return "|".join([
-        str(entry["satellite"]), str(entry["track"]), str(entry["frame"]),
-        str(entry["predicted"])[:10],
-    ])
+def pass_key(satellite, track, when_iso):
+    """One overpass. A track passes at most once a day, so the date pins it
+    without ever merging two real overpasses."""
+    return "|".join([str(satellite), str(track), str(when_iso)[:10]])
+
+
+def median_instant(times):
+    ordered = sorted(times)
+    return ordered[len(ordered) // 2]
 
 
 def load_log():
     if not os.path.exists(LOG_PATH):
-        return {"schema": 1, "passes": {}}
+        return {"schema": 2, "passes": {}}
     try:
         return json.load(io.open(LOG_PATH, encoding="utf-8"))
     except Exception:                                  # noqa: BLE001
-        return {"schema": 1, "passes": {}}
+        return {"schema": 2, "passes": {}}
 
 
 def record(log, predictions, now):
-    added = updated = 0
+    """Collapse the frame-level predictions into one row per overpass."""
+    grouped = {}
     for p in predictions:
-        key = pass_key(p)
+        key = pass_key(p["satellite"], p["track"], p["predicted"])
+        grouped.setdefault(key, []).append(p)
+
+    added = updated = 0
+    for key, group in grouped.items():
+        instant = median_instant([parse_iso(g["predicted"]) for g in group])
+        iso = instant.isoformat().replace("+00:00", "Z")
+        frames = sorted({str(g["frame"]) for g in group})
         row = log["passes"].get(key)
         if row is None:
             log["passes"][key] = {
-                **p,
-                "first_predicted": p["predicted"],
+                "satellite": group[0]["satellite"],
+                "track": group[0]["track"],
+                "direction": group[0]["direction"],
+                "frames": frames,
+                "predicted": iso,
+                "uncertainty_s": max(g["uncertainty_s"] for g in group),
+                "from_granule": group[0]["from_granule"],
+                "first_predicted": iso,
                 "first_seen": now.isoformat().replace("+00:00", "Z"),
-                "first_lead_days": round(
-                    (parse_iso(p["predicted"]) - now).total_seconds() / 86400.0, 2),
+                "first_lead_days": round((instant - now).total_seconds() / 86400.0, 2),
                 "status": "pending",
             }
             added += 1
         elif row.get("status") == "pending":
             # keep the longest-lead estimate AND the freshest one
-            row["predicted"] = p["predicted"]
-            row["uncertainty_s"] = p["uncertainty_s"]
+            row["predicted"] = iso
+            row["frames"] = frames
+            row["uncertainty_s"] = max(g["uncertainty_s"] for g in group)
             row["last_seen"] = now.isoformat().replace("+00:00", "Z")
             updated += 1
     return added, updated
@@ -416,8 +441,9 @@ def score(log, frames, now):
             continue
         if sat not in newest_per_sat or when > newest_per_sat[sat]:
             newest_per_sat[sat] = when
-        key = (sat, str(frame.get("path_number")), str(frame.get("frame_number")))
-        actuals.setdefault(key, []).append((when, frame.get("granule") or ""))
+        key = pass_key(sat, frame.get("path_number"), when.isoformat())
+        actuals.setdefault(key, []).append(
+            (when, frame.get("granule") or "", str(frame.get("frame_number") or "")))
 
     scored = 0
     for row in log["passes"].values():
@@ -431,24 +457,27 @@ def score(log, frames, now):
         if newest is None or predicted > newest - timedelta(hours=SETTLE_MARGIN_H):
             continue
 
-        key = (row["satellite"], str(row["track"]), str(row["frame"]))
-        best = None
-        for when, granule in actuals.get(key, []):
-            dt = (when - predicted).total_seconds()
-            if abs(dt) <= MATCH_WINDOW_H * 3600 and (best is None or abs(dt) < abs(best[0])):
-                best = (dt, when, granule)
-
-        if best is None:
+        found = actuals.get(pass_key(row["satellite"], row["track"], row["predicted"]))
+        if not found:
             row["status"] = "miss"
         else:
-            dt, when, granule = best
-            row["status"] = "hit"
-            row["actual"] = when.isoformat().replace("+00:00", "Z")
-            row["actual_granule"] = granule
-            row["dt_s"] = round(dt, 2)
-            first = parse_iso(row.get("first_predicted") or row["predicted"])
-            if first:
-                row["first_dt_s"] = round((when - first).total_seconds(), 2)
+            actual = median_instant([f[0] for f in found])
+            dt = (actual - predicted).total_seconds()
+            if abs(dt) > MATCH_WINDOW_H * 3600:
+                row["status"] = "miss"
+            else:
+                row["status"] = "hit"
+                row["actual"] = actual.isoformat().replace("+00:00", "Z")
+                row["dt_s"] = round(dt, 2)
+                actual_frames = sorted({f[2] for f in found if f[2]})
+                row["actual_frames"] = actual_frames
+                # Sentinel-1 renumbers frames between passes; how often the
+                # predicted numbers still line up is worth watching separately.
+                row["frames_matched"] = len(
+                    set(row.get("frames") or []) & set(actual_frames))
+                first = parse_iso(row.get("first_predicted") or row["predicted"])
+                if first:
+                    row["first_dt_s"] = round((actual - first).total_seconds(), 2)
         scored += 1
     return scored
 
