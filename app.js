@@ -312,6 +312,7 @@ const TRANSLATIONS = {
     'fm-tle-age':'TLE {stamp} · age {age}','fm-loading':'Loading orbit data…',
     'fm-orbit-source':'TLE · celestrak.org · {stamp} · {age}',
     'fm-failed':'Could not load orbit data — FUTURAMA stays off.',
+    'fm-missing':'No orbit data for {sats} — their passes are missing from this forecast.',
     'fm-stale':'Orbit data is {age} old; times shown to the day only.',
     'fm-count':'+{n} predicted','fm-note':'A predicted pass is an orbital opportunity, not a guaranteed acquisition.',
     'fm-hint':'Double-click the logo to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
@@ -404,6 +405,7 @@ const TRANSLATIONS = {
     'fm-tle-age':'軌道根數 {stamp} · 已過 {age}','fm-loading':'載入軌道資料…',
     'fm-orbit-source':'軌道根數 · celestrak.org · {stamp} · {age}',
     'fm-failed':'無法載入軌道資料——FUTURAMA 維持關閉。',
+    'fm-missing':'缺少 {sats} 的軌道資料，本次預測不包含它們的過境。',
     'fm-stale':'軌道資料已過 {age}，僅顯示到日期。',
     'fm-count':'+{n} 筆預測','fm-note':'預測過境代表軌道會經過，不代表一定會取像。',
     'fm-hint':'連點兩下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
@@ -5758,6 +5760,7 @@ const FUTURE_MAX_HORIZON_DAYS = 180;
 const FUTURE_TLE_CACHE_KEY  = 'sar_tle_cache';
 const FUTURE_TLE_REFRESH_MS = 12 * 3600 * 1000;   // refetch after this
 const FUTURE_TLE_STALE_MS   = 3 * 86400 * 1000;   // past this, dates only
+const FUTURE_TLE_ATTEMPTS   = 3;                  // Celestrak times out intermittently
 // A template must be recent enough that today's TLE still retrodicts its
 // acquisition, because that retrodiction is how the track's reference
 // ground-track longitude is calibrated. Retrodiction stays accurate to a
@@ -5785,6 +5788,7 @@ const futureState = {
   frames: [],
   layer: null,
   polygons: [],       // {key, polygon} for selection styling
+  missing: [],        // satellites whose TLE never arrived this session
   notesOpen: false,   // the caveats behind the provenance line
   dash: FUTURE_DASH_DEFAULT,
   color: FUTURE_COLOR_DEFAULT,
@@ -5844,30 +5848,47 @@ function readTleCache() {
 
 async function loadFutureTLEs() {
   const cached = readTleCache();
-  if (cached && cached.tle && Object.keys(cached.tle).length) {
+  // Only reuse a COMPLETE cached set: caching a partial fetch would pin the
+  // missing satellite out of the forecast for the next 12 hours.
+  if (cached && cached.tle
+      && Object.keys(FUTURE_MODE_SATS).every(id => cached.tle[id])) {
     futureState.tle = cached.tle;
+    futureState.missing = [];
     return true;
   }
 
   const entries = await Promise.all(Object.keys(FUTURE_MODE_SATS).map(async (satId) => {
     const { norad } = FUTURE_MODE_SATS[satId];
-    try {
-      const res = await fetch(
-        'https://celestrak.org/NORAD/elements/gp.php?CATNR=' + norad + '&FORMAT=TLE',
-        { cache: 'no-cache' }
-      );
-      if (!res.ok) return null;
-      const lines = (await res.text()).trim().split('\n').map(s => s.trim());
-      const l1 = lines.find(l => l.startsWith('1 '));
-      const l2 = lines.find(l => l.startsWith('2 '));
-      if (!l1 || !l2) return null;
-      return [satId, { line1: l1, line2: l2, epochMs: parseTleEpochMs(l1) }];
-    } catch { return null; }
+    // Celestrak times out intermittently. One failed request used to drop that
+    // satellite from the forecast entirely, with nothing on screen to say so —
+    // every pass it would have predicted just silently stopped existing.
+    for (let attempt = 0; attempt < FUTURE_TLE_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(
+          'https://celestrak.org/NORAD/elements/gp.php?CATNR=' + norad + '&FORMAT=TLE',
+          { cache: 'no-cache' }
+        );
+        if (res.ok) {
+          const lines = (await res.text()).trim().split('\n').map(s => s.trim());
+          const l1 = lines.find(l => l.startsWith('1 '));
+          const l2 = lines.find(l => l.startsWith('2 '));
+          if (l1 && l2) return [satId, { line1: l1, line2: l2, epochMs: parseTleEpochMs(l1) }];
+        }
+      } catch { /* fall through to the retry */ }
+      if (attempt + 1 < FUTURE_TLE_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
+    return null;
   }));
 
   const tle = {};
   for (const entry of entries) if (entry) tle[entry[0]] = entry[1];
   if (!Object.keys(tle).length) return false;
+  // A partial set still runs — refusing outright over one flaky request would
+  // be worse — but which satellites are absent has to be visible, because a
+  // missing satellite looks exactly like one that simply is not passing.
+  futureState.missing = Object.keys(FUTURE_MODE_SATS).filter(id => !tle[id]);
 
   futureState.tle = tle;
   futureState.satrec = {};
@@ -6441,6 +6462,11 @@ function renderFutureSection() {
           : '') +
         (futureForecastIsCapped()
           ? '<div class="fm-note fm-warn">' + escapeHtml(t('fm-capped', { n: FUTURE_MAX_HORIZON_DAYS })) + '</div>'
+          : '') +
+        (futureState.missing.length
+          ? '<div class="fm-note fm-warn">'
+            + escapeHtml(t('fm-missing', { sats: futureState.missing.join(', ') }))
+            + '</div>'
           : '') +
         '<div class="fm-src' + (futureState.notesOpen ? ' open' : '') + '">' +
           '<button type="button" class="fm-src-hd" onclick="toggleFutureNotes()"' +

@@ -44,6 +44,7 @@ import os
 import re
 import statistics
 import sys
+import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -101,6 +102,8 @@ MATCH_WINDOW_H = 12        # an actual this close counts as answering a predicti
 # S1C but 5.8 d for S1D, so a 36 h wait was marking live predictions as failed.
 SETTLE_MARGIN_H = 2        # the later acquisition must clear the prediction by this
 PRUNE_AFTER_DAYS = 400     # keep the log bounded
+TLE_ATTEMPTS = 3           # Celestrak times out intermittently
+TLE_RETRY_S = 5            # backoff base, multiplied by the attempt number
 
 RE_EARTH = 6378.137
 E2 = (1 / 298.257223563) * (2 - 1 / 298.257223563)
@@ -157,21 +160,43 @@ def series_key(frame):
 # ── TLE ──────────────────────────────────────────────────────────────────────
 
 def fetch_tles():
+    """Fetch every satellite's TLE, or none of them.
+
+    A partial fetch is the worst outcome: the satellite whose request failed
+    simply vanishes from the forecast, and every pass it would have predicted
+    becomes a silent miss that looks exactly like "flew over, did not image".
+    Celestrak times out intermittently, so each request is retried, and a
+    satellite still missing at the end fails the whole run rather than
+    quietly narrowing it."""
     out = {}
     for sat_id, cfg in FUTURE_MODE_SATS.items():
         url = ("https://celestrak.org/NORAD/elements/gp.php"
                f"?CATNR={cfg['norad']}&FORMAT=TLE")
-        try:
-            with urllib.request.urlopen(url, timeout=30) as resp:
-                text = resp.read().decode("utf-8", "replace")
-        except Exception as exc:                      # noqa: BLE001
-            print(f"[forecast] TLE fetch failed for {sat_id}: {exc}", flush=True)
-            continue
-        lines = [ln.strip() for ln in text.strip().split("\n")]
-        l1 = next((ln for ln in lines if ln.startswith("1 ")), None)
-        l2 = next((ln for ln in lines if ln.startswith("2 ")), None)
-        if l1 and l2:
-            out[sat_id] = {"line1": l1, "line2": l2, "epoch": tle_epoch(l1)}
+        for attempt in range(1, TLE_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(url, timeout=30) as resp:
+                    text = resp.read().decode("utf-8", "replace")
+            except Exception as exc:                  # noqa: BLE001
+                print(f"[forecast] TLE fetch failed for {sat_id} "
+                      f"(attempt {attempt}/{TLE_ATTEMPTS}): {exc}", flush=True)
+                if attempt < TLE_ATTEMPTS:
+                    time.sleep(TLE_RETRY_S * attempt)
+                continue
+            lines = [ln.strip() for ln in text.strip().split("\n")]
+            l1 = next((ln for ln in lines if ln.startswith("1 ")), None)
+            l2 = next((ln for ln in lines if ln.startswith("2 ")), None)
+            if l1 and l2:
+                out[sat_id] = {"line1": l1, "line2": l2, "epoch": tle_epoch(l1)}
+                break
+            print(f"[forecast] TLE for {sat_id} did not parse", flush=True)
+
+    missing = [s for s in FUTURE_MODE_SATS if s not in out]
+    if missing:
+        # Recording a forecast that is missing a satellite would poison the log
+        # permanently: those passes can never be scored as anything but misses.
+        print(f"[forecast] incomplete TLE set, missing {missing} — "
+              f"not recording a forecast this run", flush=True)
+        return {}
     return out
 
 
