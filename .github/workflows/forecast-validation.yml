@@ -36,12 +36,13 @@ jobs:
 
       - name: Borrow the freshest catalog from main
         # The daily data job commits to main, so the branch's own copy of
-        # data/sar_status.js goes stale the moment it is cut. Only the two
-        # output files are committed below, so this borrowed copy never
-        # lands on the branch.
+        # data/sar_status.js goes stale the moment it is cut. `git show ... >`
+        # writes the file WITHOUT staging it. `git checkout origin/main -- path`
+        # would stage it, and the commit step below would then carry a copy of
+        # main's catalog onto the branch on every run.
         run: |
           git fetch origin main --depth=1
-          git checkout origin/main -- data/sar_status.js
+          git show origin/main:data/sar_status.js > data/sar_status.js
           ls -la data/sar_status.js
 
       - name: Set up Python 3.11
@@ -57,12 +58,24 @@ jobs:
       - name: Run validation
         run: python forecast_validation.py
 
+      - name: Return the borrowed catalog
+        # Put the branch's own copy back before anything is committed or
+        # rebased: the borrowed file was only ever input to the scoring run.
+        run: git restore --source=HEAD --worktree data/sar_status.js
+
       - name: Commit the log and the report
         run: |
           git config user.name  "SAR Monitor Bot"
           git config user.email "sar-monitor[bot]@users.noreply.github.com"
           git add data/forecast_log.json docs/forecast-accuracy.md
-          if git diff --staged --quiet; then
+          # The generated catalog must never be committed from this branch —
+          # merged later, an old copy would overwrite main's newer data.
+          if git diff --cached --name-only | grep -qE '^data/sar_(status\.js|recent\.json)$'; then
+            echo "::error::a catalog file is staged; refusing to commit"
+            git diff --cached --stat
+            exit 1
+          fi
+          if git diff --cached --quiet; then
             echo "No change, skipping commit"
           else
             git commit -m "data: forecast validation $(date -u '+%Y-%m-%d')"
