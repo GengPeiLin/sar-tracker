@@ -17,6 +17,7 @@ built](#how-a-prediction-is-built) · [Why this method](#why-this-method) ·
 changes](#what-the-mode-changes-while-it-is-on) · [Appearance](#appearance) ·
 [Traps found on the way](#traps-found-on-the-way) · [90-day
 validation](#the-90-day-validation) · [Not implemented](#not-implemented) ·
+[Known gaps](#known-gaps) ·
 [Keeping it honest](#keeping-it-honest)
 
 ---
@@ -57,7 +58,8 @@ the orbit data came from.
    acquisition of that same frame gives the track's reference ground-track
    longitude.
 3. Future crossings of that latitude, in the same direction, within 1.5° of
-   that reference longitude, become predicted passes.
+   that reference longitude **and** a whole number of 12-day repeat cycles
+   (±12 h) after that frame's recent acquisition, become predicted passes.
 
 Reusing the observed polygon rather than reconstructing one from swath geometry
 is what keeps look side, swath width and frame numbering correct without
@@ -78,6 +80,36 @@ days after that track+frame's last real acquisition
 
 SGP4 is told nothing about repeat cycles and rediscovers them from orbital
 mechanics alone. That agreement is the strongest evidence the method works.
+
+### Telling a track from its ground neighbour
+
+Longitude alone cannot do it. Sentinel-1 relative orbits 73 apart are only
+2.06° apart on the ground (12 × 73 ≡ 1 mod 175), NISAR orbits 72 apart 2.08°,
+and Taiwan's own tracks are such neighbours: A142/A69/A171, and NISAR's
+A39/A111 and D61/D133. With the 1.5° gate alone, one pass was regularly
+predicted on both neighbours — 11 double-assigned passes in the next 90 days,
+mostly a D133 pass also labelled D61 — and a neighbour that is not on Taiwan's
+list could be labelled as one that is.
+
+Tightening the gate below half the spacing was measured and rejected. It
+stopped the double-assignments, but it also dropped real passes at long lead,
+where timing drift moves the crossing by more than a degree.
+
+Time separates them cleanly. Every forecast satellite repeats exactly every 12
+days and ground neighbours pass about 5 days out of phase, while drift is
+seconds to minutes. So a crossing must also land a whole number of cycles
+(±12 h) after that frame's own recent acquisition. Rolling retrodiction over
+the 90 days to 2026-09-15:
+
+| rule | hit | not imaged | never predicted | double-assigned |
+|---|---|---|---|---|
+| 1.5° gate | 54 | 54 | 11 | 15 |
+| 1.0° gate | 50 | 24 | **15** | 0 |
+| **1.5° gate + phase** | **54** | **14** | **11** | **0** |
+
+The phase check keeps every hit, removes three quarters of the false
+positives and ends double-assignment. Tightening the gate instead would have
+cost four real acquisitions — the one trade this forecast should not make.
 
 ### Templates are restricted to one product per mission
 
@@ -421,11 +453,27 @@ passes would be a dense dash, predicted ones the sparse dash used today.
 discoverable control. A `FUTURAMA` item in the header controls at ≥980 px would
 give the gesture a twin without changing what it does.
 
-**A false positive at long lead.** At ~86 days out, track drift can let the
-1.5° longitude gate admit a neighbouring track's pass: one case in 205 over a
-90-day window (`NISAR A111 frame 13` landing 1.7 s after `NISAR A39 frame 13`).
-Tightening the gate would also start rejecting real passes; the validation log
-is the right instrument to decide with.
+---
+
+## Known gaps
+
+**A track silent for more than 60 days is not forecast.** Templates come only
+from recent acquisitions, deliberately: forecasting from early, unstable states
+(commissioning, NISAR's beta period) did more harm than good. The cost is that
+if such a track resumes, its first pass back is missed. That happened six
+times in the 17 months before 2026-09 — NISAR's four tracks resuming in June
+2026 after the beta/provisional gap, and S1C A69 twice. The gap is kept
+visible rather than silent: the sidebar and the accuracy report list every
+official track that is not being forecast, with its last acquisition, and a
+miss on such a track is reported as "track resumed after silence", separately
+from forecast failures.
+
+**An orbit phase change invalidates older templates until each track is
+imaged again.** In June 2026 S1C's acquisition schedule shifted by 7 days —
+the only three same-track gaps in 2026 that are not whole 12-day cycles, all
+S1C (A171, A69, D105). Templates from before the shift carried the old phase,
+so the first pass on each of those tracks afterwards was missed. The plain
+gate misses these too; each resolves as soon as the track is re-acquired.
 
 ---
 
@@ -434,10 +482,13 @@ is the right instrument to decide with.
 `forecast_validation.py` is a **second implementation** of the prediction rule.
 If the two drift apart, the log measures a forecast the site does not show.
 
-They were cross-checked over the same 90-day window: **204 of 205 predictions
-match, median difference 3.4 ms, worst 4.8 s** (the extra one is the false
-positive above). That is close enough to treat the log as representative — but
-it is a property that has to be maintained, not one that holds by itself.
+They were cross-checked over the same 90-day window, most recently on
+2026-09-15 with the phase check in both: **191 of 191 predictions match, median
+difference 3.4 s, worst 4.8 s**, from identical TLEs. (An earlier check, which
+had one extra JS prediction, reported that median as 3.4 ms; it was seconds.)
+The difference is well inside the 8–65 s either implementation carries. That is
+close enough to treat the log as representative — but it is a property that
+has to be maintained, not one that holds by itself.
 
 Porting the rule to Python surfaced a normalisation `enhanceFrame()` does that
 the raw catalog needs: **the same spacecraft is filed as both `S1D` and

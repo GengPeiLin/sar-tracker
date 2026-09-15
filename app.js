@@ -313,6 +313,8 @@ const TRANSLATIONS = {
     'fm-orbit-source':'TLE · celestrak.org · {stamp} · {age}',
     'fm-failed':'Could not load orbit data — FUTURAMA stays off.',
     'fm-missing':'No orbit data for {sats} — their passes are missing from this forecast.',
+    'fm-dormant':'Not forecast — no acquisition in {days} d: {tracks}. If one resumes, its first pass back will not be predicted.',
+    'fm-never':'never',
     'fm-stale':'Orbit data is {age} old; times shown to the day only.',
     'fm-count':'+{n} predicted','fm-note':'A predicted pass is an orbital opportunity, not a guaranteed acquisition.',
     'fm-hint':'Double-click the logo to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
@@ -406,6 +408,8 @@ const TRANSLATIONS = {
     'fm-orbit-source':'軌道根數 · celestrak.org · {stamp} · {age}',
     'fm-failed':'無法載入軌道資料——FUTURAMA 維持關閉。',
     'fm-missing':'缺少 {sats} 的軌道資料，本次預測不包含它們的過境。',
+    'fm-dormant':'未預測（{days} 天內無取像）：{tracks}。若恢復拍攝，第一次過境將不會被預測到。',
+    'fm-never':'從未',
     'fm-stale':'軌道資料已過 {age}，僅顯示到日期。',
     'fm-count':'+{n} 筆預測','fm-note':'預測過境代表軌道會經過，不代表一定會取像。',
     'fm-hint':'連點兩下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
@@ -5754,6 +5758,17 @@ const FUTURE_COLOR_STYLES = [
   },
 ];
 const FUTURE_COLOR_DEFAULT = 'track';
+// Official Taiwan tracks — mirrors TAIWAN_S1_FRAME_SPECS and
+// TAIWAN_NISAR_FRAME_SPECS in fetch_sar_data.py. Used only to say which tracks
+// are NOT being forecast. A track silent past the template window drops out on
+// purpose — forecasting from stale states did more harm than good — so if it
+// resumes, its first pass back cannot be predicted. That gap is accepted, but
+// it has to be visible rather than a track quietly vanishing.
+const FUTURE_TAIWAN_TRACKS = {
+  S1C:   ['A69', 'A142', 'A171', 'D105'],
+  S1D:   ['A69', 'A142', 'A171', 'D105'],
+  NISAR: ['A39', 'A111', 'D61', 'D133'],
+};
 // Propagation cost is linear in the span, so a hand-typed DATE END of 2035
 // would otherwise try to propagate a decade. Nothing beyond this is forecast.
 const FUTURE_MAX_HORIZON_DAYS = 180;
@@ -5776,7 +5791,22 @@ const FUTURE_FINE_STEPS = 16;      // samples inside a candidate bracket
 const FUTURE_LAT_BAND = [19, 28];  // Taiwan frames, with margin
 const FUTURE_REF_LON = 121;        // Taiwan
 const FUTURE_LON_PREFILTER_DEG = 15;
-const FUTURE_LON_TOL_DEG = 1.5;    // reject crossings on a neighbouring track
+// Longitude alone cannot tell a track from its ground neighbour: Sentinel-1
+// orbits 73 apart are only 2.06 deg apart (12 x 73 = 1 mod 175), NISAR orbits
+// 72 apart 2.08 deg, and Taiwan's A142/A69/A171, NISAR's A39/A111 and D61/D133
+// are all such neighbours. Tightening this below half that spacing did stop one
+// pass matching two tracks, but it also dropped real passes at long lead, where
+// timing drift moves the crossing by more than a degree: 4 more missed
+// acquisitions over a 90-day retrodiction. So the gate stays loose and the
+// neighbour is rejected by phase instead. Mirrors LON_TOL_DEG in
+// forecast_validation.py.
+const FUTURE_LON_TOL_DEG = 1.5;
+// Every forecast satellite repeats its ground track exactly every 12 days, and
+// ground neighbours pass about 5 days out of phase with each other. A crossing
+// belongs to a track only if it lands a whole number of cycles after that
+// track's own acquisition: drift is seconds to minutes, the neighbour is days.
+const FUTURE_REPEAT_DAYS = 12;
+const FUTURE_REPEAT_PHASE_TOL_H = 12;
 
 const futureState = {
   on: false,
@@ -5789,6 +5819,7 @@ const futureState = {
   layer: null,
   polygons: [],       // {key, polygon} for selection styling
   missing: [],        // satellites whose TLE never arrived this session
+  dormant: [],        // official tracks not being forecast: {satId, label, lastTs}
   notesOpen: false,   // the caveats behind the provenance line
   dash: FUTURE_DASH_DEFAULT,
   color: FUTURE_COLOR_DEFAULT,
@@ -6060,10 +6091,37 @@ function futureBuildTemplates() {
       lastTs: entry.ts,
       centroidLat: sumLat / n,
       refLon: refSp.lon,
+      phaseTs: refAt,
       ascending: (entry.frame.direction_norm || '') === 'ASCENDING',
     });
   }
   return templates;
+}
+
+// Official tracks with no canonical acquisition inside the template window,
+// with the last time each was imaged at all (null if never).
+function futureDormantTracks() {
+  const cutoff = Date.now() - FUTURE_TEMPLATE_MAX_AGE_MS;
+  const last = new Map();
+  for (const frame of state.rawFrames || []) {
+    if (!FUTURE_TAIWAN_TRACKS[frame.satellite_id]) continue;
+    if (!statsIsCanonicalProduct(frame)) continue;
+    const ts = getFrameTimestamp(frame);
+    if (ts === null) continue;
+    const dir = frame.direction_norm === 'ASCENDING' ? 'A'
+              : frame.direction_norm === 'DESCENDING' ? 'D' : '';
+    const key = frame.satellite_id + '|' + dir + (frame.path_number_norm ?? '');
+    if (!last.has(key) || ts > last.get(key)) last.set(key, ts);
+  }
+  const out = [];
+  for (const [satId, labels] of Object.entries(FUTURE_TAIWAN_TRACKS)) {
+    for (const label of labels) {
+      const ts = last.get(satId + '|' + label);
+      if (ts !== undefined && ts >= cutoff) continue;
+      out.push({ satId, label, lastTs: ts === undefined ? null : ts });
+    }
+  }
+  return out.sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
 }
 
 // ── Prediction ────────────────────────────────────────────────────────────
@@ -6137,6 +6195,9 @@ function futurePredictPasses() {
         while (dLon > 180) dLon -= 360;
         while (dLon < -180) dLon += 360;
         if (Math.abs(dLon) > FUTURE_LON_TOL_DEG) continue;
+        const cycles = (hit.t - tpl.phaseTs) / (FUTURE_REPEAT_DAYS * 86400000);
+        if (Math.abs(cycles - Math.round(cycles)) * FUTURE_REPEAT_DAYS * 24
+            > FUTURE_REPEAT_PHASE_TOL_H) continue;
 
         out.push(futureMakeFrame(tpl, hit.t));
       }
@@ -6468,6 +6529,13 @@ function renderFutureSection() {
             + escapeHtml(t('fm-missing', { sats: futureState.missing.join(', ') }))
             + '</div>'
           : '') +
+        (futureState.dormant.length
+          ? '<div class="fm-note">' + escapeHtml(t('fm-dormant', {
+              days: Math.round(FUTURE_TEMPLATE_MAX_AGE_MS / 86400000),
+              tracks: futureState.dormant.map(d => d.satId + ' ' + d.label + ' ('
+                + (d.lastTs === null ? t('fm-never') : displayDateKey(d.lastTs)) + ')').join(', '),
+            })) + '</div>'
+          : '') +
         '<div class="fm-src' + (futureState.notesOpen ? ' open' : '') + '">' +
           '<button type="button" class="fm-src-hd" onclick="toggleFutureNotes()"' +
           ' title="' + escapeHtml(srcLine) + '">' +
@@ -6626,6 +6694,7 @@ function toggleFutureNotes() {
 
 function futureRecompute() {
   futureState.frames = futureState.on ? futurePredictPasses() : [];
+  futureState.dormant = futureState.on ? futureDormantTracks() : [];
   futureRefreshAll();
 }
 

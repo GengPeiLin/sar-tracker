@@ -46,7 +46,12 @@ import statistics
 import sys
 import time
 import urllib.request
+from bisect import bisect_left
 from datetime import datetime, timedelta, timezone
+
+# The official Taiwan track list lives in the fetcher. Import it rather than
+# restate it, so a track added there is accounted for here too.
+from fetch_sar_data import TAIWAN_NISAR_FRAME_SPECS, TAIWAN_S1_FRAME_SPECS
 
 try:
     from sgp4.api import Satrec, jday
@@ -89,7 +94,32 @@ FINE_STEPS = 16
 LAT_BAND = (19.0, 28.0)
 REF_LON = 121.0
 LON_PREFILTER_DEG = 15.0
+# Longitude alone cannot tell a track from its ground neighbour: Sentinel-1
+# orbits 73 apart are only 2.06 deg apart (12 x 73 = 1 mod 175), NISAR orbits
+# 72 apart 2.08 deg, and Taiwan's A142/A69/A171, NISAR's A39/A111 and D61/D133
+# are all such neighbours. Tightening this below half that spacing did stop one
+# pass matching two tracks, but it also dropped real passes at long lead, where
+# timing drift moves the crossing by more than a degree: 4 more missed
+# acquisitions over a 90-day retrodiction. So the gate stays loose and the
+# neighbour is rejected by phase instead. Mirrors FUTURE_LON_TOL_DEG in app.js.
 LON_TOL_DEG = 1.5
+# Every forecast satellite repeats its ground track exactly every 12 days, and
+# ground neighbours pass about 5 days out of phase with each other. A crossing
+# belongs to a track only if it lands a whole number of cycles after that
+# track's own acquisition: drift is seconds to minutes, the neighbour is days.
+REPEAT_DAYS = 12.0
+REPEAT_PHASE_TOL_H = 12.0
+
+
+def _track_labels(specs):
+    return [("A" if d.upper().startswith("ASC") else "D") + str(t) for d, t, _ in specs]
+
+
+TAIWAN_TRACKS = {
+    "S1C": _track_labels(TAIWAN_S1_FRAME_SPECS),
+    "S1D": _track_labels(TAIWAN_S1_FRAME_SPECS),
+    "NISAR": _track_labels(TAIWAN_NISAR_FRAME_SPECS),
+}
 
 # ── validation policy ────────────────────────────────────────────────────────
 HORIZON_DAYS = 90          # how far ahead each run records
@@ -294,6 +324,7 @@ def build_templates(frames, satrecs, now):
             "direction": frame.get("direction") or "",
             "centroid_lat": sum(lats) / len(lats),
             "ref_lon": ref[1],
+            "phase_at": ref_at,
             "ascending": str(frame.get("direction") or "").upper().startswith("ASC"),
             "from_granule": frame.get("granule") or "",
         })
@@ -350,6 +381,9 @@ def predict(templates, satrecs, tles, start, end):
                     continue
                 when, lon = hit
                 if abs(wrap180(lon - tpl["ref_lon"])) > LON_TOL_DEG:
+                    continue
+                cycles = (when - tpl["phase_at"]).total_seconds() / (REPEAT_DAYS * 86400.0)
+                if abs(cycles - round(cycles)) * REPEAT_DAYS * 24.0 > REPEAT_PHASE_TOL_H:
                     continue
                 out.append({
                     "satellite": tpl["sat"],
@@ -521,6 +555,41 @@ def track_label(row):
     return ("A" if direction.startswith("ASC") else "D") + str(row.get("track"))
 
 
+def dormant_tracks(frames, now):
+    """Official tracks with no canonical acquisition inside the template window.
+
+    These are left out of the forecast on purpose: forecasting a track from a
+    stale state did more harm than good. The cost is that if one resumes, its
+    first pass back cannot be predicted — so the list is reported rather than
+    letting a track quietly vanish."""
+    cutoff = now - timedelta(days=TEMPLATE_MAX_AGE_DAYS)
+    last = {}
+    for frame in frames:
+        sat = frame_sat(frame)
+        if sat not in TAIWAN_TRACKS or not is_canonical(frame):
+            continue
+        when = acquisition_midpoint(frame)
+        if when is None or frame.get("path_number") is None:
+            continue
+        label = track_label({"direction": frame.get("direction"),
+                             "track": frame.get("path_number")})
+        if (sat, label) not in last or when > last[(sat, label)]:
+            last[(sat, label)] = when
+    out = []
+    for sat, labels in TAIWAN_TRACKS.items():
+        for label in labels:
+            when = last.get((sat, label))
+            if when is not None and when >= cutoff:
+                continue
+            out.append({
+                "satellite": sat,
+                "track_label": label,
+                "last": when.isoformat().replace("+00:00", "Z") if when else None,
+            })
+    out.sort(key=lambda d: d["last"] or "", reverse=True)
+    return out
+
+
 def find_unpredicted(log, frames):
     """Real passes the forecast was running for but never predicted (漏判).
 
@@ -548,12 +617,16 @@ def find_unpredicted(log, frames):
         return [], 0
 
     actual = {}
+    history = {}
     for frame in frames:
         sat = frame_sat(frame)
         if sat not in FUTURE_MODE_SATS or not is_canonical(frame):
             continue
         when = acquisition_midpoint(frame)
-        if when is None or when <= runs[0]:
+        if when is None:
+            continue
+        history.setdefault((sat, str(frame.get("path_number"))), []).append(when)
+        if when <= runs[0]:
             continue
         key = pass_key(sat, frame.get("path_number"), when.isoformat())
         entry = actual.setdefault(key, {
@@ -564,7 +637,10 @@ def find_unpredicted(log, frames):
         })
         entry["times"].append(when)
 
+    for times in history.values():
+        times.sort()
     horizon = timedelta(days=HORIZON_DAYS)
+    window = timedelta(days=TEMPLATE_MAX_AGE_DAYS)
     forecastable, missed = 0, []
     for key, entry in actual.items():
         at = median_instant(entry["times"])
@@ -572,12 +648,25 @@ def find_unpredicted(log, frames):
             continue
         forecastable += 1
         if key not in log["passes"]:
+            covering = [run for run in runs if run < at <= run + horizon]
+            times = history.get((entry["satellite"], str(entry["track"])), [])
+
+            def was_forecasting(run):
+                i = bisect_left(times, run - window)
+                return i < len(times) and times[i] < run
+
             missed.append({
                 "satellite": entry["satellite"],
                 "track": entry["track"],
                 "direction": entry["direction"],
                 "track_label": track_label(entry),
                 "actual": at.isoformat().replace("+00:00", "Z"),
+                # "dormant": no run that could have seen this pass had an
+                # acquisition of the track inside the template window, so the
+                # track was deliberately not being forecast — the accepted gap.
+                # "method": the track was being forecast and the pass was still
+                # missed, which is a failure of the forecast itself.
+                "cause": "method" if any(was_forecasting(r) for r in covering) else "dormant",
             })
     missed.sort(key=lambda m: m["actual"])
     return missed, forecastable
@@ -594,12 +683,13 @@ def fmt(value, unit="s"):
     return "--" if value is None else f"{value:.1f} {unit}"
 
 
-def write_report(log, now, tles, missed=None, forecastable=0):
+def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None):
     rows = list(log["passes"].values())
     done = [r for r in rows if r.get("status") in ("hit", "miss")]
     hits = [r for r in done if r["status"] == "hit"]
     pending = [r for r in rows if r.get("status") == "pending"]
     missed = missed or []
+    dormant_list = dormant_list or []
 
     lines = [
         "# Forecast accuracy",
@@ -636,12 +726,32 @@ def write_report(log, now, tles, missed=None, forecastable=0):
         lines += [f"**None.** All {forecastable} real passes since the first forecast "
                   "were predicted.", ""]
     else:
+        resumed = sum(1 for m in missed if m.get("cause") == "dormant")
         lines += [f"**{len(missed)} of {forecastable}** real passes "
-                  f"({100.0 * len(missed) / forecastable:.0f}%) were never predicted.",
-                  "", "| satellite | track | acquired (UTC) |", "|---|---|---|"]
+                  f"({100.0 * len(missed) / forecastable:.0f}%) were never predicted: "
+                  f"**{len(missed) - resumed} forecast failures**, and {resumed} on "
+                  "tracks that had fallen silent and resumed (see below).",
+                  "", "| satellite | track | acquired (UTC) | cause |", "|---|---|---|---|"]
         for m in missed:
             when = m["actual"][:16].replace("T", " ")
-            lines.append(f"| {m['satellite']} | {m['track_label']} | {when} |")
+            cause = ("track resumed after silence" if m.get("cause") == "dormant"
+                     else "**forecast failure**")
+            lines.append(f"| {m['satellite']} | {m['track_label']} | {when} | {cause} |")
+        lines.append("")
+
+    lines += ["## Tracks not being forecast", "",
+              "Official Taiwan tracks with no acquisition in the last "
+              f"{TEMPLATE_MAX_AGE_DAYS} days. They are left out on purpose — forecasting "
+              "from stale states did more harm than good — so if one resumes, its first "
+              "pass back will be missed, and is counted above as a resumed track rather "
+              "than a forecast failure.", ""]
+    if not dormant_list:
+        lines += ["None — every official track has a recent acquisition.", ""]
+    else:
+        lines += ["| satellite | track | last acquisition (UTC) |", "|---|---|---|"]
+        for d in dormant_list:
+            last = d["last"][:10] if d["last"] else "never"
+            lines.append(f"| {d['satellite']} | {d['track_label']} | {last} |")
         lines.append("")
 
     if not done:
@@ -756,11 +866,13 @@ def main():
     # Kept in the log as well as the report: the report is rewritten every
     # run, and the history of misses should survive in git.
     log["unpredicted"] = missed
+    dormant = dormant_tracks(frames, now)
+    log["dormant_tracks"] = dormant
     log["updated_at"] = now.isoformat().replace("+00:00", "Z")
 
     io.open(LOG_PATH, "w", encoding="utf-8", newline="\n").write(
         json.dumps(log, ensure_ascii=False, indent=1, sort_keys=True))
-    write_report(log, now, tles, missed, forecastable)
+    write_report(log, now, tles, missed, forecastable, dormant)
     print(f"[forecast] scored {scored}; {len(log['passes'])} passes in log; "
           f"{len(missed)} of {forecastable} real passes never predicted", flush=True)
 
