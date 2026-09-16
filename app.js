@@ -229,7 +229,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','repo-link':'View source on GitHub','db-stamp':'database: {stamp}','tz-label':'Time Zone','tz-taiwan':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','repo-link':'View source on GitHub','db-stamp':'database: {stamp}','tz-label':'Time Zone','tz-taiwan':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','bm-title':'Basemap','bm-dark':'Dark','bm-light':'Light','bm-imagery':'Satellite','bm-topo':'Topographic','bm-terrain':'Terrain','bm-osm':'OpenStreetMap','bm-carto':'CartoDB Dark','bm-none':'None','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -306,7 +306,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','repo-link':'在 GitHub 檢視原始碼','db-stamp':'資料庫：{stamp}','tz-label':'時區','tz-taiwan':'台灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','repo-link':'在 GitHub 檢視原始碼','db-stamp':'資料庫：{stamp}','tz-label':'時區','tz-taiwan':'台灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','bm-title':'底圖','bm-dark':'深色','bm-light':'淺色','bm-imagery':'衛星影像','bm-topo':'地形圖','bm-terrain':'地勢','bm-osm':'OpenStreetMap','bm-carto':'CartoDB 深色','bm-none':'無底圖','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
@@ -497,6 +497,7 @@ function applyI18n() {
   });
   // Zone names are translated, so the option list is rebuilt with the language.
   renderTZSelect();
+  renderBasemapLabels();
   document.querySelectorAll('input[placeholder="Any"], input[data-i18n-placeholder="any"]').forEach(el => {
     el.dataset.i18nPlaceholder = 'any';
     el.placeholder = t('any');
@@ -930,7 +931,118 @@ let state = {
   selectedSat: null,
   selectedFrameKey: null,
   framePolygons: [],
+  basemapId: null,
+  basemapLayers: [],
 };
+
+// ═══ BASEMAPS ════════════════════════════════════════════════════════
+// Every entry must be keyless AND CORS-enabled. Keyless because the site has no
+// server to hide a token in; CORS because exportMapPNG() draws the tile <img>
+// elements onto a canvas, and a tile served without Access-Control-Allow-Origin
+// taints that canvas so toBlob() throws. CartoDB (the previous sole basemap)
+// now answers unregistered traffic with an "API key required" tile, which is
+// what this switcher replaces.
+const BASEMAP_STORE_KEY = 'sar_basemap';
+const ESRI_TILE = 'https://server.arcgisonline.com/ArcGIS/rest/services';
+// Esri tiles are {z}/{y}/{x} — y before x, unlike the OSM-style {z}/{x}/{y}.
+const BASEMAPS = [
+  { id: 'dark', label: 'bm-dark', maxNativeZoom: 16,
+    url: ESRI_TILE + '/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors' },
+  { id: 'light', label: 'bm-light', maxNativeZoom: 16,
+    url: ESRI_TILE + '/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors' },
+  { id: 'imagery', label: 'bm-imagery', maxNativeZoom: 19,
+    url: ESRI_TILE + '/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    // Imagery alone carries no place names; the reference layer is drawn over
+    // it so coastlines and cities stay identifiable next to the footprints.
+    overlay: ESRI_TILE + '/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, Maxar, Earthstar Geographics' },
+  { id: 'topo', label: 'bm-topo', maxNativeZoom: 19,
+    url: ESRI_TILE + '/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS' },
+  { id: 'terrain', label: 'bm-terrain', maxNativeZoom: 17, subdomains: 'abc',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors, SRTM | OpenTopoMap (CC-BY-SA)' },
+  { id: 'osm', label: 'bm-osm', maxNativeZoom: 19,
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors' },
+  // The original basemap, kept because its palette is what the overlay colours
+  // were tuned against. CartoDB now answers some unregistered traffic with an
+  // "API key required" placeholder tile, so it is an option rather than the
+  // default; when that happens, pick another entry.
+  { id: 'carto', label: 'bm-carto', maxNativeZoom: 20, subdomains: 'abcd',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap contributors, &copy; CARTO' },
+  // No tiles at all: footprints on the page background, for figures where the
+  // basemap is noise.
+  { id: 'none', label: 'bm-none', url: null },
+];
+
+function getBasemapDef(id) {
+  return BASEMAPS.find(b => b.id === id) || BASEMAPS[0];
+}
+
+function getInitialBasemapId() {
+  const ids = BASEMAPS.map(b => b.id);
+  let saved = null;
+  try { saved = localStorage.getItem(BASEMAP_STORE_KEY); } catch (e) { /* private mode */ }
+  if (saved && ids.includes(saved)) return saved;
+  return cfgStr('map.basemap', 'dark', ids);
+}
+
+function applyBasemap(id, { persist = true } = {}) {
+  if (!state.map) return;
+  const def = getBasemapDef(id);
+  state.basemapId = def.id;
+  if (persist) {
+    try { localStorage.setItem(BASEMAP_STORE_KEY, def.id); } catch (e) { /* private mode */ }
+  }
+
+  for (const layer of state.basemapLayers) state.map.removeLayer(layer);
+  state.basemapLayers = [];
+
+  const maxZoom = cfgNum('map.basemapMaxZoom', 19, { min: 1, max: 22 });
+  const urls = [def.url, def.overlay].filter(Boolean);
+  urls.forEach((url, i) => {
+    const layer = L.tileLayer(url, {
+      maxZoom,
+      // Sources stop at different native levels; maxNativeZoom keeps zooming
+      // past that upscaling the last tile instead of blanking the map.
+      maxNativeZoom: def.maxNativeZoom ?? maxZoom,
+      subdomains: def.subdomains ?? 'abc',
+      crossOrigin: 'anonymous',
+      // Credit once per basemap, on the base layer only.
+      attribution: i === 0 ? (def.attribution || '') : '',
+    });
+    layer.addTo(state.map);
+    // Both tile layers share the tile pane, so the label overlay is added
+    // second and pushed above the imagery it annotates.
+    if (i > 0) layer.setZIndex(10 + i);
+    state.basemapLayers.push(layer);
+  });
+
+  updateBasemapMenu();
+}
+
+function updateBasemapMenu() {
+  document.querySelectorAll('.map-basemap-item').forEach(btn => {
+    const on = btn.dataset.basemap === state.basemapId;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+
+function renderBasemapLabels() {
+  document.querySelectorAll('.map-basemap-item').forEach(btn => {
+    btn.textContent = t(getBasemapDef(btn.dataset.basemap).label);
+  });
+  const btn = document.querySelector('.map-basemap-btn');
+  if (btn) {
+    btn.title = t('bm-title');
+    btn.setAttribute('aria-label', t('bm-title'));
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAP INIT
@@ -941,12 +1053,13 @@ function initMap() {
   state.map = L.map('map', {
     center: center.length === 2 ? center : [23.5, 121],
     zoom: cfgNum('map.zoom', 6, { min: 1, max: 19 }),
-    zoomControl:true, attributionControl:false,
+    zoomControl:true,
+    // OSM and Esri both require visible credit, so the attribution control is
+    // on (styled small, bottom-right) — Leaflet's own "Leaflet" prefix is not.
+    attributionControl:true,
   });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: cfgNum('map.basemapMaxZoom', 19, { min: 1, max: 22 }),
-    crossOrigin: 'anonymous',
-  }).addTo(state.map);
+  state.map.attributionControl.setPrefix('');
+  applyBasemap(getInitialBasemapId(), { persist: false });
 
   // Taiwan outline
   L.polygon(TW_OUTLINE, { color:'#00e5ff', weight:1, fillColor:'#00e5ff', fillOpacity:.04, dashArray:'4 3' }).addTo(state.map);
@@ -975,6 +1088,72 @@ function initMap() {
     },
   });
   new SnapCtrl().addTo(state.map);
+
+  // Basemap switcher — same button look as the snapshot control, with a
+  // radio-group menu hanging off it.
+  const BasemapCtrl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const wrap = L.DomUtil.create('div', 'leaflet-bar map-basemap-ctrl');
+      const btn = L.DomUtil.create('button', 'map-basemap-btn', wrap);
+      btn.type = 'button';
+      btn.setAttribute('aria-haspopup', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
+
+      const menu = L.DomUtil.create('div', 'map-basemap-menu', wrap);
+      menu.hidden = true;
+      menu.setAttribute('role', 'radiogroup');
+      const close = () => {
+        menu.hidden = true;
+        btn.classList.remove('on');
+        btn.setAttribute('aria-expanded', 'false');
+      };
+      for (const def of BASEMAPS) {
+        const item = L.DomUtil.create('button', 'map-basemap-item', menu);
+        item.type = 'button';
+        item.dataset.basemap = def.id;
+        item.setAttribute('role', 'radio');
+        L.DomEvent.on(item, 'click', () => { applyBasemap(def.id); close(); });
+      }
+
+      L.DomEvent.disableClickPropagation(wrap);
+      L.DomEvent.disableScrollPropagation(wrap);
+      L.DomEvent.on(btn, 'click', () => {
+        const open = menu.hidden;
+        menu.hidden = !open;
+        btn.classList.toggle('on', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', e => {
+        if (!menu.hidden && !wrap.contains(e.target)) close();
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') close();
+      });
+
+      return wrap;
+    },
+  });
+  new BasemapCtrl().addTo(state.map);
+  // Both helpers look the items up through document.querySelectorAll, so they
+  // must run after the control is attached — inside onAdd the container is
+  // still detached and the queries match nothing.
+  renderBasemapLabels();
+  updateBasemapMenu();
+
+  // The download bar is pinned to the map's bottom edge and its height follows
+  // the text-size control, so the tile credit clears it from a measured value
+  // rather than a magic number.
+  const dlBar = document.querySelector('.dl-bar');
+  if (dlBar && window.ResizeObserver) {
+    const syncDlBarHeight = () => {
+      const h = Math.round(dlBar.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--dl-bar-h', h + 'px');
+    };
+    new ResizeObserver(syncDlBarHeight).observe(dlBar);
+    syncDlBarHeight();
+  }
 }
 
 function getFrameLatLngBounds(frame) {
@@ -1087,6 +1266,20 @@ async function exportMapPNG() {
     // the Leaflet map but outside its DOM.  foreignObject SVG would taint the
     // canvas and break toBlob(); instead we paint them directly with Canvas 2D.
     drawHtmlOverlays(ctx, mapRect);
+
+    // The tile credit lives in a Leaflet control, not in a map pane, so the
+    // pane walk above never sees it — paint it in, since OSM/Esri require the
+    // attribution to travel with the image.
+    const credit = getBasemapDef(state.basemapId).attribution;
+    if (credit) {
+      const text = credit.replace(/&copy;/g, '©');
+      ctx.font = '9px system-ui, sans-serif';
+      const tw = ctx.measureText(text).width;
+      ctx.fillStyle = 'rgba(11,19,32,.72)';
+      ctx.fillRect(W - tw - 10, H - 14, tw + 10, 14);
+      ctx.fillStyle = '#8fa3bf';
+      ctx.fillText(text, W - tw - 5, H - 4);
+    }
 
     const rawBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     const outBlob = await injectPngDpi(rawBlob, DPI);

@@ -22,9 +22,9 @@
   --drawer-divider: rgba(36, 56, 80, 0.8);
   --drawer-asf-bg: rgba(0, 229, 255, 0.1);
   --drawer-cdse-bg: rgba(255, 112, 67, 0.1);
-  /* Map overlays (stat cards, legend) sit on the CartoDB dark_all basemap,
-     which stays dark in every theme — the per-theme filters only nudge
-     brightness. So they keep a fixed dark panel and light text. The themed
+  /* Map overlays (stat cards, legend) sit on a basemap the viewer picks, which
+     may be dark, light or satellite imagery, so they keep a fixed dark panel
+     and light text and stay readable over any of them. The themed
      --text/--muted tokens are tuned for the surrounding UI chrome, which is
      light in some themes, and become unreadable on this panel. */
   --ov-bg:      rgba(11, 19, 32, .92);
@@ -1298,6 +1298,68 @@ header {
 .map-snap-btn:hover:not(:disabled) { background: rgba(255,255,255,.07) !important; }
 .map-snap-btn:disabled { opacity: .45; cursor: wait; }
 
+/* Basemap switcher — button matches .map-snap-btn, menu drops from its left. */
+.map-basemap-ctrl {
+  position: relative;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.map-basemap-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 30px !important;
+  height: 30px !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border2) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  line-height: 1;
+  box-shadow: 0 1px 5px rgba(0,0,0,.4);
+}
+.map-basemap-btn:hover, .map-basemap-btn.on { background: rgba(255,255,255,.07) !important; }
+.map-basemap-btn.on { color: var(--cyan) !important; border-color: var(--cyan) !important; }
+.map-basemap-menu {
+  position: absolute;
+  top: 0; right: 34px;
+  min-width: 132px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  padding: 3px;
+}
+/* display:flex above beats the UA [hidden] rule, so restate it. */
+.map-basemap-menu[hidden] { display: none; }
+.map-basemap-item {
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump) - 1px);
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.map-basemap-item:hover { background: rgba(255,255,255,.07); color: var(--text-hi); }
+.map-basemap-item.on { color: var(--cyan); background: rgba(0,229,255,.1); }
+
+/* Tile credit — required by OSM/Esri, kept out of the way of the footprints. */
+.leaflet-control-attribution {
+  background: rgba(11,19,32,.72) !important;
+  color: var(--muted) !important;
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  /* Clear the .dl-bar, which is pinned to the same corner of the map; its
+     height is measured in initMap because it grows with the text-size control. */
+  margin-bottom: calc(var(--dl-bar-h, 44px) + 4px) !important;
+}
+.leaflet-control-attribution a { color: var(--muted) !important; }
+
 :root[data-theme="paper-radar"] .leaflet-tile-pane {
   filter: saturate(.45) brightness(1.35) contrast(.9);
 }
@@ -2356,6 +2418,8 @@ header {
 
   /* ── MAP tab: hide overlays except stats; drawer = bottom sheet ── */
   .map-legend, .dl-bar { display: none !important; }
+  /* No .dl-bar to clear here; the bottom nav is outside the map. */
+  .leaflet-control-attribution { margin-bottom: 0 !important; }
   .mobile-feed { display: none; }
 
   /* stat strip — compact in-flow bar above the map */
