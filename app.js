@@ -5708,7 +5708,7 @@ const FUTURE_MODE_SATS = {
   // against 0.07-3.05 s/day for the satellites below. Commercial and
   // on-demand missions are absent for a different reason: an overpass says
   // nothing about whether they image.
-  // driftSPerDay / baseErrS are measured, not assumed — see docs/futurama.md
+  // driftSPerDay / baseErrS are measured by retrodiction, not assumed.
   S1C:   { norad: 62261, driftSPerDay: 3.05, baseErrS: 22 },
   S1D:   { norad: 66315, driftSPerDay: 0.07, baseErrS: 8  },
   NISAR: { norad: 65053, driftSPerDay: 0.76, baseErrS: 29 },
