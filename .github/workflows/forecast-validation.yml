@@ -1,13 +1,12 @@
 # This file only does anything once it is on `main`. GitHub fires `schedule:`
 # triggers only for workflows on the repository's default branch — a cron sitting
-# on feature/futurama never runs, whatever it says. So to let the branch collect
-# 90 days of evidence on its own, this one small file has to be merged to main;
-# everything it needs (forecast_validation.py, the FUTURAMA code) stays on the
-# branch, and nothing it does touches the published site.
+# on a feature branch never runs, whatever it says. So this one small file has
+# to live on main; everything it drives stays on the branch, and nothing it does
+# touches the published site.
 #
-# Until then, run it by hand:  python forecast_validation.py
+# Run it by hand with:  python forecast_validation.py
 
-name: FUTURAMA forecast validation
+name: Branch validation
 
 on:
   schedule:
@@ -25,7 +24,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Score yesterday's forecast, record the next 90 days
+    name: Score the outstanding predictions and record the next ones
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the feature branch
@@ -63,15 +62,19 @@ jobs:
         # rebased: the borrowed file was only ever input to the scoring run.
         run: git restore --source=HEAD --worktree data/sar_status.js
 
-      - name: Commit the log and the report
+      - name: Commit the log
         run: |
           git config user.name  "SAR Monitor Bot"
           git config user.email "sar-monitor[bot]@users.noreply.github.com"
-          git add data/forecast_log.json docs/forecast-accuracy.md
-          # The generated catalog must never be committed from this branch —
-          # merged later, an old copy would overwrite main's newer data.
-          if git diff --cached --name-only | grep -qE '^data/sar_(status\.js|recent\.json)$'; then
-            echo "::error::a catalog file is staged; refusing to commit"
+          # Only the machine-readable log is committed. The run also writes
+          # docs/forecast-accuracy.md, which is gitignored and stays local:
+          # regenerate it any time with `python forecast_validation.py`.
+          git add data/forecast_log.json
+          # Neither the generated catalog nor anything under docs/ may be
+          # committed from this branch — a stale catalog would overwrite main's
+          # newer data once merged, and the docs are deliberately not published.
+          if git diff --cached --name-only | grep -qE '^(data/sar_(status\.js|recent\.json)|docs/)'; then
+            echo "::error::a file that must not be committed is staged"
             git diff --cached --stat
             exit 1
           fi
