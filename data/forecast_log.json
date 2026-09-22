@@ -1055,7 +1055,15 @@
    "uncertainty_s": 52
   },
   "S1C|105|2026-09-16": {
+   "actual": "2026-09-16T21:52:05.500000Z",
+   "actual_frames": [
+    "509",
+    "515",
+    "520"
+   ],
    "direction": "DESCENDING",
+   "dt_s": 14.39,
+   "first_dt_s": 19.4,
    "first_lead_days": 21.63,
    "first_predicted": "2026-09-16T21:51:46.100813Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
@@ -1064,11 +1072,12 @@
     "515",
     "520"
    ],
+   "frames_matched": 3,
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
    "last_seen": "2026-09-16T06:23:25.879805Z",
    "predicted": "2026-09-16T21:51:51.109331Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "hit",
    "track": 105,
    "uncertainty_s": 25
   },
@@ -2283,5 +2292,5 @@
  ],
  "schema": 2,
  "unpredicted": [],
- "updated_at": "2026-09-21T06:45:12.418749Z"
+ "updated_at": "2026-09-22T06:32:31.634913Z"
 }
