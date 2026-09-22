@@ -5807,6 +5807,14 @@ const FUTURE_LON_TOL_DEG = 1.5;
 // track's own acquisition: drift is seconds to minutes, the neighbour is days.
 const FUTURE_REPEAT_DAYS = 12;
 const FUTURE_REPEAT_PHASE_TOL_H = 12;
+// Templates follow each track's most recent passes only, so the forecast is
+// re-based on how the track was last actually flown every time it is computed.
+// A frame that was not imaged on the latest pass (Sentinel-1 renumbers frames
+// between datatakes) otherwise kept its own older template and phase alive for
+// up to 60 days. Two passes, not one: if the latest is out of phase with the
+// one before, both phases are predicted until the next pass settles it.
+// Mirrors TEMPLATE_PASSES in forecast_validation.py.
+const FUTURE_TEMPLATE_PASSES = 2;
 
 const futureState = {
   on: false,
@@ -6025,25 +6033,16 @@ function futureCrossingInSamples(samples, targetLat, ascending) {
 
 // ── Templates: geometry borrowed from the archive ─────────────────────────
 
+function futureTrackKey(frame) {
+  return [frame.satellite_id || '', frame.direction_norm || '', getFramePathNumber(frame) ?? ''].join('|');
+}
+
 function futureBuildTemplates() {
   const frames = state.rawFrames || [];
-  const cutoff = Date.now() - FUTURE_TEMPLATE_MAX_AGE_MS;
+  const now = Date.now();
+  const cutoff = now - FUTURE_TEMPLATE_MAX_AGE_MS;
 
-  // Two different jobs, so two different picks per (track, frame):
-  //
-  //   geom  — the polygon to draw. For NISAR this must be a FULL-coverage
-  //           frame: one overpass ships Full and Partial versions of the same
-  //           frame, and a Partial footprint is a clipped slice of the real
-  //           one. Predicting with it would draw a pass as smaller than it
-  //           will be. Sentinel-1 carries no coverage field and is unaffected.
-  //   calib — the frame whose acquisition instant calibrates this track's
-  //           ground-track longitude. Coverage is irrelevant here and only
-  //           recency matters, so it takes the newest frame at this latitude
-  //           whatever its coverage. Keeping the two apart means an older Full
-  //           frame costs geometry nothing and timing nothing.
-  const geom = new Map();
-  const calib = new Map();
-
+  const recent = [];
   for (const frame of frames) {
     if (!FUTURE_MODE_SATS[frame.satellite_id]) continue;
     // One overpass ships several products with different geometry: NISAR's L3
@@ -6052,21 +6051,58 @@ function futureBuildTemplates() {
     // templating on all of them emitted the same pass once per product.
     if (!statsIsCanonicalProduct(frame)) continue;
     const ts = getFrameTimestamp(frame);
-    if (ts === null || ts < cutoff) continue;
+    if (ts === null || ts < cutoff || ts > now) continue;
     const g = normalizeFootprint(frame.footprint);
     if (!g || g.type !== 'Polygon') continue;
+    recent.push({ frame, ts, geom: g, day: new Date(ts).toISOString().slice(0, 10) });
+  }
 
-    const key = getFrameSeriesKey(frame);
+  // The passes each track is re-based on: its newest FUTURE_TEMPLATE_PASSES
+  // overpasses. A track passes at most once a day, so the UTC date names one.
+  const days = new Map();
+  for (const r of recent) {
+    const tk = futureTrackKey(r.frame);
+    if (!days.has(tk)) days.set(tk, new Set());
+    days.get(tk).add(r.day);
+  }
+  const kept = new Map();
+  for (const [tk, set] of days) kept.set(tk, new Set([...set].sort().slice(-FUTURE_TEMPLATE_PASSES)));
+
+  // Two different jobs, so two different picks per (track, frame):
+  //
+  //   geom  — the polygon to draw. For NISAR this must be a FULL-coverage
+  //           frame: one overpass ships Full and Partial versions of the same
+  //           frame, and a Partial footprint is a clipped slice of the real
+  //           one. Geometry does not depend on when the track is flown, so any
+  //           recent Full footprint of the frame may supply it. Sentinel-1
+  //           carries no coverage field and is unaffected.
+  //   calib — the frame whose acquisition instant calibrates this track's
+  //           ground-track longitude: the newest one within the kept passes,
+  //           whatever its coverage.
+  //
+  // anchors — every acquisition of the kept passes, per track. A crossing is
+  //           in phase if it lands a whole number of repeats after any of them.
+  const geom = new Map();
+  const calib = new Map();
+  const anchors = new Map();
+  for (const r of recent) {
+    const key = getFrameSeriesKey(r.frame);
+    if (!r.frame.frame_coverage || r.frame.frame_coverage === 'Full') {
+      const cur = geom.get(key);
+      if (!cur || r.ts > cur.ts) geom.set(key, r);
+    }
+    const tk = futureTrackKey(r.frame);
+    if (!kept.get(tk).has(r.day)) continue;
     const cal = calib.get(key);
-    if (!cal || ts > cal.ts) calib.set(key, { frame, ts });
-
-    if (frame.frame_coverage && frame.frame_coverage !== 'Full') continue;
-    const cur = geom.get(key);
-    if (!cur || ts > cur.ts) geom.set(key, { frame, ts, geom: g });
+    if (!cal || r.ts > cal.ts) calib.set(key, r);
+    if (!anchors.has(tk)) anchors.set(tk, []);
+    anchors.get(tk).push(r.ts);
   }
 
   const templates = [];
-  for (const [key, entry] of geom) {
+  for (const [key, cal] of calib) {
+    const entry = geom.get(key);
+    if (!entry) continue;
     const ring = entry.geom.coordinates[0] || [];
     if (ring.length < 4) continue;
     let sumLat = 0, sumLon = 0, n = 0;
@@ -6078,9 +6114,9 @@ function futureBuildTemplates() {
 
     const satrec = futureSatrec(entry.frame.satellite_id);
     if (!satrec) continue;
-    // Calibrated at the newest acquisition of THIS frame, so the reference
-    // longitude is matched to this latitude as well as being recent.
-    const refAt = (calib.get(key) || entry).ts;
+    // Calibrated at the newest kept acquisition of THIS frame, so the
+    // reference longitude is matched to this latitude as well as being recent.
+    const refAt = cal.ts;
     const refSp = futureSubpoint(satrec, new Date(refAt));
     if (!refSp) continue;
 
@@ -6091,11 +6127,19 @@ function futureBuildTemplates() {
       lastTs: entry.ts,
       centroidLat: sumLat / n,
       refLon: refSp.lon,
-      phaseTs: refAt,
+      phaseAnchors: anchors.get(futureTrackKey(entry.frame)),
       ascending: (entry.frame.direction_norm || '') === 'ASCENDING',
     });
   }
   return templates;
+}
+
+function futureInPhase(t, anchors) {
+  for (const at of anchors) {
+    const cycles = (t - at) / (FUTURE_REPEAT_DAYS * 86400000);
+    if (Math.abs(cycles - Math.round(cycles)) * FUTURE_REPEAT_DAYS * 24 <= FUTURE_REPEAT_PHASE_TOL_H) return true;
+  }
+  return false;
 }
 
 // Official tracks with no canonical acquisition inside the template window,
@@ -6195,9 +6239,7 @@ function futurePredictPasses() {
         while (dLon > 180) dLon -= 360;
         while (dLon < -180) dLon += 360;
         if (Math.abs(dLon) > FUTURE_LON_TOL_DEG) continue;
-        const cycles = (hit.t - tpl.phaseTs) / (FUTURE_REPEAT_DAYS * 86400000);
-        if (Math.abs(cycles - Math.round(cycles)) * FUTURE_REPEAT_DAYS * 24
-            > FUTURE_REPEAT_PHASE_TOL_H) continue;
+        if (!futureInPhase(hit.t, tpl.phaseAnchors)) continue;
 
         out.push(futureMakeFrame(tpl, hit.t));
       }

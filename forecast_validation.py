@@ -109,6 +109,16 @@ LON_TOL_DEG = 1.5
 # track's own acquisition: drift is seconds to minutes, the neighbour is days.
 REPEAT_DAYS = 12.0
 REPEAT_PHASE_TOL_H = 12.0
+# Templates follow each track's most recent passes only, so every run re-bases
+# the forecast on how the track was last actually flown. Within the 60-day
+# window a frame that simply was not imaged on the latest pass (Sentinel-1
+# renumbers frames between datatakes) used to keep its own older template and
+# phase alive; if the schedule had moved, it went on predicting the old one.
+# Two passes rather than one: when the latest pass is out of phase with the
+# one before, both phases are predicted until the next pass settles which is
+# real — a false alarm is cheap, a missed acquisition is not. 0 restores the
+# old per-frame rule, for comparison. Mirrors FUTURE_TEMPLATE_PASSES in app.js.
+TEMPLATE_PASSES = 2
 
 
 def _track_labels(specs):
@@ -273,16 +283,25 @@ def wrap180(deg):
 
 # ── templates: geometry from the archive, timing from SGP4 ───────────────────
 
-def build_templates(frames, satrecs, now):
-    cutoff = now - timedelta(days=TEMPLATE_MAX_AGE_DAYS)
-    geom, calib = {}, {}
+def track_key(frame):
+    return "|".join([
+        frame_sat(frame),
+        str(frame.get("direction") or ""),
+        str(frame.get("path_number") if frame.get("path_number") is not None else ""),
+    ])
 
+
+def build_templates(frames, satrecs, now, passes=None):
+    passes = TEMPLATE_PASSES if passes is None else passes
+    cutoff = now - timedelta(days=TEMPLATE_MAX_AGE_DAYS)
+
+    recent = []
     for frame in frames:
         sat = frame_sat(frame)
         if sat not in FUTURE_MODE_SATS or not is_canonical(frame):
             continue
         when = parse_iso(frame.get("date"))
-        if when is None or when < cutoff:
+        if when is None or when < cutoff or when > now:
             continue
         fp = frame.get("fp")
         if not fp or len(fp) < 6:
@@ -291,20 +310,41 @@ def build_templates(frames, satrecs, now):
         # frame of a pass — the unit both the forecast and the scoring key on.
         if frame.get("path_number") is None or not str(frame.get("frame_number") or ""):
             continue
+        recent.append((frame, when))
 
+    # The passes each track is re-based on: its newest `passes` overpasses. A
+    # track passes at most once a day, so the UTC date names an overpass, as
+    # it does in pass_key.
+    kept = None
+    if passes:
+        days = {}
+        for frame, when in recent:
+            days.setdefault(track_key(frame), set()).add(when.date())
+        kept = {tk: set(sorted(d)[-passes:]) for tk, d in days.items()}
+
+    geom, calib, anchors = {}, {}, {}
+    for frame, when in recent:
         key = series_key(frame)
-        if key not in calib or when > calib[key][1]:
-            calib[key] = (frame, when)
         # NISAR ships Full and Partial versions of one frame; a Partial
         # footprint is a clipped slice, so it must never define the geometry.
+        # Geometry does not depend on when a track is flown, so any recent
+        # Full footprint of the frame may supply it.
         coverage = frame.get("frame_coverage")
-        if coverage and coverage != "Full":
+        if not coverage or coverage == "Full":
+            if key not in geom or when > geom[key][1]:
+                geom[key] = (frame, when)
+        tk = track_key(frame)
+        if kept is not None and when.date() not in kept[tk]:
             continue
-        if key not in geom or when > geom[key][1]:
-            geom[key] = (frame, when)
+        if key not in calib or when > calib[key][1]:
+            calib[key] = (frame, when)
+        anchors.setdefault(tk, []).append(when)
 
     templates = []
-    for key, (frame, when) in geom.items():
+    for key, (_, ref_at) in calib.items():
+        if key not in geom:
+            continue
+        frame = geom[key][0]
         fp = frame["fp"]
         lats = fp[1::2]
         if not lats:
@@ -313,7 +353,6 @@ def build_templates(frames, satrecs, now):
         satrec = satrecs.get(sat)
         if satrec is None:
             continue
-        ref_at = calib.get(key, (frame, when))[1]
         ref = subpoint(satrec, ref_at)
         if ref is None:
             continue
@@ -324,11 +363,21 @@ def build_templates(frames, satrecs, now):
             "direction": frame.get("direction") or "",
             "centroid_lat": sum(lats) / len(lats),
             "ref_lon": ref[1],
-            "phase_at": ref_at,
+            # the old rule phased each frame on its own newest acquisition;
+            # the new one on every acquisition of the track's kept passes
+            "phase_at": anchors[track_key(frame)] if kept is not None else [ref_at],
             "ascending": str(frame.get("direction") or "").upper().startswith("ASC"),
             "from_granule": frame.get("granule") or "",
         })
     return templates
+
+
+def in_phase(when, anchors):
+    for at in anchors:
+        cycles = (when - at).total_seconds() / (REPEAT_DAYS * 86400.0)
+        if abs(cycles - round(cycles)) * REPEAT_DAYS * 24.0 <= REPEAT_PHASE_TOL_H:
+            return True
+    return False
 
 
 def uncertainty_s(sat, target, tle):
@@ -382,8 +431,7 @@ def predict(templates, satrecs, tles, start, end):
                 when, lon = hit
                 if abs(wrap180(lon - tpl["ref_lon"])) > LON_TOL_DEG:
                     continue
-                cycles = (when - tpl["phase_at"]).total_seconds() / (REPEAT_DAYS * 86400.0)
-                if abs(cycles - round(cycles)) * REPEAT_DAYS * 24.0 > REPEAT_PHASE_TOL_H:
+                if not in_phase(when, tpl["phase_at"]):
                     continue
                 out.append({
                     "satellite": tpl["sat"],
@@ -460,14 +508,31 @@ def record(log, predictions, now):
                 "status": "pending",
             }
             added += 1
-        elif row.get("status") == "pending":
+        elif row.get("status") in ("pending", "withdrawn"):
             # keep the longest-lead estimate AND the freshest one
+            if row.get("status") == "withdrawn":
+                row["status"] = "pending"
+                row.pop("withdrawn_at", None)
             row["predicted"] = iso
             row["frames"] = frames
             row["uncertainty_s"] = max(g["uncertainty_s"] for g in group)
             row["last_seen"] = now.isoformat().replace("+00:00", "Z")
             updated += 1
-    return added, updated
+
+    # Each run supersedes the last: a future pass this run no longer predicts
+    # is withdrawn, not left to be scored as a false alarm the forecast has
+    # already corrected. It stays in the log, and find_unpredicted treats it
+    # as never predicted — a withdrawn pass that is then acquired is a miss.
+    withdrawn = 0
+    for key, row in log["passes"].items():
+        if row.get("status") != "pending" or key in grouped:
+            continue
+        at = parse_iso(row["predicted"])
+        if at is not None and at > now:
+            row["status"] = "withdrawn"
+            row["withdrawn_at"] = now.isoformat().replace("+00:00", "Z")
+            withdrawn += 1
+    return added, updated, withdrawn
 
 
 def acquisition_midpoint(frame):
@@ -647,7 +712,8 @@ def find_unpredicted(log, frames):
         if not any(run < at <= run + horizon for run in runs):
             continue
         forecastable += 1
-        if key not in log["passes"]:
+        row = log["passes"].get(key)
+        if row is None or row.get("status") == "withdrawn":
             covering = [run for run in runs if run < at <= run + horizon]
             times = history.get((entry["satellite"], str(entry["track"])), [])
 
@@ -667,6 +733,8 @@ def find_unpredicted(log, frames):
                 # "method": the track was being forecast and the pass was still
                 # missed, which is a failure of the forecast itself.
                 "cause": "method" if any(was_forecasting(r) for r in covering) else "dormant",
+                # predicted once, then dropped by a later run before it happened
+                "withdrawn": row is not None,
             })
     missed.sort(key=lambda m: m["actual"])
     return missed, forecastable
@@ -704,6 +772,8 @@ def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None)
         f"- Predicted passes scored: **{len(done)}** ({len(hits)} imaged, "
         f"{len(done) - len(hits)} not)",
         f"- Still pending: {len(pending)}",
+        f"- Withdrawn by a later run before they happened: "
+        f"{sum(1 for r in rows if r.get('status') == 'withdrawn')}",
         "",
         "Three outcomes, and they are not equally bad:",
         "",
@@ -736,6 +806,8 @@ def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None)
             when = m["actual"][:16].replace("T", " ")
             cause = ("track resumed after silence" if m.get("cause") == "dormant"
                      else "**forecast failure**")
+            if m.get("withdrawn"):
+                cause += " (predicted, then withdrawn)"
             lines.append(f"| {m['satellite']} | {m['track_label']} | {when} | {cause} |")
         lines.append("")
 
@@ -843,14 +915,14 @@ def main():
             templates = build_templates(frames, satrecs, now)
             preds = predict(templates, satrecs, tles, now,
                             now + timedelta(days=HORIZON_DAYS))
-            added, updated = record(log, preds, now)
+            added, updated, withdrawn = record(log, preds, now)
             log["last_prediction_day"] = today
             # Which windows the forecast actually covered; find_unpredicted
             # charges a real pass as missed only if a run was watching for it.
             log.setdefault("prediction_runs", []).append(
                 now.isoformat().replace("+00:00", "Z"))
             print(f"[forecast] {len(templates)} templates, {len(preds)} passes "
-                  f"({added} new, {updated} refreshed)", flush=True)
+                  f"({added} new, {updated} refreshed, {withdrawn} withdrawn)", flush=True)
         else:
             # No orbit data is not a build failure; scoring still runs.
             print("[forecast] no TLE this run, scoring only", flush=True)
