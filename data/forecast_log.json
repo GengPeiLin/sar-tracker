@@ -1,6 +1,11 @@
 {
  "dormant_tracks": [
   {
+   "last": "2026-07-24T21:51:52.500000Z",
+   "satellite": "S1D",
+   "track_label": "D105"
+  },
+  {
    "last": "2026-06-23T09:52:37.500000Z",
    "satellite": "S1D",
    "track_label": "A171"
@@ -11,7 +16,7 @@
    "track_label": "A142"
   }
  ],
- "last_prediction_day": "2026-09-21",
+ "last_prediction_day": "2026-09-23",
  "passes": {
   "NISAR|111|2026-09-01": {
    "actual": "2026-09-01T21:16:38Z",
@@ -70,12 +75,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-09-25T21:16:35.609850Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-09-25T21:16:35.677270Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 33
+   "uncertainty_s": 31
   },
   "NISAR|111|2026-10-07": {
    "direction": "ASCENDING",
@@ -86,12 +91,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-07T21:16:32.190157Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-07T21:16:32.719164Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 42
+   "uncertainty_s": 40
   },
   "NISAR|111|2026-10-14": {
    "direction": "ASCENDING",
@@ -104,9 +109,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
    "predicted": "2026-10-14T21:23:43.678977Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 111,
-   "uncertainty_s": 67
+   "uncertainty_s": 67,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|111|2026-10-19": {
    "direction": "ASCENDING",
@@ -117,12 +123,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-19T21:16:25.621546Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-19T21:16:27.068352Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 51
+   "uncertainty_s": 50
   },
   "NISAR|111|2026-10-26": {
    "direction": "ASCENDING",
@@ -135,9 +141,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
    "predicted": "2026-10-26T21:23:23.720864Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 111,
-   "uncertainty_s": 76
+   "uncertainty_s": 76,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|111|2026-10-31": {
    "direction": "ASCENDING",
@@ -148,12 +155,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-31T21:16:15.961233Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-31T21:16:18.779401Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 60
+   "uncertainty_s": 59
   },
   "NISAR|111|2026-11-07": {
    "direction": "ASCENDING",
@@ -166,9 +173,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
    "predicted": "2026-11-07T21:22:59.799668Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 111,
-   "uncertainty_s": 85
+   "uncertainty_s": 85,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|111|2026-11-12": {
    "direction": "ASCENDING",
@@ -179,12 +187,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-12T21:16:03.249780Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-12T21:16:07.899078Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 69
+   "uncertainty_s": 68
   },
   "NISAR|111|2026-11-19": {
    "direction": "ASCENDING",
@@ -197,9 +205,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
    "predicted": "2026-11-19T21:22:31.874545Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 111,
-   "uncertainty_s": 94
+   "uncertainty_s": 94,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|111|2026-11-24": {
    "direction": "ASCENDING",
@@ -210,12 +219,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_029_111_A_014_4005_DHDH_A_20260901T211640_20260901T211712_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-24T21:15:47.499563Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-24T21:15:54.442618Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 78
+   "uncertainty_s": 77
   },
   "NISAR|111|2026-12-06": {
    "direction": "ASCENDING",
@@ -226,12 +235,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_029_111_A_014_4005_DHDH_A_20260901T211640_20260901T211712_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-06T21:15:28.688056Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-06T21:15:38.392882Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 87
+   "uncertainty_s": 86
   },
   "NISAR|111|2026-12-18": {
    "direction": "ASCENDING",
@@ -242,12 +251,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_030_111_A_014_4005_DHDH_A_20260913T211640_20260913T211712_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-18T21:15:06.765922Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-18T21:15:19.704143Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 111,
-   "uncertainty_s": 97
+   "uncertainty_s": 95
   },
   "NISAR|133|2026-09-03": {
    "actual": "2026-09-03T10:30:20Z",
@@ -276,7 +285,15 @@
    "uncertainty_s": 35
   },
   "NISAR|133|2026-09-15": {
+   "actual": "2026-09-15T10:30:20Z",
+   "actual_frames": [
+    "76",
+    "77",
+    "78"
+   ],
    "direction": "DESCENDING",
+   "dt_s": -20.88,
+   "first_dt_s": -13.58,
    "first_lead_days": 20.16,
    "first_predicted": "2026-09-15T10:30:33.576625Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
@@ -285,11 +302,12 @@
     "77",
     "78"
    ],
+   "frames_matched": 3,
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
    "last_seen": "2026-09-15T02:02:06.287990Z",
    "predicted": "2026-09-15T10:30:40.880962Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "hit",
    "track": 133,
    "uncertainty_s": 30
   },
@@ -304,12 +322,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-09-27T10:30:40.263420Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-09-27T10:30:40.356249Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 34
+   "uncertainty_s": 33
   },
   "NISAR|133|2026-10-02": {
    "direction": "DESCENDING",
@@ -322,9 +340,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-10-02T10:21:56.796949Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 43
+   "uncertainty_s": 43,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-10-09": {
    "direction": "DESCENDING",
@@ -337,12 +356,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-09T10:30:36.606028Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-09T10:30:37.198417Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 43
+   "uncertainty_s": 42
   },
   "NISAR|133|2026-10-14": {
    "direction": "DESCENDING",
@@ -357,9 +376,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-10-14T10:22:30.474359Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 52
+   "uncertainty_s": 52,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-10-21": {
    "direction": "DESCENDING",
@@ -372,12 +392,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-21T10:30:29.895962Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-21T10:30:31.453934Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 52
+   "uncertainty_s": 51
   },
   "NISAR|133|2026-10-26": {
    "direction": "DESCENDING",
@@ -392,9 +412,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-10-26T10:22:38.120235Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 61
+   "uncertainty_s": 61,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-11-02": {
    "direction": "DESCENDING",
@@ -407,12 +428,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-02T10:30:20.087061Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-02T10:30:23.083271Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 61
+   "uncertainty_s": 60
   },
   "NISAR|133|2026-11-07": {
    "direction": "DESCENDING",
@@ -427,9 +448,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-11-07T10:22:47.985411Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 70
+   "uncertainty_s": 70,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-11-14": {
    "direction": "DESCENDING",
@@ -442,12 +464,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-14T10:30:07.124157Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-14T10:30:12.029123Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 70
+   "uncertainty_s": 69
   },
   "NISAR|133|2026-11-19": {
    "direction": "DESCENDING",
@@ -462,9 +484,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-11-19T10:23:00.024646Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 79
+   "uncertainty_s": 79,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-11-26": {
    "direction": "DESCENDING",
@@ -477,12 +500,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-26T10:29:50.959625Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-26T10:29:58.243411Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 80
+   "uncertainty_s": 78
   },
   "NISAR|133|2026-12-01": {
    "direction": "DESCENDING",
@@ -497,9 +520,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-12-01T10:23:14.218509Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 133,
-   "uncertainty_s": 88
+   "uncertainty_s": 88,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|133|2026-12-08": {
    "direction": "DESCENDING",
@@ -512,12 +536,12 @@
     "78"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-08T10:29:31.573749Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-08T10:29:41.701619Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 89
+   "uncertainty_s": 87
   },
   "NISAR|133|2026-12-13": {
    "direction": "DESCENDING",
@@ -532,9 +556,27 @@
    "from_granule": "NISAR_L1_PR_RSLC_029_133_D_076_4005_DHDH_A_20260903T102935_20260903T103008_P05023_N_F_J_001",
    "predicted": "2026-12-13T10:23:30.582548Z",
    "satellite": "NISAR",
+   "status": "withdrawn",
+   "track": 133,
+   "uncertainty_s": 97,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
+  },
+  "NISAR|133|2026-12-20": {
+   "direction": "DESCENDING",
+   "first_lead_days": 88.17,
+   "first_predicted": "2026-12-20T10:29:22.414274Z",
+   "first_seen": "2026-09-23T06:18:08.257770Z",
+   "frames": [
+    "76",
+    "77",
+    "78"
+   ],
+   "from_granule": "NISAR_L1_PR_RSLC_030_133_D_076_4005_DHDH_A_20260915T102935_20260915T103008_P05023_N_F_J_001",
+   "predicted": "2026-12-20T10:29:22.414274Z",
+   "satellite": "NISAR",
    "status": "pending",
    "track": 133,
-   "uncertainty_s": 97
+   "uncertainty_s": 96
   },
   "NISAR|39|2026-08-27": {
    "actual": "2026-08-27T21:25:04Z",
@@ -611,12 +653,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_028_039_A_013_4005_DHDH_A_20260815T212424_20260815T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-02T21:24:54.897196Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-02T21:24:55.062210Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 38
+   "uncertainty_s": 37
   },
   "NISAR|39|2026-10-14": {
    "direction": "ASCENDING",
@@ -628,12 +670,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_028_039_A_013_4005_DHDH_A_20260815T212424_20260815T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-14T21:24:49.632884Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-14T21:24:50.525125Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 47
+   "uncertainty_s": 46
   },
   "NISAR|39|2026-10-26": {
    "direction": "ASCENDING",
@@ -645,12 +687,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_028_039_A_013_4005_DHDH_A_20260815T212424_20260815T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-26T21:24:41.253045Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-26T21:24:43.326946Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 56
+   "uncertainty_s": 55
   },
   "NISAR|39|2026-11-07": {
    "direction": "ASCENDING",
@@ -662,12 +704,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_028_039_A_013_4005_DHDH_A_20260815T212424_20260815T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-07T21:24:29.807931Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-07T21:24:33.521912Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 65
+   "uncertainty_s": 64
   },
   "NISAR|39|2026-11-19": {
    "direction": "ASCENDING",
@@ -679,12 +721,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_028_039_A_013_4005_DHDH_A_20260815T212424_20260815T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-19T21:24:15.323164Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-19T21:24:21.137574Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 75
+   "uncertainty_s": 73
   },
   "NISAR|39|2026-12-01": {
    "direction": "ASCENDING",
@@ -696,12 +738,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_030_039_A_013_4005_DHDH_A_20260908T212423_20260908T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-01T21:23:57.790766Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-01T21:24:06.171933Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 84
+   "uncertainty_s": 82
   },
   "NISAR|39|2026-12-13": {
    "direction": "ASCENDING",
@@ -713,12 +755,12 @@
     "14"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_030_039_A_013_4005_DHDH_A_20260908T212423_20260908T212501_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-13T21:23:37.170213Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-13T21:23:48.588631Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 39,
-   "uncertainty_s": 93
+   "uncertainty_s": 91
   },
   "NISAR|61|2026-08-29": {
    "actual": "2026-08-29T10:38:41Z",
@@ -779,7 +821,7 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-09-15T10:30:10.522592Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "miss",
    "track": 61,
    "uncertainty_s": 30
   },
@@ -811,9 +853,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-09-27T10:30:12.605689Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 39
+   "uncertainty_s": 39,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-10-04": {
    "direction": "DESCENDING",
@@ -825,12 +868,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_026_061_D_076_2005_DHDH_A_20260724T103753_20260724T103827_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-04T10:39:01.593136Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-04T10:39:01.920760Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 39
+   "uncertainty_s": 38
   },
   "NISAR|61|2026-10-09": {
    "direction": "DESCENDING",
@@ -843,9 +886,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-10-09T10:30:17.014464Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 48
+   "uncertainty_s": 48,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-10-16": {
    "direction": "DESCENDING",
@@ -857,12 +901,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_026_061_D_076_2005_DHDH_A_20260724T103753_20260724T103827_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-16T10:38:56.158068Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-16T10:38:57.256657Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 48
+   "uncertainty_s": 47
   },
   "NISAR|61|2026-10-21": {
    "direction": "DESCENDING",
@@ -875,9 +919,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-10-21T10:30:23.718754Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 57
+   "uncertainty_s": 57,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-10-28": {
    "direction": "DESCENDING",
@@ -889,12 +934,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_026_061_D_076_2005_DHDH_A_20260724T103753_20260724T103827_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-28T10:38:47.645267Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-28T10:38:49.985870Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 57
+   "uncertainty_s": 56
   },
   "NISAR|61|2026-11-02": {
    "direction": "DESCENDING",
@@ -908,9 +953,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-11-02T10:31:06.822842Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 66
+   "uncertainty_s": 66,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-11-09": {
    "direction": "DESCENDING",
@@ -922,12 +968,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_026_061_D_076_2005_DHDH_A_20260724T103753_20260724T103827_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-09T10:38:36.002155Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-09T10:38:40.055200Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 67
+   "uncertainty_s": 65
   },
   "NISAR|61|2026-11-14": {
    "direction": "DESCENDING",
@@ -941,9 +987,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-11-14T10:31:17.960434Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 75
+   "uncertainty_s": 75,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-11-21": {
    "direction": "DESCENDING",
@@ -955,12 +1002,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_026_061_D_076_2005_DHDH_A_20260724T103753_20260724T103827_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-21T10:38:21.173859Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-21T10:38:27.411083Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 76
+   "uncertainty_s": 74
   },
   "NISAR|61|2026-11-26": {
    "direction": "DESCENDING",
@@ -974,9 +1021,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-11-26T10:31:31.257751Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 84
+   "uncertainty_s": 84,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-12-03": {
    "direction": "DESCENDING",
@@ -988,12 +1036,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-03T10:38:03.128006Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-03T10:38:12.015669Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 85
+   "uncertainty_s": 83
   },
   "NISAR|61|2026-12-08": {
    "direction": "DESCENDING",
@@ -1007,9 +1055,10 @@
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
    "predicted": "2026-12-08T10:31:46.714732Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 61,
-   "uncertainty_s": 93
+   "uncertainty_s": 93,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|61|2026-12-15": {
    "direction": "DESCENDING",
@@ -1021,12 +1070,12 @@
     "77"
    ],
    "from_granule": "NISAR_L1_PR_RSLC_030_061_D_076_2005_DHDH_A_20260910T103751_20260910T103826_P05023_N_F_J_001",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-15T10:37:41.866683Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-15T10:37:53.866830Z",
    "satellite": "NISAR",
    "status": "pending",
    "track": 61,
-   "uncertainty_s": 94
+   "uncertainty_s": 93
   },
   "S1C|105|2026-09-04": {
    "actual": "2026-09-04T21:52:05.500000Z",
@@ -1092,12 +1141,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-09-28T21:51:51.609815Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-09-28T21:51:51.439234Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 46
+   "uncertainty_s": 40
   },
   "S1C|105|2026-10-10": {
    "direction": "DESCENDING",
@@ -1110,12 +1159,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-10T21:51:50.964429Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-10T21:51:49.898381Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 83
+   "uncertainty_s": 77
   },
   "S1C|105|2026-10-22": {
    "direction": "DESCENDING",
@@ -1128,12 +1177,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-22T21:51:48.841673Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-22T21:51:46.148029Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 119
+   "uncertainty_s": 113
   },
   "S1C|105|2026-11-03": {
    "direction": "DESCENDING",
@@ -1146,12 +1195,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-03T21:51:45.184710Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-03T21:51:40.135890Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 156
+   "uncertainty_s": 150
   },
   "S1C|105|2026-11-15": {
    "direction": "DESCENDING",
@@ -1164,12 +1213,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260823T215123_20260823T215153_009128_0121FA_0DF6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-15T21:51:39.925543Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-15T21:51:31.794041Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 193
+   "uncertainty_s": 186
   },
   "S1C|105|2026-11-27": {
    "direction": "DESCENDING",
@@ -1182,12 +1231,12 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260904T215123_20260904T215154_009303_0127E4_6A40",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-27T21:51:33.015443Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-27T21:51:21.066826Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 229
+   "uncertainty_s": 223
   },
   "S1C|105|2026-12-09": {
    "direction": "DESCENDING",
@@ -1200,12 +1249,29 @@
     "520"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260904T215123_20260904T215154_009303_0127E4_6A40",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-09T21:51:24.441466Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-09T21:51:07.935204Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 105,
-   "uncertainty_s": 266
+   "uncertainty_s": 260
+  },
+  "S1C|105|2026-12-21": {
+   "direction": "DESCENDING",
+   "first_lead_days": 89.65,
+   "first_predicted": "2026-12-21T21:50:52.423033Z",
+   "first_seen": "2026-09-23T06:18:08.257770Z",
+   "frames": [
+    "509",
+    "515",
+    "520"
+   ],
+   "from_granule": "S1C_IW_SLC__1SDV_20260916T215123_20260916T215154_009478_012DA9_DFD1",
+   "predicted": "2026-12-21T21:50:52.423033Z",
+   "satellite": "S1C",
+   "status": "pending",
+   "track": 105,
+   "uncertainty_s": 296
   },
   "S1C|171|2026-08-28": {
    "actual": "2026-08-28T09:52:28.500000Z",
@@ -1276,12 +1342,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260816T095207_20260816T095248_009019_011E7B_E6D6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-03T09:52:44.178277Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-03T09:52:43.788249Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 60
+   "uncertainty_s": 54
   },
   "S1C|171|2026-10-15": {
    "direction": "ASCENDING",
@@ -1292,12 +1358,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260816T095207_20260816T095248_009019_011E7B_E6D6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-15T09:52:42.729387Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-15T09:52:41.186745Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 96
+   "uncertainty_s": 90
   },
   "S1C|171|2026-10-22": {
    "direction": "ASCENDING",
@@ -1310,9 +1376,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
    "predicted": "2026-10-22T09:44:40.943996Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 171,
-   "uncertainty_s": 137
+   "uncertainty_s": 137,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|171|2026-10-27": {
    "direction": "ASCENDING",
@@ -1323,12 +1390,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260816T095207_20260816T095248_009019_011E7B_E6D6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-27T09:52:39.741123Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-27T09:52:36.295175Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 133
+   "uncertainty_s": 127
   },
   "S1C|171|2026-11-03": {
    "direction": "ASCENDING",
@@ -1341,9 +1408,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
    "predicted": "2026-11-03T09:44:48.390652Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 171,
-   "uncertainty_s": 174
+   "uncertainty_s": 174,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|171|2026-11-08": {
    "direction": "ASCENDING",
@@ -1354,12 +1422,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260816T095207_20260816T095248_009019_011E7B_E6D6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-08T09:52:35.271421Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-08T09:52:29.175315Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 170
+   "uncertainty_s": 164
   },
   "S1C|171|2026-11-15": {
    "direction": "ASCENDING",
@@ -1372,9 +1440,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
    "predicted": "2026-11-15T09:44:57.842667Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 171,
-   "uncertainty_s": 210
+   "uncertainty_s": 210,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|171|2026-11-20": {
    "direction": "ASCENDING",
@@ -1385,12 +1454,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260816T095207_20260816T095248_009019_011E7B_E6D6",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-20T09:52:29.346165Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-20T09:52:19.861492Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 206
+   "uncertainty_s": 200
   },
   "S1C|171|2026-11-27": {
    "direction": "ASCENDING",
@@ -1403,9 +1472,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
    "predicted": "2026-11-27T09:45:09.280646Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 171,
-   "uncertainty_s": 247
+   "uncertainty_s": 247,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|171|2026-12-02": {
    "direction": "ASCENDING",
@@ -1416,12 +1486,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-02T09:52:21.948866Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-02T09:52:08.342075Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 243
+   "uncertainty_s": 237
   },
   "S1C|171|2026-12-09": {
    "direction": "ASCENDING",
@@ -1434,9 +1504,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
    "predicted": "2026-12-09T09:45:22.651289Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 171,
-   "uncertainty_s": 284
+   "uncertainty_s": 284,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|171|2026-12-14": {
    "direction": "ASCENDING",
@@ -1447,12 +1518,12 @@
     "74"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260909T095208_20260909T095249_009369_012A2F_F86C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-14T09:52:13.028095Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-14T09:51:54.569623Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 171,
-   "uncertainty_s": 279
+   "uncertainty_s": 273
   },
   "S1C|69|2026-09-02": {
    "actual": "2026-09-02T10:00:05Z",
@@ -1508,17 +1579,15 @@
    "first_predicted": "2026-09-26T10:00:37.266732Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-09-26T10:00:48.228604Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-09-26T10:00:21.102017Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 39
+   "uncertainty_s": 32
   },
   "S1C|69|2026-10-08": {
    "direction": "ASCENDING",
@@ -1526,17 +1595,15 @@
    "first_predicted": "2026-10-08T10:00:28.031907Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-08T10:00:47.709859Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-08T10:00:19.869892Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 75
+   "uncertainty_s": 69
   },
   "S1C|69|2026-10-15": {
    "direction": "ASCENDING",
@@ -1549,9 +1616,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260809T100042_20260809T100109_008917_011B05_786C",
    "predicted": "2026-10-15T09:53:06.289989Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 69,
-   "uncertainty_s": 116
+   "uncertainty_s": 116,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-10-20": {
    "direction": "ASCENDING",
@@ -1559,17 +1627,15 @@
    "first_predicted": "2026-10-20T10:00:15.890562Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-20T10:00:45.610592Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-20T10:00:16.305078Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 112
+   "uncertainty_s": 106
   },
   "S1C|69|2026-10-27": {
    "direction": "ASCENDING",
@@ -1583,9 +1649,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260809T100018_20260809T100044_008917_011B05_ADE7",
    "predicted": "2026-10-27T09:53:12.576556Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 69,
-   "uncertainty_s": 153
+   "uncertainty_s": 153,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-11-01": {
    "direction": "ASCENDING",
@@ -1593,17 +1660,15 @@
    "first_predicted": "2026-11-01T10:00:00.840960Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-01T10:00:41.997315Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-01T10:00:10.474383Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 148
+   "uncertainty_s": 142
   },
   "S1C|69|2026-11-08": {
    "direction": "ASCENDING",
@@ -1617,9 +1682,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260809T100018_20260809T100044_008917_011B05_ADE7",
    "predicted": "2026-11-08T09:53:20.861323Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 69,
-   "uncertainty_s": 189
+   "uncertainty_s": 189,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-11-13": {
    "direction": "ASCENDING",
@@ -1627,17 +1693,15 @@
    "first_predicted": "2026-11-13T09:59:42.842128Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-13T10:00:36.917662Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-13T10:00:02.430986Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 185
+   "uncertainty_s": 179
   },
   "S1C|69|2026-11-20": {
    "direction": "ASCENDING",
@@ -1652,9 +1716,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260914T095951_20260914T100020_009442_012C7F_58C2",
    "predicted": "2026-11-20T09:53:06.314578Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 69,
-   "uncertainty_s": 226
+   "uncertainty_s": 226,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-11-25": {
    "direction": "ASCENDING",
@@ -1662,17 +1727,15 @@
    "first_predicted": "2026-11-25T10:01:24.903304Z",
    "first_seen": "2026-09-15T02:02:06.287990Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260914T095951_20260914T100020_009442_012C7F_58C2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-25T10:00:30.380970Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-25T09:59:52.195222Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 222
+   "uncertainty_s": 215
   },
   "S1C|69|2026-12-02": {
    "direction": "ASCENDING",
@@ -1687,9 +1750,10 @@
    "from_granule": "S1C_IW_SLC__1SDV_20260914T095951_20260914T100020_009442_012C7F_58C2",
    "predicted": "2026-12-02T09:53:18.565506Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 69,
-   "uncertainty_s": 262
+   "uncertainty_s": 262,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-12-07": {
    "direction": "ASCENDING",
@@ -1697,17 +1761,15 @@
    "first_predicted": "2026-12-07T10:01:37.958068Z",
    "first_seen": "2026-09-15T02:02:06.287990Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260914T095951_20260914T100020_009442_012C7F_58C2",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-07T10:00:22.356128Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-07T09:59:39.740235Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 258
+   "uncertainty_s": 252
   },
   "S1C|69|2026-12-19": {
    "direction": "ASCENDING",
@@ -1715,16 +1777,15 @@
    "first_predicted": "2026-12-19T10:00:12.778443Z",
    "first_seen": "2026-09-21T06:45:12.418749Z",
    "frames": [
-    "68",
-    "73",
-    "78"
+    "68"
    ],
    "from_granule": "S1C_IW_SLC__1SDV_20260914T095951_20260914T100020_009442_012C7F_58C2",
-   "predicted": "2026-12-19T10:00:12.778443Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-19T09:59:25.009366Z",
    "satellite": "S1C",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 295
+   "uncertainty_s": 289
   },
   "S1D|105|2026-08-29": {
    "direction": "DESCENDING",
@@ -1788,9 +1849,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-10-04T21:51:38.245275Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 9
+   "uncertainty_s": 9,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-10-16": {
    "direction": "DESCENDING",
@@ -1804,9 +1866,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-10-16T21:51:33.355095Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 10
+   "uncertainty_s": 10,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-10-28": {
    "direction": "DESCENDING",
@@ -1820,9 +1883,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-10-28T21:51:25.254621Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 11
+   "uncertainty_s": 11,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-11-09": {
    "direction": "DESCENDING",
@@ -1836,9 +1900,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-11-09T21:51:13.878676Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 12
+   "uncertainty_s": 12,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-11-21": {
    "direction": "DESCENDING",
@@ -1852,9 +1917,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-11-21T21:50:59.166651Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 12
+   "uncertainty_s": 12,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-12-03": {
    "direction": "DESCENDING",
@@ -1868,9 +1934,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-12-03T21:50:41.084917Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 13
+   "uncertainty_s": 13,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|105|2026-12-15": {
    "direction": "DESCENDING",
@@ -1884,9 +1951,10 @@
    "last_seen": "2026-09-21T06:45:12.418749Z",
    "predicted": "2026-12-15T21:50:19.641218Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "withdrawn",
    "track": 105,
-   "uncertainty_s": 14
+   "uncertainty_s": 14,
+   "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1D|142|2026-09-01": {
    "actual": "2026-09-01T10:09:11.500000Z",
@@ -1941,8 +2009,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-09-25T10:09:27.325427Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-09-25T10:09:27.550526Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -1957,8 +2025,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-07T10:09:24.783576Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-07T10:09:26.506250Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -1973,8 +2041,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-19T10:09:18.949996Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-19T10:09:23.598949Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -1989,8 +2057,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-31T10:09:09.891386Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-31T10:09:18.895769Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -2005,8 +2073,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-12T10:08:57.654187Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-12T10:09:12.448210Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -2021,12 +2089,12 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260913T100857_20260913T100927_004558_0087B3_3D67",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-24T10:08:42.251864Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-24T10:09:04.273651Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
-   "uncertainty_s": 13
+   "uncertainty_s": 12
   },
   "S1D|142|2026-12-06": {
    "direction": "ASCENDING",
@@ -2037,8 +2105,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260913T100857_20260913T100927_004558_0087B3_3D67",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-06T10:08:23.651878Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-06T10:08:54.350770Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -2053,8 +2121,8 @@
     "75"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260913T100857_20260913T100927_004558_0087B3_3D67",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-18T10:08:01.794052Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-18T10:08:42.620176Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 142,
@@ -2147,15 +2215,12 @@
    "first_predicted": "2026-10-02T10:01:05.979280Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-02T10:00:58.014355Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-02T10:01:25.606148Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2167,15 +2232,12 @@
    "first_predicted": "2026-10-14T10:01:07.029610Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-14T10:00:53.546318Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-14T10:01:23.467901Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2187,19 +2249,16 @@
    "first_predicted": "2026-10-26T10:01:08.199385Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-10-26T10:00:45.824516Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-10-26T10:01:19.506387Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
-   "uncertainty_s": 11
+   "uncertainty_s": 10
   },
   "S1D|69|2026-11-07": {
    "direction": "ASCENDING",
@@ -2207,15 +2266,12 @@
    "first_predicted": "2026-11-07T10:01:09.468312Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-07T10:00:34.907535Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-07T10:01:13.783048Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2227,15 +2283,12 @@
    "first_predicted": "2026-11-19T10:01:10.782328Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-11-19T10:00:20.824870Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-11-19T10:01:06.332443Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2247,15 +2300,12 @@
    "first_predicted": "2026-12-01T10:00:18.498947Z",
    "first_seen": "2026-09-15T02:02:06.287990Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-01T10:00:03.563044Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-01T10:00:57.144725Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2267,15 +2317,12 @@
    "first_predicted": "2026-12-13T10:00:03.218889Z",
    "first_seen": "2026-09-15T02:02:06.287990Z",
    "frames": [
-    "71",
-    "72",
     "73",
-    "76",
     "78"
    ],
    "from_granule": "S1D_IW_SLC__1SDV_20260722T100004_20260722T100035_003785_006CCE_1D5C",
-   "last_seen": "2026-09-21T06:45:12.418749Z",
-   "predicted": "2026-12-13T09:59:43.072596Z",
+   "last_seen": "2026-09-23T06:18:08.257770Z",
+   "predicted": "2026-12-13T10:00:46.177349Z",
    "satellite": "S1D",
    "status": "pending",
    "track": 69,
@@ -2288,9 +2335,10 @@
   "2026-09-18T06:17:15.286518Z",
   "2026-09-19T06:15:40.368648Z",
   "2026-09-20T06:39:03.646274Z",
-  "2026-09-21T06:45:12.418749Z"
+  "2026-09-21T06:45:12.418749Z",
+  "2026-09-23T06:18:08.257770Z"
  ],
  "schema": 2,
  "unpredicted": [],
- "updated_at": "2026-09-22T06:32:31.634913Z"
+ "updated_at": "2026-09-23T06:18:08.257770Z"
 }
