@@ -229,7 +229,7 @@ const SATS = [
 const TRANSLATIONS = {
   en: {
     'loading':'Connecting to data sources…','loading-inventory':'Loading latest frame inventory…',
-    'updated':'Updated:','repo-link':'View source on GitHub','db-stamp':'database: {stamp}','tz-label':'Time Zone','tz-taiwan':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','bm-title':'Basemap','bm-dark':'Dark','bm-light':'Light','bm-imagery':'Satellite','bm-topo':'Topographic','bm-terrain':'Terrain','bm-osm':'OpenStreetMap','bm-carto':'CartoDB Dark','bm-none':'None','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
+    'updated':'Updated:','repo-link':'View source on GitHub','db-stamp':'database: {stamp}','tz-label':'Time Zone','tz-taiwan':'Taiwan','tz-utc':'UTC','tz-local':'Local','tz-tokyo':'Tokyo','tz-singapore':'Singapore','tz-kolkata':'Kolkata','tz-london':'London','tz-berlin':'Berlin','tz-newyork':'New York','tz-losangeles':'Los Angeles','bm-title':'Basemap','bm-dark':'Dark','bm-light':'Light','bm-imagery':'Satellite','bm-topo':'Topographic','bm-terrain':'Terrain','bm-osm':'OpenStreetMap','bm-carto':'CartoDB Dark','bm-none':'None','bm-unavailable':'Not serving tiles right now — click to try again','bm-note-switch':'{from} is not serving tiles — switched to {to}','bm-note-mirror':'{name} switched to a backup server','bm-note-none':'No basemap is responding — tiles turned off','tab-all':'All Satellites','tab-op':'Active','tab-tw':'This Week',
     'sat-fleet':'SAR Satellite Fleet','loading-ellipsis':'Loading…',
     'waiting-inventory':'Waiting for inventory…','n-satellites':'{n} satellites listed',
     'featured-missions':'Featured open missions','other-missions':'Other SAR missions',
@@ -306,7 +306,7 @@ const TRANSLATIONS = {
   },
   'zh-TW': {
     'loading':'連線資料來源中…','loading-inventory':'載入最新取像清單…',
-    'updated':'更新：','repo-link':'在 GitHub 檢視原始碼','db-stamp':'資料庫：{stamp}','tz-label':'時區','tz-taiwan':'台灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','bm-title':'底圖','bm-dark':'深色','bm-light':'淺色','bm-imagery':'衛星影像','bm-topo':'地形圖','bm-terrain':'地勢','bm-osm':'OpenStreetMap','bm-carto':'CartoDB 深色','bm-none':'無底圖','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
+    'updated':'更新：','repo-link':'在 GitHub 檢視原始碼','db-stamp':'資料庫：{stamp}','tz-label':'時區','tz-taiwan':'台灣','tz-utc':'UTC','tz-local':'本地','tz-tokyo':'東京','tz-singapore':'新加坡','tz-kolkata':'加爾各答','tz-london':'倫敦','tz-berlin':'柏林','tz-newyork':'紐約','tz-losangeles':'洛杉磯','bm-title':'底圖','bm-dark':'深色','bm-light':'淺色','bm-imagery':'衛星影像','bm-topo':'地形圖','bm-terrain':'地勢','bm-osm':'OpenStreetMap','bm-carto':'CartoDB 深色','bm-none':'無底圖','bm-unavailable':'目前無法提供圖磚，點一下可重試','bm-note-switch':'{from} 無法提供圖磚，已切換到 {to}','bm-note-mirror':'{name} 已改用備援伺服器','bm-note-none':'所有底圖來源都沒有回應，已關閉圖磚','tab-all':'全部衛星','tab-op':'運作中','tab-tw':'本週取像',
     'sat-fleet':'SAR 衛星艦隊','loading-ellipsis':'載入中…',
     'waiting-inventory':'等待資料清單…','n-satellites':'{n} 顆衛星',
     'featured-missions':'精選開放任務','other-missions':'其他 SAR 任務',
@@ -964,8 +964,12 @@ const BASEMAPS = [
   { id: 'terrain', label: 'bm-terrain', maxNativeZoom: 17, subdomains: 'abc',
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap contributors, SRTM | OpenTopoMap (CC-BY-SA)' },
-  { id: 'osm', label: 'bm-osm', maxNativeZoom: 19,
+  { id: 'osm', label: 'bm-osm', maxNativeZoom: 19, subdomains: 'abc',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    // Same style from a different operator: a mirror failover keeps the map
+    // looking the way the viewer picked it, so it is tried before the chain
+    // below drops them onto another style entirely.
+    mirrors: ['https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png'],
     attribution: '&copy; OpenStreetMap contributors' },
   // The original basemap, kept because its palette is what the overlay colours
   // were tuned against. CartoDB now answers some unregistered traffic with an
@@ -979,6 +983,64 @@ const BASEMAPS = [
   { id: 'none', label: 'bm-none', url: null },
 ];
 
+// Order the map falls through when the active basemap cannot draw. CartoDB
+// and 'none' are deliberate choices, never automatic destinations.
+const BASEMAP_FALLBACK_ORDER = ['dark', 'osm', 'light', 'topo', 'imagery', 'terrain'];
+
+// Two tiles at the same zoom, one over Taiwan and one over open Pacific. They
+// are what tells a *serving* source from a *broken* one: a provider that has
+// stopped answering our traffic still returns HTTP 200 with a valid PNG — the
+// "API key required" placeholder — so status codes alone see nothing wrong.
+// That placeholder is one image repeated at every coordinate, and no real map
+// draws land and open ocean as the same bytes.
+const BASEMAP_PROBE_TILES = [{ z: 6, x: 53, y: 27 }, { z: 6, x: 20, y: 30 }];
+
+// url template -> 'ok' | 'placeholder' | 'dead', for this page load only.
+const basemapHealth = new Map();
+// Ids whose every source failed; rendered struck through in the menu.
+const basemapBroken = new Set();
+// Bumped on every apply, so a probe or tile error belonging to a basemap the
+// viewer has already moved on from cannot trigger a switch.
+let basemapGeneration = 0;
+
+function basemapSources(def) {
+  return [def.url, ...(def.mirrors || [])].filter(Boolean);
+}
+
+function fillTileUrl(template, subdomains, tile) {
+  const subs = subdomains || 'abc';
+  return template
+    .replace('{s}', subs[0])
+    .replace('{z}', tile.z)
+    .replace('{x}', tile.x)
+    .replace('{y}', tile.y)
+    .replace('{r}', '');
+}
+
+// Cheap content hash; this only has to tell two tile images apart.
+function hashBytes(buf) {
+  let h = 0;
+  for (let i = 0; i < buf.length; i++) h = (h * 31 + buf[i]) | 0;
+  return buf.length + ':' + h;
+}
+
+async function probeTileSource(template, subdomains) {
+  if (basemapHealth.has(template)) return basemapHealth.get(template);
+  let verdict;
+  try {
+    const shots = await Promise.all(BASEMAP_PROBE_TILES.map(async tile => {
+      const res = await fetch(fillTileUrl(template, subdomains, tile));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return hashBytes(new Uint8Array(await res.arrayBuffer()));
+    }));
+    verdict = shots[0] === shots[1] ? 'placeholder' : 'ok';
+  } catch (e) {
+    verdict = 'dead';
+  }
+  basemapHealth.set(template, verdict);
+  return verdict;
+}
+
 function getBasemapDef(id) {
   return BASEMAPS.find(b => b.id === id) || BASEMAPS[0];
 }
@@ -991,10 +1053,16 @@ function getInitialBasemapId() {
   return cfgStr('map.basemap', 'dark', ids);
 }
 
-function applyBasemap(id, { persist = true } = {}) {
+// `sourceIndex` picks the base URL or one of its mirrors. Only a choice the
+// viewer made is stored: a failover is for this page load, so a provider that
+// comes back is picked up again on the next visit rather than being quietly
+// replaced forever.
+function applyBasemap(id, { persist = true, sourceIndex = 0 } = {}) {
   if (!state.map) return;
   const def = getBasemapDef(id);
   state.basemapId = def.id;
+  state.basemapSourceIndex = sourceIndex;
+  const generation = ++basemapGeneration;
   if (persist) {
     try { localStorage.setItem(BASEMAP_STORE_KEY, def.id); } catch (e) { /* private mode */ }
   }
@@ -1003,7 +1071,8 @@ function applyBasemap(id, { persist = true } = {}) {
   state.basemapLayers = [];
 
   const maxZoom = cfgNum('map.basemapMaxZoom', 19, { min: 1, max: 22 });
-  const urls = [def.url, def.overlay].filter(Boolean);
+  const base = basemapSources(def)[sourceIndex] || def.url;
+  const urls = [base, def.overlay].filter(Boolean);
   urls.forEach((url, i) => {
     const layer = L.tileLayer(url, {
       maxZoom,
@@ -1015,6 +1084,7 @@ function applyBasemap(id, { persist = true } = {}) {
       // Credit once per basemap, on the base layer only.
       attribution: i === 0 ? (def.attribution || '') : '',
     });
+    if (i === 0) watchBasemapLayer(layer, def, sourceIndex, generation);
     layer.addTo(state.map);
     // Both tile layers share the tile pane, so the label overlay is added
     // second and pushed above the imagery it annotates.
@@ -1022,15 +1092,82 @@ function applyBasemap(id, { persist = true } = {}) {
     state.basemapLayers.push(layer);
   });
 
+  if (base) {
+    probeTileSource(base, def.subdomains).then(verdict => {
+      if (verdict !== 'ok') failOverBasemap(def, sourceIndex, generation);
+    });
+  }
+
   updateBasemapMenu();
+}
+
+// A source that is refusing or timing out never fires the probe's success path
+// either, but tile errors surface it sooner and cover a source that dies while
+// the viewer is panning. One stray error is normal at the edge of coverage, so
+// the switch waits for a burst that nothing has loaded against.
+function watchBasemapLayer(layer, def, sourceIndex, generation) {
+  let errors = 0, loaded = 0;
+  layer.on('tileload', () => { loaded++; });
+  layer.on('tileerror', () => {
+    errors++;
+    if (loaded === 0 && errors >= 4) failOverBasemap(def, sourceIndex, generation);
+  });
+}
+
+// Try this style's next mirror first; only when the style has no server left
+// does the map move to a different style.
+function failOverBasemap(def, sourceIndex, generation) {
+  if (generation !== basemapGeneration) return;   // viewer already moved on
+
+  const sources = basemapSources(def);
+  const failed = sources[sourceIndex];
+  if (failed && basemapHealth.get(failed) === 'ok') basemapHealth.set(failed, 'dead');
+
+  if (sourceIndex + 1 < sources.length) {
+    showBasemapNote(t('bm-note-mirror', { name: t(def.label) }));
+    applyBasemap(def.id, { persist: false, sourceIndex: sourceIndex + 1 });
+    return;
+  }
+
+  basemapBroken.add(def.id);
+  const next = BASEMAP_FALLBACK_ORDER.find(cand => cand !== def.id && !basemapBroken.has(cand));
+  if (next) {
+    showBasemapNote(t('bm-note-switch', { from: t(def.label), to: t(getBasemapDef(next).label) }));
+    applyBasemap(next, { persist: false });
+  } else {
+    showBasemapNote(t('bm-note-none'));
+    applyBasemap('none', { persist: false });
+  }
+}
+
+function showBasemapNote(text) {
+  const note = document.querySelector('.map-basemap-note');
+  if (!note) return;
+  note.textContent = text;
+  note.hidden = false;
+  clearTimeout(note._hideTimer);
+  note._hideTimer = setTimeout(() => { note.hidden = true; }, 8000);
 }
 
 function updateBasemapMenu() {
   document.querySelectorAll('.map-basemap-item').forEach(btn => {
-    const on = btn.dataset.basemap === state.basemapId;
+    const id = btn.dataset.basemap;
+    const on = id === state.basemapId;
     btn.classList.toggle('on', on);
     btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    const bad = basemapBroken.has(id);
+    btn.classList.toggle('bad', bad);
+    btn.title = bad ? t('bm-unavailable') : '';
   });
+}
+
+// Picking an entry by hand always gives it another chance: a provider that was
+// down an hour ago may be serving again, and the verdict is cached per page.
+function chooseBasemap(id) {
+  const def = getBasemapDef(id);
+  basemapBroken.delete(id);
+  for (const url of basemapSources(def)) basemapHealth.delete(url);
+  applyBasemap(id);
 }
 
 function renderBasemapLabels() {
@@ -1104,17 +1241,28 @@ function initMap() {
       const menu = L.DomUtil.create('div', 'map-basemap-menu', wrap);
       menu.hidden = true;
       menu.setAttribute('role', 'radiogroup');
+      const note = L.DomUtil.create('div', 'map-basemap-note', wrap);
+      note.hidden = true;
+      note.setAttribute('role', 'status');
+
+      // The note hangs under the button, where the open menu also sits, so it
+      // steps below the menu while that is open. The menu's height depends on
+      // the entry count and text size, hence measuring rather than a constant.
+      const placeNote = open => {
+        note.style.top = open ? (menu.offsetHeight + 6) + 'px' : '';
+      };
       const close = () => {
         menu.hidden = true;
         btn.classList.remove('on');
         btn.setAttribute('aria-expanded', 'false');
+        placeNote(false);
       };
       for (const def of BASEMAPS) {
         const item = L.DomUtil.create('button', 'map-basemap-item', menu);
         item.type = 'button';
         item.dataset.basemap = def.id;
         item.setAttribute('role', 'radio');
-        L.DomEvent.on(item, 'click', () => { applyBasemap(def.id); close(); });
+        L.DomEvent.on(item, 'click', () => { chooseBasemap(def.id); close(); });
       }
 
       L.DomEvent.disableClickPropagation(wrap);
@@ -1124,6 +1272,7 @@ function initMap() {
         menu.hidden = !open;
         btn.classList.toggle('on', open);
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        placeNote(open);
       });
       document.addEventListener('click', e => {
         if (!menu.hidden && !wrap.contains(e.target)) close();
