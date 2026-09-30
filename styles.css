@@ -1347,6 +1347,26 @@ header {
 }
 .map-basemap-item:hover { background: rgba(255,255,255,.07); color: var(--text-hi); }
 .map-basemap-item.on { color: var(--cyan); background: rgba(0,229,255,.1); }
+/* A source that failed this page load. Still clickable — picking it re-probes,
+   so a provider that has come back is not locked out until a reload. */
+.map-basemap-item.bad { color: var(--muted); text-decoration: line-through; }
+.map-basemap-item.bad::after { content: " !"; text-decoration: none; color: var(--orange, #ff7043); }
+
+.map-basemap-note {
+  position: absolute;
+  top: 34px; right: 0;
+  width: max-content;
+  max-width: 230px;
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump) - 1px);
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--ov-bg);
+  border: 1px solid var(--border2);
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  padding: 6px 9px;
+}
+.map-basemap-note[hidden] { display: none; }
 
 /* Tile credit — required by OSM/Esri, kept out of the way of the footprints. */
 .leaflet-control-attribution {
