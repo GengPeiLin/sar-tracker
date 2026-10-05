@@ -336,7 +336,15 @@
    "uncertainty_s": 30
   },
   "NISAR|133|2026-09-27": {
+   "actual": "2026-09-27T10:30:20Z",
+   "actual_frames": [
+    "76",
+    "77",
+    "78"
+   ],
    "direction": "DESCENDING",
+   "dt_s": -20.87,
+   "first_dt_s": -3.63,
    "first_lead_days": 32.16,
    "first_predicted": "2026-09-27T10:30:23.628422Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
@@ -345,11 +353,12 @@
     "77",
     "78"
    ],
+   "frames_matched": 3,
    "from_granule": "NISAR_L1_PR_RSLC_027_133_D_076_4005_DHDH_A_20260810T102936_20260810T103009_P05023_N_F_J_001",
    "last_seen": "2026-09-27T06:51:07.558861Z",
    "predicted": "2026-09-27T10:30:40.873330Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "hit",
    "track": 133,
    "uncertainty_s": 29
   },
@@ -2543,5 +2552,5 @@
  ],
  "schema": 2,
  "unpredicted": [],
- "updated_at": "2026-10-04T07:10:13.050013Z"
+ "updated_at": "2026-10-05T07:24:31.549925Z"
 }
