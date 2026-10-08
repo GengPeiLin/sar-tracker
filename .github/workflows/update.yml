@@ -72,6 +72,13 @@ jobs:
           DAYS_BACK: ${{ github.event.inputs.days_back || '3' }}
           INCREMENTAL_OVERLAP_DAYS: ${{ github.event.inputs.overlap_days || '2' }}
           FORCE_FULL_REBUILD: ${{ github.event.inputs.full_rebuild || 'false' }}
+          # NISAR S-band (ISRO/Bhoonidhi) is OFF: the API is not ready to
+          # integrate against yet. To turn it on, set the repository variable
+          # BHOONIDHI_ENABLED to 1 and add the BHOONIDHI_TOKEN secret — no code
+          # change needed. Until then the source logs a skip and the run
+          # continues with ASF's L-band only.
+          BHOONIDHI_ENABLED: ${{ vars.BHOONIDHI_ENABLED }}
+          BHOONIDHI_TOKEN: ${{ secrets.BHOONIDHI_TOKEN }}
         run: python fetch_sar_data.py
 
       - name: Print summary
