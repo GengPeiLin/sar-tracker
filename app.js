@@ -468,6 +468,46 @@ function cycleTitleFont() {
   applyTitleFont();
 }
 
+// A run of three clicks on the logo is its own gesture, registered by whoever
+// wants it (see initFutureMode). The font still cycles on the first clicks,
+// because delaying it until a run could be ruled out made every single click
+// feel broken on a phone; reaching the third click puts the font back where
+// the run started, so the shortcut leaves no trace of itself.
+//
+// Counting clicks rather than listening for `dblclick` is what makes the same
+// gesture work by touch: a tap sends a click, but phones do not send dblclick.
+const LOGO_RUN_CLICKS = 3;
+const LOGO_RUN_GAP_MS = 600;   // a thumb repeats slower than a mouse
+const logoRun = { n: 0, at: 0, font: '0', spent: false };
+let logoRunGesture = null;
+
+function registerLogoRunGesture(fn) {
+  logoRunGesture = fn;
+}
+
+function handleLogoClick() {
+  const now = Date.now();
+  if (now - logoRun.at > LOGO_RUN_GAP_MS) {
+    logoRun.n = 0;
+    logoRun.spent = false;
+    logoRun.font = localStorage.getItem('titleFont') || '0';
+  }
+  logoRun.at = now;
+  // The rest of a run that already fired is swallowed, so a fourth click
+  // cannot both trigger the gesture and start cycling the font again.
+  if (logoRun.spent) return;
+  logoRun.n++;
+
+  if (logoRunGesture && logoRun.n >= LOGO_RUN_CLICKS) {
+    logoRun.spent = true;
+    try { localStorage.setItem('titleFont', logoRun.font); } catch {}
+    applyTitleFont();
+    logoRunGesture();
+    return;
+  }
+  cycleTitleFont();
+}
+
 // The dataset version is a compact UTC timestamp (YYYYMMDDThhmmss) written by
 // fetch_sar_data.py. Parsed back to a real instant so the header stamp and the
 // mobile badge can be shown in the selected display zone like every other time
@@ -1573,7 +1613,7 @@ function setupReadableUI() {
   if (logo) {
     logo.textContent = 'SAR Tracker';
     logo.title = 'Cycle title font';
-    logo.onclick = cycleTitleFont;
+    logo.onclick = handleLogoClick;
     applyTitleFont();
   }
 
@@ -5773,6 +5813,7 @@ const FUTURE_TAIWAN_TRACKS = {
 // would otherwise try to propagate a decade. Nothing beyond this is forecast.
 const FUTURE_MAX_HORIZON_DAYS = 180;
 const FUTURE_TLE_CACHE_KEY  = 'sar_tle_cache';
+const FUTURE_SGP4_SRC = 'https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js';
 const FUTURE_TLE_REFRESH_MS = 12 * 3600 * 1000;   // refetch after this
 const FUTURE_TLE_STALE_MS   = 3 * 86400 * 1000;   // past this, dates only
 const FUTURE_TLE_ATTEMPTS   = 3;                  // Celestrak times out intermittently
@@ -5864,6 +5905,25 @@ function setFutureColor(id) {
 function futureModeAvailable() {
   return typeof satellite !== 'undefined' && satellite
     && typeof satellite.twoline2satrec === 'function';
+}
+
+// The propagator is ~150 KB and only this mode uses it, so it is fetched on
+// the first entry rather than shipped in the page. One promise, kept, so a
+// second entry and a failed load are both cheap.
+let futureSgp4Load = null;
+
+function futureLoadSgp4() {
+  if (futureModeAvailable()) return Promise.resolve(true);
+  if (futureSgp4Load) return futureSgp4Load;
+  futureSgp4Load = new Promise((resolve) => {
+    const el = document.createElement('script');
+    el.src = FUTURE_SGP4_SRC;
+    el.async = true;
+    el.onload = () => resolve(futureModeAvailable());
+    el.onerror = () => { futureSgp4Load = null; resolve(false); };
+    document.head.appendChild(el);
+  });
+  return futureSgp4Load;
 }
 
 // ── TLE loading ───────────────────────────────────────────────────────────
@@ -6390,8 +6450,6 @@ function openFuturePredictionDrawer(frame) {
 // ── Rendering: header badge ───────────────────────────────────────────────
 
 function renderFutureBadge() {
-  const logo = document.querySelector('.hdr-logo');
-  if (logo) logo.title = t('fm-title');
   const badge = document.getElementById('fm-badge');
   if (!badge) return;
   // The field carries the spacer label that lines the badge up with the header
@@ -6684,14 +6742,15 @@ async function setFutureMode(on) {
   }
   if (futureState.on || futureState.loading) return;
 
-  if (!futureModeAvailable()) {
-    futureFlashError();
-    return;
-  }
-
   futureState.loading = true;
   futureState.error = '';
   renderFutureBadge();
+
+  if (!await futureLoadSgp4()) {
+    futureState.loading = false;
+    futureFlashError();
+    return;
+  }
 
   const ok = await loadFutureTLEs();
   futureState.loading = false;
@@ -6768,21 +6827,15 @@ function initFutureMode() {
   const stored = parseInt(localStorage.getItem('sar_future_horizon') || '', 10);
   if (FUTURE_HORIZONS.includes(stored)) futureState.horizonDays = stored;
 
-  const logo = document.querySelector('.hdr-logo');
-  if (logo) {
-    logo.classList.add('fm-logo-target');
-    logo.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      toggleFutureMode();
-    });
-    // A double-click cannot be produced by keyboard or by most assistive
-    // input, so the gesture is a shortcut and never the only way in.
-    logo.tabIndex = 0;
-    logo.setAttribute('role', 'button');
-    logo.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFutureMode(); }
-    });
-  }
+  // Three clicks (or three taps) on the logo. Not a focusable control and not
+  // keyboard-reachable: the logo keeps its own role, nothing in the chrome
+  // announces the mode, and no one tabbing through the header can land on it
+  // by accident. ?future=1 is the equivalent for anyone not using a pointer.
+  registerLogoRunGesture(toggleFutureMode);
 
-  if (localStorage.getItem('sar_future_mode') === '1') setFutureMode(true);
+  let fromUrl = false;
+  try {
+    fromUrl = new URLSearchParams(location.search).get('future') === '1';
+  } catch {}
+  if (fromUrl || localStorage.getItem('sar_future_mode') === '1') setFutureMode(true);
 }

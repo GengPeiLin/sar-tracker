@@ -173,6 +173,9 @@ header {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
+  /* Repeated taps on the logo are clicks, not a zoom: without this a phone
+     treats the second tap as double-tap-to-zoom and delays every click. */
+  touch-action: manipulation;
 }
 
 .hdr-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
@@ -2741,8 +2744,6 @@ header {
 
 /* The glow is the only hint the logo carries a second gesture, and it shows
    only once the mode is on — before that the header stays exactly as it is. */
-.fm-logo-target { cursor: pointer; user-select: none; }
-.fm-logo-target:focus-visible { outline: 1px solid var(--fm); outline-offset: 3px; }
 :root.future-mode .hdr-logo { text-shadow: 0 0 14px color-mix(in srgb, var(--fm) 55%, transparent); }
 
 /* ── sidebar panel ── */
