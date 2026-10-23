@@ -126,18 +126,26 @@
    "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "NISAR|111|2026-10-19": {
+   "actual": "2026-10-19T21:16:38.500000Z",
+   "actual_frames": [
+    "13",
+    "14"
+   ],
    "direction": "ASCENDING",
+   "dt_s": 1.71,
+   "first_dt_s": 50.27,
    "first_lead_days": 54.6,
    "first_predicted": "2026-10-19T21:15:48.226450Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
     "14"
    ],
+   "frames_matched": 1,
    "from_granule": "NISAR_L1_PR_RSLC_024_111_A_013_2005_DHDH_M_20260703T211609_20260703T211644_P05023_N_F_J_001",
    "last_seen": "2026-10-19T06:30:48.755432Z",
    "predicted": "2026-10-19T21:16:36.793663Z",
    "satellite": "NISAR",
-   "status": "pending",
+   "status": "hit",
    "track": 111,
    "uncertainty_s": 30
   },
@@ -1988,18 +1996,25 @@
    "withdrawn_at": "2026-09-23T06:18:08.257770Z"
   },
   "S1C|69|2026-10-20": {
+   "actual": "2026-10-20T10:00:06Z",
+   "actual_frames": [
+    "68"
+   ],
    "direction": "ASCENDING",
+   "dt_s": -14.99,
+   "first_dt_s": -9.89,
    "first_lead_days": 55.14,
    "first_predicted": "2026-10-20T10:00:15.890562Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
     "68"
    ],
+   "frames_matched": 1,
    "from_granule": "S1C_IW_SLC__1SDV_20260821T095950_20260821T100020_009092_0120CA_E3B2",
    "last_seen": "2026-10-20T06:18:13.002907Z",
    "predicted": "2026-10-20T10:00:20.994536Z",
    "satellite": "S1C",
-   "status": "pending",
+   "status": "hit",
    "track": 69,
    "uncertainty_s": 23
   },
@@ -2929,5 +2944,5 @@
    "withdrawn": true
   }
  ],
- "updated_at": "2026-10-22T06:21:57.806019Z"
+ "updated_at": "2026-10-23T06:15:58.540308Z"
 }
