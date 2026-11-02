@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Inject cache-busting version into index.html
         run: |
           VER=$(git rev-parse --short HEAD)
@@ -34,9 +34,9 @@ jobs:
           sed -i "s|sar_status\.js|sar_status.js?v=$VER|g"              app.js
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: '.' # Package entire repo root (includes index.html and data/)
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
