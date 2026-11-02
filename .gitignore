@@ -42,3 +42,17 @@ data/meta4/
 CLAUDE.md
 SETTINGS.txt
 serve.py
+
+# Local-only notes. Development detail that is not for publication; the repo
+# is public, so these stay on disk and never travel with it.
+TOOLING_PYTHON_NOTES.md
+pwtest/
+docs/developer-notes.md
+
+# The forecast mode is deliberately undocumented in public: it exists, and
+# only people who already know about it use it. The write-up and the accuracy
+# scoreboard it generates therefore stay on disk. forecast_validation.py still
+# writes docs/forecast-accuracy.md on every run; read it locally, and re-run
+# `python forecast_validation.py` to regenerate it from data/forecast_log.json.
+docs/futurama.md
+docs/forecast-accuracy.md

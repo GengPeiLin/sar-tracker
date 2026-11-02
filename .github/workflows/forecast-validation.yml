@@ -1,8 +1,7 @@
-# This file only does anything once it is on `main`. GitHub fires `schedule:`
-# triggers only for workflows on the repository's default branch — a cron sitting
-# on a feature branch never runs, whatever it says. So this one small file has
-# to live on main; everything it drives stays on the branch, and nothing it does
-# touches the published site.
+# Scores the standing predictions against what was actually acquired, once a
+# day, and records the next ones. It runs against the default branch, which is
+# also where the code it drives now lives: checking out anything else would
+# validate a copy that is not what visitors get.
 #
 # Run it by hand with:  python forecast_validation.py
 
@@ -27,22 +26,13 @@ jobs:
     name: Score the outstanding predictions and record the next ones
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the feature branch
+      # The catalog this scores against is committed here by the data job, so
+      # a plain checkout already has the night's acquisitions in it.
+      - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: feature/futurama
+          ref: main
           fetch-depth: 0
-
-      - name: Borrow the freshest catalog from main
-        # The daily data job commits to main, so the branch's own copy of
-        # data/sar_status.js goes stale the moment it is cut. `git show ... >`
-        # writes the file WITHOUT staging it. `git checkout origin/main -- path`
-        # would stage it, and the commit step below would then carry a copy of
-        # main's catalog onto the branch on every run.
-        run: |
-          git fetch origin main --depth=1
-          git show origin/main:data/sar_status.js > data/sar_status.js
-          ls -la data/sar_status.js
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v7
@@ -57,11 +47,6 @@ jobs:
       - name: Run validation
         run: python forecast_validation.py
 
-      - name: Return the borrowed catalog
-        # Put the branch's own copy back before anything is committed or
-        # rebased: the borrowed file was only ever input to the scoring run.
-        run: git restore --source=HEAD --worktree data/sar_status.js
-
       - name: Commit the log
         run: |
           git config user.name  "SAR Monitor Bot"
@@ -70,9 +55,9 @@ jobs:
           # docs/forecast-accuracy.md, which is gitignored and stays local:
           # regenerate it any time with `python forecast_validation.py`.
           git add data/forecast_log.json
-          # Neither the generated catalog nor anything under docs/ may be
-          # committed from this branch — a stale catalog would overwrite main's
-          # newer data once merged, and the docs are deliberately not published.
+          # Neither the catalog nor anything under docs/ may be committed by
+          # this job: the data job owns the catalog, and the write-up and the
+          # scoreboard are deliberately not published.
           if git diff --cached --name-only | grep -qE '^(data/sar_(status\.js|recent\.json)|docs/)'; then
             echo "::error::a file that must not be committed is staged"
             git diff --cached --stat
@@ -82,7 +67,7 @@ jobs:
             echo "No change, skipping commit"
           else
             git commit -m "data: forecast validation $(date -u '+%Y-%m-%d')"
-            git fetch origin feature/futurama
-            git rebase origin/feature/futurama
-            git push origin HEAD:feature/futurama
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
