@@ -321,6 +321,8 @@ const TRANSLATIONS = {
     'fm-hint':'Click the logo three times to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
     'fm-excluded':'Predicted frames are excluded from downloads, CSV export and the statistics table.',
     'fm-export':'Forecast CSV','fm-col-datetime':'Date / Time','fm-col-satellite':'Satellite','fm-col-track':'Track',
+    'fm-list-title':'Predicted passes','fm-copy':'Copy','fm-copied':'Copied','fm-copy-manual':'Selected — press Ctrl+C',
+    'fm-list-hide':'Hide the list','fm-list-show':'Show the list',
     'fm-last-imaged':'Last imaged','fm-cycle-last':'previous cycle imaged','fm-cycle-skipped':'{n} cycle(s) not imaged since',
     'fm-templated-from':'Footprint from','fm-capped':'Forecast stops {n} days ahead; the window reaches further.',
   },
@@ -418,6 +420,8 @@ const TRANSLATIONS = {
     'fm-hint':'連點三下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
     'fm-excluded':'預測影像不納入下載、CSV 匯出與統計表。',
     'fm-export':'預測 CSV','fm-col-datetime':'日期時間','fm-col-satellite':'衛星','fm-col-track':'軌道',
+    'fm-list-title':'預測過境清單','fm-copy':'複製','fm-copied':'已複製','fm-copy-manual':'已選取，請按 Ctrl+C',
+    'fm-list-hide':'收起清單','fm-list-show':'展開清單',
     'fm-last-imaged':'上次拍攝','fm-cycle-last':'前一週期有拍','fm-cycle-skipped':'之後已有 {n} 個週期未拍',
     'fm-templated-from':'足跡取自','fm-capped':'預測只推算到 {n} 天後，視窗超出此範圍。',
   },
@@ -597,6 +601,7 @@ function applyI18n() {
   renderMobileFeed();
   renderFutureBadge();
   renderFutureSection();
+  renderFutureList();
   renderFutureFrames();
   if (document.getElementById('stats-panel')?.classList.contains('open')) renderStatsPanel();
 }
@@ -787,6 +792,9 @@ function applyDisplayTZ() {
   // its freshness badge is judged on the new zone's calendar day.
   if (state.baseStats?.version) renderDatasetStamp();
   if (state.rawFrames?.length) applyAdvancedFilters();
+  // Every line of the pass list is a time, so it belongs to the zone too, and
+  // applyAdvancedFilters() does not touch it.
+  if (typeof futureState !== 'undefined' && futureState.on) renderFutureList();
   // applyAdvancedFilters() re-renders the map/list but never the open drawer's
   // own text (its "Selected Date" and per-day group headings) — rebuild it in
   // place for the new zone, same fix as the stats bucket popup below.
@@ -5946,9 +5954,10 @@ function statsExportChartCSV(button) {
 // templated from several frames along the same track, which differ only in
 // latitude and so land seconds apart. The table is about when a satellite comes
 // over, so those collapse into the earliest instant of the pass.
-function statsExportFutureCSV(button) {
-  if (typeof futureState === 'undefined' || !futureState.on) return;
-
+// One row per overpass rather than per predicted frame: a pass ships several
+// frames seconds apart, and nobody wants to read the same pass three times.
+function futurePassList() {
+  if (typeof futureState === 'undefined' || !futureState.on) return [];
   const passes = new Map();
   for (const f of futureState.frames) {
     const ms = getFrameTimestamp(f);
@@ -5961,12 +5970,17 @@ function statsExportFutureCSV(button) {
     const key = [f.satellite_id, track, Math.floor(ms / 600000)].join('|');
     const current = passes.get(key);
     if (!current || ms < current.ms) {
-      passes.set(key, { ms, satellite: f.satellite_name || f.satellite_id, track });
+      passes.set(key, { ms, satId: f.satellite_id,
+                        satellite: f.satellite_name || f.satellite_id, track });
     }
   }
+  return [...passes.values()].sort((a, b) => a.ms - b.ms);
+}
 
-  const rows = [...passes.values()]
-    .sort((a, b) => a.ms - b.ms)
+function statsExportFutureCSV(button) {
+  if (typeof futureState === 'undefined' || !futureState.on) return;
+
+  const rows = futurePassList()
     .map(p => [futureFormatWhen(new Date(p.ms).toISOString()), p.satellite, p.track]);
 
   const headers = [t('fm-col-datetime'), t('fm-col-satellite'), t('fm-col-track')];
@@ -6228,7 +6242,8 @@ const futureState = {
   polygons: [],       // {key, polygon} for selection styling
   missing: [],        // satellites whose TLE never arrived this session
   dormant: [],
-  stale: [],        // official tracks not being forecast: {satId, label, lastTs}
+  stale: [],
+  listCollapsed: false,        // official tracks not being forecast: {satId, label, lastTs}
   notesOpen: false,   // the caveats behind the provenance line
   dash: FUTURE_DASH_DEFAULT,
   color: FUTURE_COLOR_DEFAULT,
@@ -6853,6 +6868,91 @@ function openFuturePredictionDrawer(frame) {
   document.getElementById('drawer').classList.add('open');
 }
 
+// ── Rendering: the copyable pass list ─────────────────────────────────────
+
+// "2026-11-02 17:52 S1D A171", one pass per line, in the display timezone.
+// Deliberately plain: it is written to be pasted into a chat message, so no
+// table, no box drawing, nothing anyone has to re-type.
+function futurePassListText() {
+  return futurePassList().map(p => {
+    const iso = new Date(p.ms).toISOString();
+    const time = formatDisplayTime(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+    return [displayDateKey(iso), time, p.satId, p.track].join(' ');
+  }).join('\n');
+}
+
+function renderFutureList() {
+  const box = document.getElementById('fm-list');
+  if (!box) return;
+  if (!futureState.on) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const text = futurePassListText();
+  const lines = text ? text.split('\n').length : 0;
+  const collapsed = futureState.listCollapsed;
+  box.hidden = false;
+  box.classList.toggle('collapsed', collapsed);
+  // Where the list may start is measured, not guessed: the map's own top-right
+  // controls grow with the text-size control, and the stat cards are an
+  // overlay on a wide screen but part of the flow once the layout stacks.
+  // Same approach initMap uses for the download bar's height.
+  const wrap = box.parentElement?.getBoundingClientRect();
+  const ctrls = document.querySelector('.leaflet-top.leaflet-right')?.getBoundingClientRect();
+  const statsEl = document.querySelector('.map-stats');
+  const stats = statsEl && getComputedStyle(statsEl).position === 'absolute'
+    ? statsEl.getBoundingClientRect() : null;
+  if (wrap) {
+    const below = Math.max(ctrls?.height ? ctrls.bottom : 0, stats?.height ? stats.bottom : 0);
+    if (below) box.style.top = Math.round(below - wrap.top + 10) + 'px';
+  }
+  box.innerHTML =
+    '<div class="fm-list-hd">' +
+      '<button type="button" class="fm-list-toggle" onclick="toggleFutureList()"' +
+        ' title="' + escapeHtml(t(collapsed ? 'fm-list-show' : 'fm-list-hide')) + '">' +
+        '<span class="fm-list-title">' + escapeHtml(t('fm-list-title')) + '</span>' +
+        '<span class="fm-list-count">' + lines + '</span>' +
+      '</button>' +
+      (collapsed ? '' :
+        '<button type="button" class="fm-list-copy" onclick="futureCopyPassList(this)">'
+        + escapeHtml(t('fm-copy')) + '</button>') +
+    '</div>' +
+    (collapsed ? '' :
+      '<pre class="fm-list-body" id="fm-list-body">'
+      + escapeHtml(text || t('fm-no-passes')) + '</pre>');
+}
+
+function toggleFutureList() {
+  futureState.listCollapsed = !futureState.listCollapsed;
+  try {
+    localStorage.setItem('sar_future_list', futureState.listCollapsed ? '0' : '1');
+  } catch {}
+  renderFutureList();
+}
+
+async function futureCopyPassList(button) {
+  const text = futurePassListText();
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    flashButton(button, 'fm-copied');
+  } catch (error) {
+    // Clipboard writes need a focused document and a secure context. Select
+    // the text instead, so Ctrl+C still finishes the job the button started.
+    console.warn('Copy failed, selecting the text instead:', error);
+    const body = document.getElementById('fm-list-body');
+    if (body) {
+      const range = document.createRange();
+      range.selectNodeContents(body);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    flashButton(button, 'fm-copy-manual');
+  }
+}
+
 // ── Rendering: header badge ───────────────────────────────────────────────
 
 function renderFutureBadge() {
@@ -7222,6 +7322,7 @@ function futureRefreshAll() {
   document.documentElement.style.setProperty('--fm-dash', futureDashArray());
   renderFutureBadge();
   renderFutureSection();
+  renderFutureList();
   renderFutureFrames();
   updateLegend();
   // The stats panel's header and chart are built once per render, so an open
@@ -7242,6 +7343,7 @@ function initFutureMode() {
 
   const stored = parseInt(localStorage.getItem('sar_future_horizon') || '', 10);
   if (FUTURE_HORIZONS.includes(stored)) futureState.horizonDays = stored;
+  futureState.listCollapsed = localStorage.getItem('sar_future_list') === '0';
 
   // Three clicks (or three taps) on the logo. Not a focusable control and not
   // keyboard-reachable: the logo keeps its own role, nothing in the chrome

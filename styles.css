@@ -1301,6 +1301,64 @@ header {
 .map-snap-btn:hover:not(:disabled) { background: rgba(255,255,255,.07) !important; }
 .map-snap-btn:disabled { opacity: .45; cursor: wait; }
 
+/* FUTURAMA's copyable pass list. Right-hand side of the map, below the
+   top-right map buttons and above the download bar. It hides while the drawer
+   is open rather than being painted over by it: the drawer sits at z-index
+   500, below every map overlay. */
+.fm-list {
+  position: absolute;
+  /* Starting point only: renderFutureList measures the map's top-right
+     controls and moves the panel below them. */
+  top: 52px; right: 12px;
+  z-index: 1100;
+  width: 232px;
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  background: var(--ov-bg);
+  border: 1px solid var(--fm-dim, var(--ov-border));
+  backdrop-filter: blur(6px);
+}
+.map-wrap:has(.drawer.open) .fm-list { display: none; }
+.fm-list-hd {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 6px;
+  border-bottom: 1px solid var(--ov-border);
+}
+.fm-list.collapsed .fm-list-hd { border-bottom: 0; }
+.fm-list-toggle, .fm-list-copy {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: calc(9px + var(--font-bump));
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 7px 9px;
+}
+.fm-list-toggle { display: flex; align-items: center; gap: 6px; flex: 1; text-align: left; }
+.fm-list-toggle:hover, .fm-list-copy:hover { color: var(--text); }
+.fm-list-copy.ok { color: var(--green); }
+.fm-list-title { color: var(--fm, var(--cyan)); }
+.fm-list-count { color: var(--muted); border: 1px solid var(--ov-border); padding: 0 4px; }
+.fm-list-body {
+  margin: 0;
+  padding: 8px 9px 10px;
+  max-height: min(42vh, 340px);
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: calc(10px + var(--font-bump));
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre;
+  /* It exists to be selected and copied, so unlike the rest of the map chrome
+     it must stay selectable. */
+  user-select: text;
+}
+
 /* Basemap switcher — button matches .map-snap-btn, menu drops from its left. */
 .map-basemap-ctrl {
   position: relative;
@@ -2372,6 +2430,11 @@ header {
 
 /* ═══ MOBILE (≤640px) ═══════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
+  /* Phones: the map is the whole screen, so the list stays narrow, clears the
+     bottom tab bar and never covers more than a third of the view. */
+  .fm-list { top: 46px; right: 8px; width: 190px; }
+  .fm-list-body { max-height: 30vh; }
+
   /* ── root ── */
   :root { --font-bump: 2px; }
 
