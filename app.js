@@ -313,11 +313,12 @@ const TRANSLATIONS = {
     'fm-orbit-source':'TLE · celestrak.org · {stamp} · {age}',
     'fm-failed':'Could not load orbit data — FUTURAMA stays off.',
     'fm-missing':'No orbit data for {sats} — their passes are missing from this forecast.',
+    'fm-stale-tracks':'Forecast from a stale observation — nothing has confirmed these in months: {tracks}. The time stays accurate; whether the track is still being imaged is the open question.',
     'fm-dormant':'Not forecast — no acquisition in {days} d: {tracks}. If one resumes, its first pass back will not be predicted.',
     'fm-never':'never',
     'fm-stale':'Orbit data is {age} old; times shown to the day only.',
     'fm-count':'+{n} predicted','fm-note':'A predicted pass is an orbital opportunity, not a guaranteed acquisition.',
-    'fm-hint':'Double-click the logo to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
+    'fm-hint':'Click the logo three times to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
     'fm-excluded':'Predicted frames are excluded from downloads, CSV export and the statistics table.',
     'fm-export':'Forecast CSV','fm-col-datetime':'Date / Time','fm-col-satellite':'Satellite','fm-col-track':'Track',
     'fm-templated-from':'Footprint from','fm-capped':'Forecast stops {n} days ahead; the window reaches further.',
@@ -408,11 +409,12 @@ const TRANSLATIONS = {
     'fm-orbit-source':'軌道根數 · celestrak.org · {stamp} · {age}',
     'fm-failed':'無法載入軌道資料——FUTURAMA 維持關閉。',
     'fm-missing':'缺少 {sats} 的軌道資料，本次預測不包含它們的過境。',
+    'fm-stale-tracks':'樣板已久未更新（數月內無取像確認）：{tracks}。時刻仍然準確，但該軌道是否仍在拍攝並不確定。',
     'fm-dormant':'未預測（{days} 天內無取像）：{tracks}。若恢復拍攝，第一次過境將不會被預測到。',
     'fm-never':'從未',
     'fm-stale':'軌道資料已過 {age}，僅顯示到日期。',
     'fm-count':'+{n} 筆預測','fm-note':'預測過境代表軌道會經過，不代表一定會取像。',
-    'fm-hint':'連點兩下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
+    'fm-hint':'連點三下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
     'fm-excluded':'預測影像不納入下載、CSV 匯出與統計表。',
     'fm-export':'預測 CSV','fm-col-datetime':'日期時間','fm-col-satellite':'衛星','fm-col-track':'軌道',
     'fm-templated-from':'足跡取自','fm-capped':'預測只推算到 {n} 天後，視窗超出此範圍。',
@@ -2038,6 +2040,11 @@ async function loadData() {
       // JSON downgrading Stats after sar_recent.json has updated.
       if (shouldApplyFullDataset(data)) {
         applyFrameData(data, { preserveFilters: phase1ok });
+        // The forecast is built from the catalog, and until now that catalog
+        // was the last 14 days: every template came from those two weeks and
+        // every track without an acquisition in them looked as though it had
+        // never been imaged at all. Rebuild on the full history.
+        if (typeof futureState !== 'undefined' && futureState.on) futureRecompute();
       }
     } catch (error) {
       hideBar();
@@ -5826,7 +5833,15 @@ const FUTURE_TLE_ATTEMPTS   = 3;                  // Celestrak times out intermi
 // 30 days was too tight once templates were restricted to the canonical
 // product: NISAR's newest RSLC frame on a track can be older than its newest
 // frame overall, which silently dropped whole tracks from the forecast.
-const FUTURE_TEMPLATE_MAX_AGE_MS = 60 * 86400 * 1000;
+// A template is FRESH while the acquisition behind it is this recent. Past it
+// the track is still forecast and only flagged as stale: dropping it is what
+// cost the forward log its one missed acquisition (S1D D105, silent after
+// 2026-07-24, imaged again on 10-16 with no prediction standing). A repeat
+// cycle and a time of day do not drift while a track goes unused.
+// Mirrors TEMPLATE_FRESH_DAYS in forecast_validation.py.
+const FUTURE_TEMPLATE_FRESH_MS = 60 * 86400 * 1000;
+// The hard stop: past this the track is not forecast at all, and is listed.
+const FUTURE_TEMPLATE_MAX_AGE_MS = 365 * 86400 * 1000;
 const FUTURE_COARSE_S = 300;       // coarse scan step
 const FUTURE_FINE_STEPS = 16;      // samples inside a candidate bracket
 const FUTURE_LAT_BAND = [19, 28];  // Taiwan frames, with margin
@@ -5868,7 +5883,8 @@ const futureState = {
   layer: null,
   polygons: [],       // {key, polygon} for selection styling
   missing: [],        // satellites whose TLE never arrived this session
-  dormant: [],        // official tracks not being forecast: {satId, label, lastTs}
+  dormant: [],
+  stale: [],        // official tracks not being forecast: {satId, label, lastTs}
   notesOpen: false,   // the caveats behind the provenance line
   dash: FUTURE_DASH_DEFAULT,
   color: FUTURE_COLOR_DEFAULT,
@@ -6097,6 +6113,17 @@ function futureTrackKey(frame) {
   return [frame.satellite_id || '', frame.direction_norm || '', getFramePathNumber(frame) ?? ''].join('|');
 }
 
+// The ground track repeats exactly every FUTURE_REPEAT_DAYS, so advancing an
+// acquisition instant by whole cycles lands on the same ground track while
+// bringing it within days of now. Retrodicting the current TLE that far is
+// accurate; retrodicting it months back is not (S1C drifts ~3 s/day), and the
+// longitude gate would then reject every real pass on a stale track.
+function futureRollToRecent(atMs, nowMs) {
+  const cycle = FUTURE_REPEAT_DAYS * 86400000;
+  const cycles = Math.floor((nowMs - atMs) / cycle);
+  return cycles > 0 ? atMs + cycles * cycle : atMs;
+}
+
 function futureBuildTemplates() {
   const frames = state.rawFrames || [];
   const now = Date.now();
@@ -6174,12 +6201,14 @@ function futureBuildTemplates() {
 
     const satrec = futureSatrec(entry.frame.satellite_id);
     if (!satrec) continue;
-    // Calibrated at the newest kept acquisition of THIS frame, so the
-    // reference longitude is matched to this latitude as well as being recent.
-    const refAt = cal.ts;
+    // Calibrated on THIS frame's own ground track — so the reference longitude
+    // is matched to this latitude — one repeat cycle ago rather than at the
+    // acquisition itself, which keeps an old template just as accurate.
+    const refAt = futureRollToRecent(cal.ts, now);
     const refSp = futureSubpoint(satrec, new Date(refAt));
     if (!refSp) continue;
 
+    const ageDays = (now - cal.ts) / 86400000;
     templates.push({
       satId: entry.frame.satellite_id,
       frame: entry.frame,
@@ -6187,8 +6216,10 @@ function futureBuildTemplates() {
       lastTs: entry.ts,
       centroidLat: sumLat / n,
       refLon: refSp.lon,
-      phaseAnchors: anchors.get(futureTrackKey(entry.frame)),
+      phaseAnchors: (anchors.get(futureTrackKey(entry.frame)) || [])
+        .map(at => futureRollToRecent(at, now)),
       ascending: (entry.frame.direction_norm || '') === 'ASCENDING',
+      staleDays: ageDays > FUTURE_TEMPLATE_FRESH_MS / 86400000 ? ageDays : 0,
     });
   }
   return templates;
@@ -6202,10 +6233,11 @@ function futureInPhase(t, anchors) {
   return false;
 }
 
-// Official tracks with no canonical acquisition inside the template window,
-// with the last time each was imaged at all (null if never).
-function futureDormantTracks() {
-  const cutoff = Date.now() - FUTURE_TEMPLATE_MAX_AGE_MS;
+// Official tracks and the last time each was imaged at all (null if never),
+// split into the ones still forecast on a stale observation and the ones past
+// FUTURE_TEMPLATE_MAX_AGE_MS, which are not forecast at all.
+function futureTrackStates() {
+  const now = Date.now();
   const last = new Map();
   for (const frame of state.rawFrames || []) {
     if (!FUTURE_TAIWAN_TRACKS[frame.satellite_id]) continue;
@@ -6217,15 +6249,20 @@ function futureDormantTracks() {
     const key = frame.satellite_id + '|' + dir + (frame.path_number_norm ?? '');
     if (!last.has(key) || ts > last.get(key)) last.set(key, ts);
   }
-  const out = [];
+  const dormant = [], stale = [];
   for (const [satId, labels] of Object.entries(FUTURE_TAIWAN_TRACKS)) {
     for (const label of labels) {
-      const ts = last.get(satId + '|' + label);
-      if (ts !== undefined && ts >= cutoff) continue;
-      out.push({ satId, label, lastTs: ts === undefined ? null : ts });
+      const raw = last.get(satId + '|' + label);
+      const ts = raw === undefined ? null : raw;
+      const age = ts === null ? Infinity : now - ts;
+      if (age > FUTURE_TEMPLATE_MAX_AGE_MS) dormant.push({ satId, label, lastTs: ts });
+      else if (age > FUTURE_TEMPLATE_FRESH_MS) {
+        stale.push({ satId, label, lastTs: ts, days: Math.round(age / 86400000) });
+      }
     }
   }
-  return out.sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
+  const newest = (a, b) => (b.lastTs || 0) - (a.lastTs || 0);
+  return { dormant: dormant.sort(newest), stale: stale.sort(newest) };
 }
 
 // ── Prediction ────────────────────────────────────────────────────────────
@@ -6629,6 +6666,12 @@ function renderFutureSection() {
             + escapeHtml(t('fm-missing', { sats: futureState.missing.join(', ') }))
             + '</div>'
           : '') +
+        (futureState.stale.length
+          ? '<div class="fm-note">' + escapeHtml(t('fm-stale-tracks', {
+              tracks: futureState.stale.map(d => d.satId + ' ' + d.label
+                + ' (' + d.days + ' d)').join(', '),
+            })) + '</div>'
+          : '') +
         (futureState.dormant.length
           ? '<div class="fm-note">' + escapeHtml(t('fm-dormant', {
               days: Math.round(FUTURE_TEMPLATE_MAX_AGE_MS / 86400000),
@@ -6795,7 +6838,9 @@ function toggleFutureNotes() {
 
 function futureRecompute() {
   futureState.frames = futureState.on ? futurePredictPasses() : [];
-  futureState.dormant = futureState.on ? futureDormantTracks() : [];
+  const trackStates = futureState.on ? futureTrackStates() : { dormant: [], stale: [] };
+  futureState.dormant = trackStates.dormant;
+  futureState.stale = trackStates.stale;
   futureRefreshAll();
 }
 

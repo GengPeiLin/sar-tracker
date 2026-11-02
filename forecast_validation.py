@@ -88,7 +88,21 @@ KNOWN_PRODUCT_TYPES = [
     "SLC", "GRD_HD", "GRD_MS", "GRD_HS", "GRD_FD", "GRD", "GCOV", "GUNW",
     "SME2", "RAW", "SSC", "OCN", "ETAD", "COH12",
 ]
-TEMPLATE_MAX_AGE_DAYS = 60
+# A template is FRESH while the acquisition behind it is this recent. Past it
+# the track is still forecast — it is only flagged as running on a stale
+# observation — because dropping it is what caused the one missed acquisition
+# this log has: S1D D105 fell silent after 2026-07-24, its template aged out on
+# 09-22, and the standing (correct, 52 s) prediction for 10-16 was withdrawn a
+# day later. The track then imaged on 10-16. A track's repeat and its time of
+# day do not drift when it stops being used, so an old template still answers
+# the question; what it cannot do is promise the track will be used at all,
+# which costs false alarms and nothing else.
+TEMPLATE_FRESH_DAYS = 60
+# The hard stop. Past a year of silence a track is not forecast at all and is
+# reported instead: the phase is probably still right, but a mission that has
+# not flown a track for a year is not planning to this month either, and the
+# false alarms would outnumber everything else in the log.
+TEMPLATE_MAX_AGE_DAYS = 365
 COARSE_S = 300
 FINE_STEPS = 16
 LAT_BAND = (19.0, 28.0)
@@ -341,7 +355,7 @@ def build_templates(frames, satrecs, now, passes=None):
         anchors.setdefault(tk, []).append(when)
 
     templates = []
-    for key, (_, ref_at) in calib.items():
+    for key, (_, observed_at) in calib.items():
         if key not in geom:
             continue
         frame = geom[key][0]
@@ -353,9 +367,13 @@ def build_templates(frames, satrecs, now, passes=None):
         satrec = satrecs.get(sat)
         if satrec is None:
             continue
+        # Calibrated on the same ground track, one repeat cycle ago rather than
+        # at the acquisition itself, so an old template is no less accurate.
+        ref_at = roll_to_recent(observed_at, now)
         ref = subpoint(satrec, ref_at)
         if ref is None:
             continue
+        observed = anchors[track_key(frame)] if kept is not None else [observed_at]
         templates.append({
             "sat": sat,
             "track": frame.get("path_number"),
@@ -365,11 +383,27 @@ def build_templates(frames, satrecs, now, passes=None):
             "ref_lon": ref[1],
             # the old rule phased each frame on its own newest acquisition;
             # the new one on every acquisition of the track's kept passes
-            "phase_at": anchors[track_key(frame)] if kept is not None else [ref_at],
+            "phase_at": [roll_to_recent(a, now) for a in observed],
             "ascending": str(frame.get("direction") or "").upper().startswith("ASC"),
             "from_granule": frame.get("granule") or "",
+            # how stale the observation behind this template is
+            "age_days": round((now - observed_at).total_seconds() / 86400.0, 1),
         })
     return templates
+
+
+def roll_to_recent(at, now):
+    """Advance an acquisition instant by whole repeat cycles, to the last one
+    before `now`.
+
+    The ground track repeats exactly every REPEAT_DAYS, so the rolled instant
+    sits on the same ground track as the original — but retrodicting today's
+    TLE to it is a hop of days instead of months. That is what keeps a stale
+    template's reference longitude usable: S1C drifts 3.05 s/day against this
+    catalog, so calibrating at a 300-day-old acquisition would put the ground
+    track ~4 deg out and the longitude gate would reject every real pass."""
+    cycles = int((now - at).total_seconds() // (REPEAT_DAYS * 86400.0))
+    return at + timedelta(days=REPEAT_DAYS * cycles) if cycles > 0 else at
 
 
 def in_phase(when, anchors):
@@ -434,6 +468,9 @@ def predict(templates, satrecs, tles, start, end):
                 if not in_phase(when, tpl["phase_at"]):
                     continue
                 out.append({
+                    "stale_days": (tpl["age_days"]
+                                   if tpl.get("age_days", 0) > TEMPLATE_FRESH_DAYS
+                                   else 0),
                     "satellite": tpl["sat"],
                     "track": tpl["track"],
                     "frame": tpl["frame"],
@@ -487,6 +524,12 @@ def record(log, predictions, now):
         key = pass_key(p["satellite"], p["track"], p["predicted"])
         grouped.setdefault(key, []).append(p)
 
+    # Which tracks this run had anything to say about. A track that produced no
+    # templates at all has not changed its mind — it has gone quiet — and its
+    # standing predictions must survive, or the forecast throws away the very
+    # answer it will be judged on when the track comes back.
+    live_tracks = {(p["satellite"], str(p["track"])) for p in predictions}
+
     added = updated = 0
     for key, group in grouped.items():
         instant = median_instant([parse_iso(g["predicted"]) for g in group])
@@ -506,9 +549,16 @@ def record(log, predictions, now):
                 "first_seen": now.isoformat().replace("+00:00", "Z"),
                 "first_lead_days": round((instant - now).total_seconds() / 86400.0, 2),
                 "status": "pending",
+                **({"stale_days": max(g["stale_days"] for g in group)}
+                   if max(g.get("stale_days") or 0 for g in group) else {}),
             }
             added += 1
         elif row.get("status") in ("pending", "withdrawn"):
+            stale = max((g.get("stale_days") or 0) for g in group)
+            if stale:
+                row["stale_days"] = stale
+            else:
+                row.pop("stale_days", None)
             # keep the longest-lead estimate AND the freshest one
             if row.get("status") == "withdrawn":
                 row["status"] = "pending"
@@ -526,6 +576,8 @@ def record(log, predictions, now):
     withdrawn = 0
     for key, row in log["passes"].items():
         if row.get("status") != "pending" or key in grouped:
+            continue
+        if (row["satellite"], str(row["track"])) not in live_tracks:
             continue
         at = parse_iso(row["predicted"])
         if at is not None and at > now:
@@ -621,12 +673,13 @@ def track_label(row):
 
 
 def dormant_tracks(frames, now):
-    """Official tracks with no canonical acquisition inside the template window.
+    """Official tracks with no canonical acquisition inside the whole template
+    window (TEMPLATE_MAX_AGE_DAYS).
 
-    These are left out of the forecast on purpose: forecasting a track from a
-    stale state did more harm than good. The cost is that if one resumes, its
-    first pass back cannot be predicted — so the list is reported rather than
-    letting a track quietly vanish."""
+    These are the only tracks left out of the forecast. The cost is that if one
+    resumes, its first pass back cannot be predicted — so the list is reported
+    rather than letting a track quietly vanish. A track merely past
+    TEMPLATE_FRESH_DAYS is still forecast; see stale_tracks."""
     cutoff = now - timedelta(days=TEMPLATE_MAX_AGE_DAYS)
     last = {}
     for frame in frames:
@@ -652,6 +705,37 @@ def dormant_tracks(frames, now):
                 "last": when.isoformat().replace("+00:00", "Z") if when else None,
             })
     out.sort(key=lambda d: d["last"] or "", reverse=True)
+    return out
+
+
+def stale_tracks(frames, now):
+    """Tracks still forecast, but on an observation older than
+    TEMPLATE_FRESH_DAYS. Reported so that a prediction nobody has confirmed in
+    months is never mistaken for one standing on this week's evidence."""
+    fresh = now - timedelta(days=TEMPLATE_FRESH_DAYS)
+    floor = now - timedelta(days=TEMPLATE_MAX_AGE_DAYS)
+    last = {}
+    for frame in frames:
+        sat = frame_sat(frame)
+        if sat not in TAIWAN_TRACKS or not is_canonical(frame):
+            continue
+        when = acquisition_midpoint(frame)
+        if when is None or frame.get("path_number") is None:
+            continue
+        label = track_label({"direction": frame.get("direction"),
+                             "track": frame.get("path_number")})
+        if (sat, label) not in last or when > last[(sat, label)]:
+            last[(sat, label)] = when
+    out = []
+    for (sat, label), when in last.items():
+        if floor <= when < fresh:
+            out.append({
+                "satellite": sat,
+                "track_label": label,
+                "last": when.isoformat().replace("+00:00", "Z"),
+                "age_days": round((now - when).total_seconds() / 86400.0, 1),
+            })
+    out.sort(key=lambda d: d["age_days"], reverse=True)
     return out
 
 
@@ -705,7 +789,7 @@ def find_unpredicted(log, frames):
     for times in history.values():
         times.sort()
     horizon = timedelta(days=HORIZON_DAYS)
-    window = timedelta(days=TEMPLATE_MAX_AGE_DAYS)
+    window = timedelta(days=TEMPLATE_MAX_AGE_DAYS)   # what build_templates accepts
     forecastable, missed = 0, []
     for key, entry in actual.items():
         at = median_instant(entry["times"])
@@ -751,13 +835,15 @@ def fmt(value, unit="s"):
     return "--" if value is None else f"{value:.1f} {unit}"
 
 
-def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None):
+def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None,
+                 stale_list=None):
     rows = list(log["passes"].values())
     done = [r for r in rows if r.get("status") in ("hit", "miss")]
     hits = [r for r in done if r["status"] == "hit"]
     pending = [r for r in rows if r.get("status") == "pending"]
     missed = missed or []
     dormant_list = dormant_list or []
+    stale_list = stale_list or []
 
     lines = [
         "# Forecast accuracy",
@@ -811,12 +897,28 @@ def write_report(log, now, tles, missed=None, forecastable=0, dormant_list=None)
             lines.append(f"| {m['satellite']} | {m['track_label']} | {when} | {cause} |")
         lines.append("")
 
+    lines += ["## Tracks forecast on a stale observation", "",
+              f"Still forecast, but nothing has confirmed them in over "
+              f"{TEMPLATE_FRESH_DAYS} days. A repeat cycle and a time of day do not "
+              "drift while a track is unused, so the prediction stays as accurate as it "
+              "ever was; what it cannot tell you is whether the mission still intends to "
+              "image the track. Expect false alarms here, and expect the real pass to be "
+              "caught when it comes.", ""]
+    if not stale_list:
+        lines += ["None — every forecast track has a recent acquisition.", ""]
+    else:
+        lines += ["| satellite | track | last acquisition (UTC) | silent |",
+                  "|---|---|---|---|"]
+        for d in stale_list:
+            lines.append(f"| {d['satellite']} | {d['track_label']} | "
+                         f"{d['last'][:10]} | {d['age_days']:.0f} d |")
+        lines.append("")
+
     lines += ["## Tracks not being forecast", "",
               "Official Taiwan tracks with no acquisition in the last "
-              f"{TEMPLATE_MAX_AGE_DAYS} days. They are left out on purpose — forecasting "
-              "from stale states did more harm than good — so if one resumes, its first "
-              "pass back will be missed, and is counted above as a resumed track rather "
-              "than a forecast failure.", ""]
+              f"{TEMPLATE_MAX_AGE_DAYS} days. These are the only ones left out, and if "
+              "one resumes its first pass back will be missed — counted above as a "
+              "resumed track rather than a forecast failure.", ""]
     if not dormant_list:
         lines += ["None — every official track has a recent acquisition.", ""]
     else:
@@ -940,13 +1042,16 @@ def main():
     log["unpredicted"] = missed
     dormant = dormant_tracks(frames, now)
     log["dormant_tracks"] = dormant
+    stale = stale_tracks(frames, now)
+    log["stale_tracks"] = stale
     log["updated_at"] = now.isoformat().replace("+00:00", "Z")
 
     io.open(LOG_PATH, "w", encoding="utf-8", newline="\n").write(
         json.dumps(log, ensure_ascii=False, indent=1, sort_keys=True))
-    write_report(log, now, tles, missed, forecastable, dormant)
+    write_report(log, now, tles, missed, forecastable, dormant, stale)
     print(f"[forecast] scored {scored}; {len(log['passes'])} passes in log; "
-          f"{len(missed)} of {forecastable} real passes never predicted", flush=True)
+          f"{len(missed)} of {forecastable} real passes never predicted; "
+          f"{len(stale)} track(s) forecast on a stale observation", flush=True)
 
 
 if __name__ == "__main__":
