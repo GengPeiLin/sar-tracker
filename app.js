@@ -321,6 +321,7 @@ const TRANSLATIONS = {
     'fm-hint':'Click the logo three times to leave FUTURAMA','fm-no-passes':'No predicted passes in this window.',
     'fm-excluded':'Predicted frames are excluded from downloads, CSV export and the statistics table.',
     'fm-export':'Forecast CSV','fm-col-datetime':'Date / Time','fm-col-satellite':'Satellite','fm-col-track':'Track',
+    'fm-last-imaged':'Last imaged','fm-cycle-last':'previous cycle imaged','fm-cycle-skipped':'{n} cycle(s) not imaged since',
     'fm-templated-from':'Footprint from','fm-capped':'Forecast stops {n} days ahead; the window reaches further.',
   },
   'zh-TW': {
@@ -417,6 +418,7 @@ const TRANSLATIONS = {
     'fm-hint':'連點三下 logo 離開 FUTURAMA','fm-no-passes':'此區間內沒有預測過境。',
     'fm-excluded':'預測影像不納入下載、CSV 匯出與統計表。',
     'fm-export':'預測 CSV','fm-col-datetime':'日期時間','fm-col-satellite':'衛星','fm-col-track':'軌道',
+    'fm-last-imaged':'上次拍攝','fm-cycle-last':'前一週期有拍','fm-cycle-skipped':'之後已有 {n} 個週期未拍',
     'fm-templated-from':'足跡取自','fm-capped':'預測只推算到 {n} 天後，視窗超出此範圍。',
   },
 };
@@ -6218,6 +6220,15 @@ function futureBuildTemplates() {
       refLon: refSp.lon,
       phaseAnchors: (anchors.get(futureTrackKey(entry.frame)) || [])
         .map(at => futureRollToRecent(at, now)),
+      // The track's newest real acquisition, unrolled, and how many of its
+      // repeat cycles have come and gone since without one. 0 means the most
+      // recent cycle was imaged; 2 means the last two were not. Counted
+      // against now, not against the pass being predicted: a cycle still in
+      // the future has not been skipped, it simply has not happened yet.
+      lastAcqTs: Math.max(...(anchors.get(futureTrackKey(entry.frame)) || [cal.ts])),
+      missedCycles: Math.floor(
+        (now - Math.max(...(anchors.get(futureTrackKey(entry.frame)) || [cal.ts])))
+        / (FUTURE_REPEAT_DAYS * 86400000)),
       ascending: (entry.frame.direction_norm || '') === 'ASCENDING',
       staleDays: ageDays > FUTURE_TEMPLATE_FRESH_MS / 86400000 ? ageDays : 0,
     });
@@ -6277,6 +6288,18 @@ function futureUncertaintyS(satId, targetMs) {
   return Math.round(cfg.baseErrS + cfg.driftSPerDay * days);
 }
 
+// "2026-10-22 · previous cycle imaged" / "2026-06-23 · 11 cycles not imaged
+// since" — when this track was last really imaged, and whether it has been
+// keeping to its 12-day repeat since.
+function futureLastAcqLabel(frame) {
+  if (!frame.forecast_last_acq) return t('fm-never');
+  const when = displayDateKey(frame.forecast_last_acq);
+  const missed = frame.forecast_missed_cycles;
+  if (!Number.isFinite(missed)) return when;
+  return when + ' · ' + (missed < 1 ? t('fm-cycle-last')
+    : t('fm-cycle-skipped', { n: missed }));
+}
+
 function futureMakeFrame(tpl, tMs) {
   const src = tpl.frame;
   const iso = new Date(Math.round(tMs)).toISOString();
@@ -6293,6 +6316,9 @@ function futureMakeFrame(tpl, tMs) {
     forecast_source: 'sgp4',
     forecast_uncertainty_s: futureUncertaintyS(tpl.satId, tMs),
     forecast_from_granule: src.granule || '',
+    forecast_last_acq: Number.isFinite(tpl.lastAcqTs)
+      ? new Date(tpl.lastAcqTs).toISOString() : '',
+    forecast_missed_cycles: Number.isFinite(tpl.lastAcqTs) ? tpl.missedCycles : null,
     future_key: 'FM|' + tpl.satId + '|' + getFrameSeriesKey(src) + '|' + iso,
   };
 }
@@ -6472,6 +6498,7 @@ function openFuturePredictionDrawer(frame) {
     cell(t('frame'), String(frame.frame_number_norm || '--')) +
     cell(t('direction'), frame.direction_norm || '--') +
     cell(t('fm-source'), t('fm-sgp4')) +
+    cell(t('fm-last-imaged'), futureLastAcqLabel(frame), true) +
     cell(t('fm-templated-from'), frame.forecast_from_granule || '--', true);
 
   const section = document.querySelector('.d-section');
@@ -6760,6 +6787,8 @@ function futureNextPassBlockHTML(clickedFrame) {
       '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-in')) + '</span><strong>' + escapeHtml(inLabel) + '</strong></div>' +
       (stale || f.forecast_uncertainty_s === null ? '' :
         '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-uncertainty')) + '</span><strong>&plusmn;' + f.forecast_uncertainty_s + ' s</strong></div>') +
+      '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-last-imaged')) + '</span><strong>'
+        + escapeHtml(futureLastAcqLabel(f)) + '</strong></div>' +
       '<div class="d-link-meta-row"><span>' + escapeHtml(t('fm-source')) + '</span><strong>' + escapeHtml(t('fm-sgp4')) + '</strong></div>' +
     '</div>';
   }).join('');

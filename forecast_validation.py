@@ -388,6 +388,14 @@ def build_templates(frames, satrecs, now, passes=None):
             "from_granule": frame.get("granule") or "",
             # how stale the observation behind this template is
             "age_days": round((now - observed_at).total_seconds() / 86400.0, 1),
+            # the track's newest real acquisition, and how many of its repeat
+            # cycles have come and gone since without one: 0 means the most
+            # recent cycle was imaged. Counted against now, not against the
+            # pass predicted, since a future cycle has not been skipped
+            # (mirrors app.js).
+            "last_acq": max(observed),
+            "missed_cycles": int((now - max(observed)).total_seconds()
+                                 // (REPEAT_DAYS * 86400.0)),
         })
     return templates
 
@@ -468,6 +476,8 @@ def predict(templates, satrecs, tles, start, end):
                 if not in_phase(when, tpl["phase_at"]):
                     continue
                 out.append({
+                    "last_acq": tpl["last_acq"].isoformat().replace("+00:00", "Z"),
+                    "missed_cycles": tpl["missed_cycles"],
                     "stale_days": (tpl["age_days"]
                                    if tpl.get("age_days", 0) > TEMPLATE_FRESH_DAYS
                                    else 0),
@@ -548,6 +558,8 @@ def record(log, predictions, now):
                 "first_predicted": iso,
                 "first_seen": now.isoformat().replace("+00:00", "Z"),
                 "first_lead_days": round((instant - now).total_seconds() / 86400.0, 2),
+                "last_acq": group[0]["last_acq"],
+                "missed_cycles": max(g["missed_cycles"] for g in group),
                 "status": "pending",
                 **({"stale_days": max(g["stale_days"] for g in group)}
                    if max(g.get("stale_days") or 0 for g in group) else {}),
@@ -565,6 +577,8 @@ def record(log, predictions, now):
                 row.pop("withdrawn_at", None)
             row["predicted"] = iso
             row["frames"] = frames
+            row["last_acq"] = group[0]["last_acq"]
+            row["missed_cycles"] = max(g["missed_cycles"] for g in group)
             row["uncertainty_s"] = max(g["uncertainty_s"] for g in group)
             row["last_seen"] = now.isoformat().replace("+00:00", "Z")
             updated += 1
