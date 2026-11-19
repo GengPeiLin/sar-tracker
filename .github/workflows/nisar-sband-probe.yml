@@ -1,0 +1,36 @@
+name: NISAR S-band access probe
+
+# Bhoonidhi (ISRO's EO data hub, the only distributor of NISAR S-band) blocks
+# connections from Taiwan, so reachability has to be tested from somewhere
+# else. This runs the probe on a GitHub-hosted runner and prints the result to
+# the job log. It is manual-only, writes nothing and commits nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: 'Bhoonidhi STAC base URL'
+        required: false
+        default: 'https://bhoonidhi-api.nrsc.gov.in/data'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe ASF + Bhoonidhi for NISAR S-band
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # BHOONIDHI_TOKEN is optional: without it the probe reports what an
+      # unauthenticated caller sees, which is itself the answer we need first.
+      - name: Run probe
+        env:
+          BHOONIDHI_API: ${{ github.event.inputs.api_base }}
+          BHOONIDHI_TOKEN: ${{ secrets.BHOONIDHI_TOKEN }}
+        run: python scripts/probe_nisar_sband.py

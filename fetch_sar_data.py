@@ -116,8 +116,47 @@ NISAR_PROCESSING_LEVELS = frozenset(
     {
         "RSLC", "GSLC", "GCOV", "GUNW", "SME2",
         "L1_RSLC", "L1_GSLC", "L2_GCOV", "L2_GUNW", "L3_SME2",
+        # Interferometric and pixel-offset products. ISRO ships these for the
+        # S-band (released 24 Jul 2026); ASF's L-band catalogue does not.
+        "RIFG", "RUNW", "ROFF", "GOFF",
+        "L1_RIFG", "L1_RUNW", "L1_ROFF", "L2_GOFF",
     }
 )
+
+# ── NISAR S-band (ISRO) — OFF ───────────────────────────────────────────────
+# NISAR carries two radars. L-SAR (NASA/JPL) is distributed by ASF and is what
+# every query above fetches; S-SAR (ISRO) is distributed only through
+# Bhoonidhi, whose STAC API (POST /data/search) needs a Bearer access_token.
+# The token is obtained out of band — Bhoonidhi issues one from POST
+# /auth/token with a registered userId/password — and supplied here through the
+# environment, so no credential ever passes through this script.
+#
+# The whole source is DISABLED by default: the API is not ready to integrate
+# against (unreachable from Taiwan, collection ids and property names
+# unverified), so it must not run merely because a token happens to be present.
+# Turn it on deliberately with BHOONIDHI_ENABLED=1 once the endpoint is
+# confirmed — see docs/nisar-sband.md. Everything below stays exercised by the
+# offline tests, so reactivation is a switch rather than a rewrite.
+BHOONIDHI_ENABLED = os.environ.get("BHOONIDHI_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+BHOONIDHI_TOKEN = os.environ.get("BHOONIDHI_TOKEN", "").strip()
+BHOONIDHI_API = os.environ.get("BHOONIDHI_API", "https://bhoonidhi-api.nrsc.gov.in/data").rstrip("/")
+# STAC collection ids for the S-band products. Overridable because the ids are
+# documented only in Bhoonidhi's own catalogue, which is unreachable from
+# Taiwan — see docs/nisar-sband.md.
+BHOONIDHI_COLLECTIONS = tuple(
+    c.strip() for c in os.environ.get(
+        "BHOONIDHI_COLLECTIONS",
+        "nisar_s_rslc,nisar_s_gslc,nisar_s_gcov,nisar_s_gunw",
+    ).split(",") if c.strip()
+)
+# S-band frames are numbered on their own scheme (ISRO's sample granule is
+# track 026 / frame 125), so the L-band frame allowlist cannot gate them.
+# Fall back to a Taiwan bounding box on the footprint centroid, wide enough for
+# NISAR's ~2.7 deg frame span.
+NISAR_CENTROID_LAT_MIN = 20.0
+NISAR_CENTROID_LAT_MAX = 27.5
+NISAR_CENTROID_LON_MIN = 118.0
+NISAR_CENTROID_LON_MAX = 124.0
 S1_PROCESSING_LEVELS = "SLC,GRD_HD,GRD_MS,GRD_HS,GRD_FD,GRD"
 
 # Sentinel-1 centroid bounds. The search WKT uses intersects, so frames that
@@ -146,7 +185,10 @@ MISSIONS: dict[str, dict] = {
         "label": "NISAR",
         "catalog": CATALOG_DIR / "nisar.json",
         "earliest": NISAR_LAUNCH,
-        "sources": ("ASF",),
+        # Bhoonidhi carries the S-band only. Listed as a source solely when
+        # enabled, so a disabled run writes exactly the files it wrote before
+        # the S-band work rather than an empty bhoonidhi_nisar.meta4.
+        "sources": ("ASF", "Bhoonidhi") if BHOONIDHI_ENABLED else ("ASF",),
     },
 }
 
@@ -155,8 +197,16 @@ def log(message: str) -> None:
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}", flush=True)
 
 
-def http_json(url: str, timeout: int = 60, retries: int = 4, backoff_factor: float = 2.0) -> dict | None:
-    request = urllib.request.Request(url, headers={"User-Agent": "sar-tracker/3.0"})
+def http_json(
+    url: str,
+    timeout: int = 60,
+    retries: int = 4,
+    backoff_factor: float = 2.0,
+    headers: dict[str, str] | None = None,
+) -> dict | None:
+    request = urllib.request.Request(
+        url, headers={"User-Agent": "sar-tracker/3.0", **(headers or {})}
+    )
     for attempt in range(1, retries + 1):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -174,6 +224,32 @@ def http_json(url: str, timeout: int = 60, retries: int = 4, backoff_factor: flo
             log(f"Waiting {sleep_time}s before retrying...")
             time.sleep(sleep_time)
     return None
+
+
+def http_json_post(
+    url: str,
+    body: dict,
+    timeout: int = 60,
+    headers: dict[str, str] | None = None,
+) -> dict | None:
+    """Single-shot JSON POST. Used by the Bhoonidhi STAC search.
+
+    No retry loop: unlike ASF's 504s, the failures here are authentication and
+    reachability, which retrying does not fix.
+    """
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "User-Agent": "sar-tracker/3.0",
+            "Content-Type": "application/json",
+            "Accept": "application/geo+json",
+            **(headers or {}),
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def chunk_range(start: datetime, end: datetime, days: int) -> list[tuple[datetime, datetime]]:
@@ -283,8 +359,12 @@ def infer_product_type(*values: str) -> str:
     known = [
         "L1_RSLC",
         "L1_GSLC",
+        "L1_RIFG",
+        "L1_RUNW",
+        "L1_ROFF",
         "L2_GCOV",
         "L2_GUNW",
+        "L2_GOFF",
         "L3_SME2",
         "GSLC",
         "RSLC",
@@ -296,6 +376,11 @@ def infer_product_type(*values: str) -> str:
         "GRD",
         "GCOV",
         "GUNW",
+        # S-band interferometric / pixel-offset products (ISRO).
+        "GOFF",
+        "RIFG",
+        "RUNW",
+        "ROFF",
         "SME2",
         "RAW",
         "SSC",
@@ -350,9 +435,37 @@ def is_nisar_frame(frame: dict) -> bool:
     return any("NISAR" in str(value).upper() for value in values)
 
 
+def nisar_band(frame: dict) -> str:
+    """'L' or 'S' for a NISAR record; '' when it cannot be determined.
+
+    Both catalogues report the instrument as `sensor` ('L-SAR' / 'S-SAR'); the
+    granule's second field is instrument+level ('L1', 'S2'). Mirrors
+    getNisarBandCode() in app.js.
+    """
+    sensor = str(frame.get("sensor") or "").upper()
+    if sensor.startswith("L-SAR") or sensor.startswith("LSAR"):
+        return "L"
+    if sensor.startswith("S-SAR") or sensor.startswith("SSAR"):
+        return "S"
+    parts = str(frame.get("granule") or "").split("_")
+    code = (parts[1][:1].upper() if len(parts) > 1 and parts[1] else "")
+    return code if code in ("L", "S") else ""
+
+
 def is_taiwan_nisar_frame(frame: dict) -> bool:
     if not is_nisar_frame(frame):
         return False
+    # S-band uses its own track/frame numbering, so the L-band allowlist would
+    # reject every S-band scene. Gate those on the footprint instead.
+    if nisar_band(frame) == "S":
+        centroid = footprint_centroid(frame)
+        if centroid is None:
+            return False
+        lat, lon = centroid
+        return (
+            NISAR_CENTROID_LAT_MIN <= lat <= NISAR_CENTROID_LAT_MAX
+            and NISAR_CENTROID_LON_MIN <= lon <= NISAR_CENTROID_LON_MAX
+        )
     direction = normalize_direction(frame.get("direction", ""))
     path_number = safe_int(frame.get("path_number"))
     frame_number = safe_int(frame.get("frame_number"))
@@ -656,9 +769,146 @@ def fetch_sentinel1_frames(start: datetime, end: datetime, bootstrap: bool) -> l
     ]
 
 
+def parse_nisar_granule(name: str) -> dict:
+    """Track / frame / direction / bandwidth from a NISAR granule name.
+
+    Bhoonidhi's STAC properties are not documented publicly, so the granule
+    name — which follows the same convention for both bands — is the reliable
+    source. Mirrors parseNisarGranuleFields() in app.js:
+      NISAR_IL_PT_PROD_CYL_REL_P_FRM_MODE_POLE_S_start_end_CRID_A_C_LOC_CTR
+    with REL the track and FRM the frame. GUNW-style pair products insert an
+    extra cycle and date pair, which shifts nothing before index 8.
+    """
+    parts = str(name or "").strip().split("_")
+    if len(parts) < 18 or parts[0] != "NISAR":
+        return {}
+    is_pair = len(parts) >= 20
+    mode_index = 9 if is_pair else 8
+    pole = parts[mode_index + 1] if len(parts) > mode_index + 1 else ""
+    return {
+        "track": safe_int(parts[5]),
+        "frame": safe_int(parts[7]),
+        "direction": {"A": "ASCENDING", "D": "DESCENDING"}.get(parts[6], ""),
+        "range_bandwidth": parts[mode_index],
+        "main_polarization": pole[:2],
+        "side_polarization": pole[2:],
+        "crid": parts[-5],
+    }
+
+
+def process_bhoonidhi_item(item: dict) -> dict:
+    """NISAR S-band record from a Bhoonidhi STAC item.
+
+    Only the STAC core fields (id, geometry, properties.datetime, assets) are
+    relied on; everything mission-specific is decoded from the granule name,
+    since Bhoonidhi's property names are not published and the API is not
+    reachable for inspection from here.
+    """
+    props = item.get("properties", {}) or {}
+    granule = str(item.get("id") or props.get("title") or "")
+    named = parse_nisar_granule(granule)
+    assets = item.get("assets", {}) or {}
+    # Prefer the science file over browse imagery.
+    href = ""
+    size_bytes = 0
+    for key, asset in assets.items():
+        if not isinstance(asset, dict):
+            continue
+        url = str(asset.get("href") or "")
+        if url.lower().endswith((".h5", ".hdf5")) or key in ("data", "product"):
+            href, size_bytes = url, int(asset.get("file:size") or 0)
+            break
+        href = href or url
+    direction = normalize_direction(props.get("sat:orbit_state") or named.get("direction") or "")
+    path_number = safe_int(props.get("sat:relative_orbit")) or named.get("track")
+    return {
+        "source": "Bhoonidhi",
+        "granule": granule,
+        "platform": "NISAR",
+        "sensor": "S-SAR",
+        "date": props.get("start_datetime") or props.get("datetime") or "",
+        "stop_time": props.get("end_datetime") or "",
+        "orbit": props.get("sat:absolute_orbit", ""),
+        "path_number": path_number if path_number is not None else "",
+        "frame_number": named.get("frame") if named.get("frame") is not None else "",
+        "direction": direction,
+        "product_type": infer_product_type(props.get("product_type"), granule),
+        "processing_level": str(props.get("processing:level") or ""),
+        "footprint": normalize_footprint(item.get("geometry")),
+        "asf_url": "",
+        "asf_meta_url": "",
+        # Bhoonidhi links are the only way to fetch S-band, so they take the
+        # download_url slot that Copernicus uses for Sentinel-1.
+        "download_url": href,
+        "copernicus_url": "",
+        "browse_url": str((assets.get("browse") or {}).get("href") or ""),
+        "file_size_mb": round(size_bytes / 1_000_000, 1) if size_bytes else 0.0,
+        "satellite_id": "NISAR",
+        "track_label": track_label("NISAR", direction, path_number),
+        "frame_coverage": "",
+        "main_polarization": named.get("main_polarization", ""),
+        "side_polarization": named.get("side_polarization", ""),
+        "range_bandwidth": named.get("range_bandwidth", ""),
+        "crid": named.get("crid", ""),
+        "orbit_type": "",
+        "pge_version": str(props.get("processing:version") or ""),
+        "collection": str(item.get("collection") or ""),
+        "processing_date": props.get("created", ""),
+        "polarization": named.get("main_polarization", ""),
+        "mode": "",
+    }
+
+
+def fetch_bhoonidhi_nisar_frames(start: datetime, end: datetime) -> list[dict]:
+    """NISAR S-band from ISRO's Bhoonidhi STAC API. Disabled by default.
+
+    Two gates, in order: the BHOONIDHI_ENABLED switch (the API is not ready to
+    integrate against yet) and then a token, since the API publishes no
+    anonymous search endpoint and an unauthenticated run would only produce
+    401s. The whole source is best-effort — a failure here must not cost the
+    L-band update, so every error is logged and swallowed.
+    """
+    if not BHOONIDHI_ENABLED:
+        log("Bhoonidhi: disabled (set BHOONIDHI_ENABLED=1 to fetch NISAR S-band)")
+        return []
+    if not BHOONIDHI_TOKEN:
+        log("Bhoonidhi: no BHOONIDHI_TOKEN set, skipping NISAR S-band")
+        return []
+    frames: list[dict] = []
+    bbox = [
+        NISAR_CENTROID_LON_MIN, NISAR_CENTROID_LAT_MIN,
+        NISAR_CENTROID_LON_MAX, NISAR_CENTROID_LAT_MAX,
+    ]
+    for collection in BHOONIDHI_COLLECTIONS:
+        # STAC item search: POST /data/search with a JSON body.
+        body = {
+            "collections": [collection],
+            "bbox": bbox,
+            "datetime": f"{fmt_asf(start)}/{fmt_asf(end)}",
+            "limit": MAX_RESULTS,
+        }
+        log(f"Bhoonidhi {collection}: {start.date()} -> {end.date()}")
+        try:
+            payload = http_json_post(
+                f"{BHOONIDHI_API}/search", body, timeout=120,
+                headers={"Authorization": f"Bearer {BHOONIDHI_TOKEN}"},
+            )
+        except Exception as exc:
+            log(f"Bhoonidhi {collection} failed: {exc}")
+            continue
+        features = (payload or {}).get("features", []) or []
+        frames.extend(process_bhoonidhi_item(item) for item in features)
+    kept = [f for f in frames if is_taiwan_nisar_frame(f)]
+    log(f"Bhoonidhi NISAR S-band features: {len(frames)} ({len(kept)} over Taiwan)")
+    return kept
+
+
 def fetch_nisar_frames(start: datetime, end: datetime) -> list[dict]:
-    """Full NISAR workflow: ASF only, track/frame-scoped."""
-    return fetch_asf_nisar_frames(start, end)
+    """Full NISAR workflow: ASF for L-band, Bhoonidhi for S-band (off by default)."""
+    return [
+        *fetch_asf_nisar_frames(start, end),
+        *fetch_bhoonidhi_nisar_frames(start, end),
+    ]
 
 
 def fetch_asf_nisar_frames(start: datetime, end: datetime) -> list[dict]:
@@ -796,6 +1046,10 @@ def slot_template_key(frame: dict) -> str:
             str(frame.get("path_number") or ""),
             str(frame.get("product_type") or ""),
             str(frame.get("mode") or ""),
+            # NISAR's two radars share satellite, track and product type, so
+            # without the band an S-band pass would share a slot with the
+            # L-band pass of the same overpass and inherit its frame number.
+            nisar_band(frame),
         ]
     )
 
@@ -833,7 +1087,9 @@ def backfill_from_asf_metadata(frames: list[dict]) -> list[dict]:
         for index, item in enumerate(ordered):
             if not item.get("frame_number") and index in slot_map:
                 item["frame_number"] = slot_map[index]
-            if not item.get("asf_meta_url"):
+            # ASF holds no S-band, so a Bhoonidhi granule has no ASF metadata
+            # record to point at.
+            if not item.get("asf_meta_url") and item.get("source") != "Bhoonidhi":
                 item["asf_meta_url"] = asf_metadata_url(item.get("granule", ""))
 
     return frames
@@ -1016,7 +1272,8 @@ def main() -> int:
             # NISAR frames span ~2.7 deg of latitude, so a centroid outside the
             # range can still cover Taiwan (T133 F78 is centred at ~20.8N but
             # reaches 22.15N over the Hengchun peninsula). NISAR is already
-            # restricted to TAIWAN_NISAR_FRAME_SPECS, so skip the heuristic.
+            # restricted by is_taiwan_nisar_frame (frame allowlist for L-band,
+            # a wider centroid box for S-band), so skip the heuristic.
             if mission_of(out) == "sentinel1" and not is_taiwan_s1_frame(out):
                 return None
             out["fp"] = [round(val, 3) for pt in ring for val in pt]
