@@ -3102,20 +3102,27 @@
    "uncertainty_s": 8
   },
   "S1D|142|2026-11-12": {
+   "actual": "2026-11-12T10:09:11.500000Z",
+   "actual_frames": [
+    "75"
+   ],
    "direction": "ASCENDING",
+   "dt_s": -15.38,
+   "first_dt_s": -22.17,
    "first_lead_days": 78.14,
    "first_predicted": "2026-11-12T10:09:33.674684Z",
    "first_seen": "2026-08-26T06:45:27.082027Z",
    "frames": [
     "75"
    ],
+   "frames_matched": 1,
    "from_granule": "S1D_IW_SLC__1SDV_20260820T100856_20260820T100926_004208_007B73_B6CC",
    "last_acq": "2026-10-31T10:08:57Z",
    "last_seen": "2026-11-12T08:38:59.419088Z",
    "missed_cycles": 0,
    "predicted": "2026-11-12T10:09:26.877335Z",
    "satellite": "S1D",
-   "status": "pending",
+   "status": "hit",
    "track": 142,
    "uncertainty_s": 8
   },
@@ -3295,7 +3302,7 @@
    "predicted": "2026-11-14T09:52:56.342930Z",
    "satellite": "S1D",
    "stale_days": 143.9,
-   "status": "pending",
+   "status": "miss",
    "track": 171,
    "uncertainty_s": 8
   },
@@ -3843,7 +3850,7 @@
  "schema": 2,
  "stale_tracks": [
   {
-   "age_days": 149.0,
+   "age_days": 150.0,
    "last": "2026-06-23T09:52:37.500000Z",
    "satellite": "S1D",
    "track_label": "A171"
@@ -3860,5 +3867,5 @@
    "withdrawn": true
   }
  ],
- "updated_at": "2026-11-19T09:06:30.241029Z"
+ "updated_at": "2026-11-20T08:51:48.072961Z"
 }
